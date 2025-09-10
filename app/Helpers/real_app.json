@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "real-betting-tips-293b1",
+  "private_key_id": "6fb67b83d15fecdca4262ec5ad216da11c25919c",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDHgGd1+dWiqKF0\ntgCWozp33abFR5+UoZZu2fvdcoOLtv79N7//TV68Q+8KhNNYmaomwgXr4+c7n50g\nwhvW6DLQaNHivkYDDZ647BhLLyAhAv4F8YNE5dO+Dfo1EA/DUyO6d7MigkTO4Voy\np31diBFYA4NNoif/+UFjKxA/+SFQJuc3Ekqg6JYT6anhhaUu6YU/1w2u7YFnqROb\nUjeBMNZZK4VP9KLC/V6rHVmtZdrLorpflqubYZILX4sBuSeW1r+Y6gyFcYm/vuUO\nGtJQmwxLHAtgS2ESlFGNDTcwaWANWE2Y6rkv+kmjY3ixs0ADKsgOHLWdbMfXAyKX\npzBh0ZK7AgMBAAECggEAQkUrGQt2peOyTlyu8VsjbvHYFixmnC7ZE9WhTrxdainN\npjvAsYP39j3yx+G7evEAjoNhCCzagPnSbjFMoiTbzFMldVaTVyxND0yN/VuYJp8h\n1sOVQWu+3KEz/jBprA6QDb75aHsxdC9zkOQGRu2OJVh1Y3J8KxGXYOPLMBUHteHA\nChBlFm0zIUgYXqyOEXxyo13hfexOelp9E69mD2mVNOPIQSI+TzA5ZY3Wsq0Itaap\nId/eKoWlGNrU+XhQdLUoJDLPUEl5zjJPQx71j0EFot7pwNrrGIl8WHs+Q7deIDPZ\nnGzIHcttZEOuty/2XFpbvzNFTodvtXMQrLCayv9wAQKBgQDuxoQ/kOdM0YBQMhzG\nkXZjepAU0tuvu9onGHGBSOVKtap/QkTRsDvVuyasYBhJ59G68tvZ7WA+kOcw8h2m\nU5quow5k5ICkd1Netb+GueheuMGsTpUFIod1cWlchLtI0w5/nUBOu5xWrSozjV8B\niBP6RfW2pXlUjSml3U6OHKleuwKBgQDV5J0y/Ml1TdnF+rSRNv8i/upMeHh/HPHn\nGZRTjMEtoRft15CLIrgGybs4DkC1YfpDgTnpwhegTswCbVZidvro5Gtn/3n8B3va\nYkFeqOT/Utior2WMvsWcj6N+HRdQmDjNiHGEmbhLKQLiMFzVa2TKVG3H7/gsvuqD\nYvWmcAdcAQKBgQCa6KPn8YR+K/UJElnk4X5jL6LGP75TFpaDgrIw5DAN9io1AbNQ\nLvvCv/ZpIrbfS8yfcuv7SKuGK9AxywI9ZEQYRKUUA8MJ8HhgG520NGxy935+4USA\n3lPvd7KZWWt/5Z2kYUrVSZY2DYYxh+g5QCVl23l8E4LRvftlJlzOif2//QKBgQDU\nIXC6kbSnbzdtP3B3mMi/B3yNrOksgCN1pIvTtQQd4efeje0f4KYMrWPNe203tt1C\nt9Yc/M77wUpZmeCTtRaxhWD0eo6bozx1YP8eB3lds+eGnLWlOcq4tEhcmjN2ThH/\n3bNf5Ci/+gOPGpHnZCRI+iUKpvdGQW5KMgoZMIBMAQKBgCzX6wXHI7cG9tDy3Tje\n1u+n1+0fieMvWv5VHc+1kQ6CINoetmAh3GRIuf1u97bkhJwusu1egttbiM7XGLfh\nobq6ignxlITVjV3FVPuYr9DCjs0mtGXaksTPAyx0eU+utjeHOxO4LN/9p/zMTbyv\nwAmp5RVNshA/capB1khCeyfY\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-e85wy@real-betting-tips-293b1.iam.gserviceaccount.com",
+  "client_id": "104093907040847394474",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-e85wy%40real-betting-tips-293b1.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
