@@ -19,6 +19,9 @@ return new class extends Migration
             $table->string('user_type')->default('user');
             $table->string('password');
             $table->string('image')->nullable();
+            $table->string('provider')->default('email');
+            $table->integer('subscription_id')->nullable();
+            $table->string('expire_at')->nullable();
             $table->tinyInteger('status')->default(1)->comment('1=Active, 0=Inactive');
             $table->rememberToken();
             $table->timestamps();

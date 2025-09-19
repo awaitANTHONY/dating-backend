@@ -88,7 +88,6 @@ class SubscriptionController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-
             'name' => 'required|string|max:191',
             'duration_type' => 'required|string',
             'duration' => 'required',
@@ -97,7 +96,11 @@ class SubscriptionController extends Controller
             'status' => 'required',
             'description' => 'required',
             'description.*' => 'required',
-
+            'filter_include' => 'required|boolean',
+            'audio_video' => 'required|boolean',
+            'direct_chat' => 'required|boolean',
+            'chat' => 'required|boolean',
+            'like_menu' => 'required|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -118,16 +121,21 @@ class SubscriptionController extends Controller
             }
         }
 
-        $subscription = new Subscription();
-        $subscription->name = $request->name;
-        $subscription->description = json_encode($descriptions);
-        $subscription->duration_type = $request->duration_type;
-        $subscription->duration = $request->duration;
-        $subscription->platform = $request->platform;
-        $subscription->product_id = $request->product_id;
-        $subscription->status = $request->status;
+    $subscription = new Subscription();
+    $subscription->name = $request->name;
+    $subscription->description = json_encode($descriptions);
+    $subscription->duration_type = $request->duration_type;
+    $subscription->duration = $request->duration;
+    $subscription->platform = $request->platform;
+    $subscription->product_id = $request->product_id;
+    $subscription->filter_include = $request->filter_include;
+    $subscription->audio_video = $request->audio_video;
+    $subscription->direct_chat = $request->direct_chat;
+    $subscription->chat = $request->chat;
+    $subscription->like_menu = $request->like_menu;
+    $subscription->status = $request->status;
 
-        $subscription->save();
+    $subscription->save();
 
         cache()->flush();
 
@@ -182,7 +190,6 @@ class SubscriptionController extends Controller
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-
             'name' => 'required|string|max:191',
             'duration_type' => 'required|string',
             'duration' => 'required',
@@ -191,7 +198,11 @@ class SubscriptionController extends Controller
             'status' => 'required',
             'description' => 'required',
             'description.*' => 'required',
-
+            'filter_include' => 'required|boolean',
+            'audio_video' => 'required|boolean',
+            'direct_chat' => 'required|boolean',
+            'chat' => 'required|boolean',
+            'like_menu' => 'required|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -215,15 +226,20 @@ class SubscriptionController extends Controller
 
         $subscription = Subscription::find($id);
 
-        $subscription->name = $request->name;
-        $subscription->description = json_encode($descriptions);
-        $subscription->duration_type = $request->duration_type;
-        $subscription->duration = $request->duration;
-        $subscription->platform = $request->platform;
-        $subscription->product_id = $request->product_id;
-        $subscription->status = $request->status;
+    $subscription->name = $request->name;
+    $subscription->description = json_encode($descriptions);
+    $subscription->duration_type = $request->duration_type;
+    $subscription->duration = $request->duration;
+    $subscription->platform = $request->platform;
+    $subscription->product_id = $request->product_id;
+    $subscription->filter_include = $request->filter_include;
+    $subscription->audio_video = $request->audio_video;
+    $subscription->direct_chat = $request->direct_chat;
+    $subscription->chat = $request->chat;
+    $subscription->like_menu = $request->like_menu;
+    $subscription->status = $request->status;
 
-        $subscription->save();
+    $subscription->save();
 
         cache()->flush();
 

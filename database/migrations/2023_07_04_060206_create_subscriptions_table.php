@@ -22,6 +22,12 @@ class CreateSubscriptionsTable extends Migration
             $table->integer('duration');
             $table->string('platform', 20);
             $table->string('product_id', 191);
+            // Feature fields
+            $table->boolean('filter_include')->default(false);
+            $table->boolean('audio_video')->default(false);
+            $table->boolean('direct_chat')->default(false);
+            $table->boolean('chat')->default(false);
+            $table->boolean('like_menu')->default(false);
             $table->bigInteger('position')->default(99999999999);
             $table->integer('status')->default(1);
 

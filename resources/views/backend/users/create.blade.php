@@ -1,13 +1,15 @@
+                        
 @extends('layouts.app')
 
 @section('content')
 <h2 class="card-title d-none">{{ _lang('Add New') }}</h2>
+<form method="post" autocomplete="off" action="{{ route('users.store') }}" enctype="multipart/form-data">
+                    @csrf
 <div class="row">
-    <div class="col-md-12">
+    <div class="col-md-8">
         <div class="card">
             <div class="card-body">
-                <form method="post" autocomplete="off" action="{{ route('users.store') }}" enctype="multipart/form-data">
-                    @csrf
+                
                     <div class="row">
                         <!-- Basic User Information -->
                         <div class="col-md-12">
@@ -27,6 +29,22 @@
                                 <input type="email" class="form-control" name="email" value="{{ old('email') }}">
                             </div>
                         </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Country Code') }}</label>
+                                <select class="form-control select2" name="country_code" data-selected="{{ old('country_code') }}">
+                                    <option value="">{{ _lang('Select One') }}</option>
+                                    {!! get_country_codes() !!}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Phone') }}</label>
+                                <input type="text" class="form-control" name="phone" value="{{ old('phone') }}" placeholder="e.g. 5551234567">
+                            </div>
+                        </div>
                         
                         <div class="col-md-6">
                             <div class="form-group">
@@ -34,28 +52,14 @@
                                 <input type="password" class="form-control" name="password" required>
                             </div>
                         </div>
-                        
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="control-label">{{ _lang('Confirm Password') }} </label>
-                                <input type="password" class="form-control" name="password_confirmation" required>
-                            </div>
-                        </div>
 
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Status') }} </label>
-                                <select class="form-control select2" name="status" data-selected="{{ old('status') }}" required>
+                                <select class="form-control select2" name="status" data-selected="{{ old('status', 1) }}" required>
                                     <option value="1" >{{ _lang('Active') }}</option>
                                     <option value="0">{{ _lang('In-Active') }}</option>
                                 </select>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="control-label">{{ _lang('Image') }}</label>
-                                <input type="file" class="form-control dropify" name="image" data-allowed-file-extensions="png jpg jpeg PNG JPG JPEG">
                             </div>
                         </div>
 
@@ -79,7 +83,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Date of Birth') }} </label>
-                                <input type="date" class="form-control" name="date_of_birth" value="{{ old('date_of_birth') }}" required>
+                                <input type="text" class="form-control datepicker" name="date_of_birth" value="{{ old('date_of_birth') }}" required>
                             </div>
                         </div>
 
@@ -88,7 +92,7 @@
                                 <label class="control-label">{{ _lang('Religion') }}</label>
                                 <select class="form-control select2" name="religion_id" data-selected="{{ old('religion_id') }}">
                                     <option value="">{{ _lang('Select Religion') }}</option>
-                                    {!! create_option('religions', 'id', 'name', old('religion_id')) !!}
+                                    {!! create_option('religions', 'id', 'title') !!}
                                 </select>
                             </div>
                         </div>
@@ -125,33 +129,39 @@
                                 <input type="number" step="any" class="form-control" name="longitude" value="{{ old('longitude') }}" placeholder="0.000000">
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Search Radius (km)') }}</label>
+                                <input type="number" step="0.1" min="0" class="form-control" name="search_radius" value="{{ old('search_radius', 1.0) }}" placeholder="1.0">
+                            </div>
+                        </div>
 
                         <!-- Preferences Information -->
                         <div class="col-md-12 mt-4">
                             <h5 class="mb-3">{{ _lang('Preferences & Interests') }}</h5>
                         </div>
 
-                        <div class="col-md-12">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Search Preference') }} </label>
-                                <select class="form-control select2" name="search_preference" data-selected="{{ old('search_preference') ? implode(',', old('search_preference')) : '' }}" multiple required>
+                                <select class="form-control select2" name="search_preference" data-selected="{{ old('search_preference') }}" required>
                                     <option value="male">{{ _lang('Male') }}</option>
                                     <option value="female">{{ _lang('Female') }}</option>
-                                    <option value="other">{{ _lang('Other') }}</option>
+                                    <option value="both">{{ _lang('Both') }}</option>
                                 </select>
                             </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Relation Goals') }}</label>
                                 <select class="form-control select2-multi" name="relation_goals[]" data-selected="{{ old('relation_goals') ? implode(',', old('relation_goals')) : '' }}" multiple>
-                                    {!! create_option('relation_goals', 'id', 'name', '', null) !!}
+                                    {!! create_option('relation_goals', 'id', 'title', '', null) !!}
                                 </select>
                             </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Interests') }}</label>
                                 <select class="form-control select2-multi" name="interests[]" data-selected="{{ old('interests') ? implode(',', old('interests')) : '' }}" multiple>
@@ -160,7 +170,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Languages') }}</label>
                                 <select class="form-control select2-multi" name="languages[]" data-selected="{{ old('languages') ? implode(',', old('languages')) : '' }}" multiple>
@@ -169,18 +179,49 @@
                             </div>
                         </div>
 
-                        <div class="col-md-12">
-                            <div class="form-group">
+                        <div class="col-md-12 ">
+                            <div class="form-group margin-auto">
                                 <button type="reset" class="btn btn-danger btn-sm">{{ _lang('Reset') }}</button>
                                 <button type="submit" class="btn btn-primary btn-sm">{{ _lang('Save') }}</button>
                             </div>
                         </div>
                     </div>
-                </form>
+                
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+               
+                    <div class="row">
+                        <!-- Basic User Information -->
+                        <div class="col-md-12">
+                            <h5 class="mb-3">{{ _lang('Images') }}</h5>
+                        </div>
+                        
+                         <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Profile') }}</label>
+                                <input type="file" class="form-control dropify" name="image" data-allowed-file-extensions="png jpg jpeg PNG JPG JPEG" required>
+                            </div>
+                        </div>
+
+                         <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Others Images') }}</label>
+                                <input type="file" class="form-control dropify" name="images[]" data-allowed-file-extensions="png jpg jpeg PNG JPG JPEG" multiple>
+                            </div>
+                        </div>
+
+                       
+                    </div>
+               
             </div>
         </div>
     </div>
 </div>
+</form>
 @endsection
 
 @section('js-script')

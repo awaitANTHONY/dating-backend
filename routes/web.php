@@ -59,6 +59,14 @@ Route::group(['middleware' => ['install']], function () {
         Route::resource('system_users', Controllers\SystemUserController::class);
         //UserController
         Route::resource('users', Controllers\UserController::class);
+        // Coin management routes
+        Route::get('users/{id}/coin-manage', [App\Http\Controllers\UserController::class, 'coin_manage'])->name('users.coin_manage');
+        Route::post('users/{id}/update-coin', [App\Http\Controllers\UserController::class, 'update_coin'])->name('users.update_coin');
+
+        // Wallet management routes
+        Route::get('users/{id}/wallet-manage', [App\Http\Controllers\UserController::class, 'wallet_manage'])->name('users.wallet_manage');
+        Route::post('users/{id}/update-wallet', [App\Http\Controllers\UserController::class, 'update_wallet'])->name('users.update_wallet');
+
         //Channel Controller
         Route::resource('sliders', Controllers\SliderController::class);
         Route::resource('interests', Controllers\InterestController::class);
@@ -74,6 +82,9 @@ Route::group(['middleware' => ['install']], function () {
 
         // PaymentController
         Route::resource('payments', Controllers\PaymentController::class);
+
+        // Package CRUD
+        Route::resource('packages', Controllers\PackageController::class);
         
     });
     

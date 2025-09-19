@@ -56,6 +56,57 @@
                                     <input type="text" class="form-control" name="product_id" value="{{ $subscription->product_id }}" required>
                                 </div>
                             </div>
+
+                            <div class="col-md-12">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="control-label">Filter Include?</label>
+                                            <select class="form-control" name="filter_include" required>
+                                                <option value="0" {{ $subscription->filter_include == 0 ? 'selected' : '' }}>No</option>
+                                                <option value="1" {{ $subscription->filter_include == 1 ? 'selected' : '' }}>Yes</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="control-label">Audio Video?</label>
+                                            <select class="form-control" name="audio_video" required>
+                                                <option value="0" {{ $subscription->audio_video == 0 ? 'selected' : '' }}>No</option>
+                                                <option value="1" {{ $subscription->audio_video == 1 ? 'selected' : '' }}>Yes</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="control-label">Direct Chat?</label>
+                                            <select class="form-control" name="direct_chat" required>
+                                                <option value="0" {{ $subscription->direct_chat == 0 ? 'selected' : '' }}>No</option>
+                                                <option value="1" {{ $subscription->direct_chat == 1 ? 'selected' : '' }}>Yes</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="control-label">Chat?</label>
+                                            <select class="form-control" name="chat" required>
+                                                <option value="0" {{ $subscription->chat == 0 ? 'selected' : '' }}>No</option>
+                                                <option value="1" {{ $subscription->chat == 1 ? 'selected' : '' }}>Yes</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="control-label">Like Menu?</label>
+                                            <select class="form-control" name="like_menu" required>
+                                                <option value="0" {{ $subscription->like_menu == 0 ? 'selected' : '' }}>No</option>
+                                                <option value="1" {{ $subscription->like_menu == 1 ? 'selected' : '' }}>Yes</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="col-md-12">
                                 <div class="form-group">
                                     <label class="control-label">{{ _lang('Status') }}</label>

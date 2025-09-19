@@ -46,14 +46,15 @@ class UserController extends Controller
                                         ' . _lang('Action') . '
                                     </button>
                                     <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">';
-                    $action .= '<a href="' . route('users.show', $user->id) . '" class="dropdown-item ajax-modal" data-title="' . _lang('Details') . '">
+                    $action .= '<a href="' . route('users.show', $user->id) . '" class="dropdown-item" data-title="' . _lang('Details') . '">
                                         <i class="fas fa-eye"></i>
                                         ' . _lang('Details') . '
                                     </a>';
-                    // $action .= '<a href="' . route('users.edit', $user->id) . '" class="dropdown-item ajax-modal" data-title="' . _lang('Edit') . '">
-                    //                     <i class="fas fa-edit"></i>
-                    //                     ' . _lang('Edit') . '
-                    //                 </a>';
+
+                    $action .= '<a href="' . route('users.edit', $user->id) . '" class="dropdown-item" data-title="' . _lang('Edit') . '">
+                                        <i class="fas fa-edit"></i>
+                                        ' . _lang('Edit') . '
+                                    </a>';
                     // $action .= '<form action="' . route('users.destroy', $user->id) . '" method="post" class="ajax-delete">'
                     //             . csrf_field() 
                     //             . method_field('DELETE') 
@@ -99,17 +100,14 @@ class UserController extends Controller
             'name' => 'required|string|max:191',
             'email' => 'nullable|string|email|max:191|unique:users',
             'status' => 'required',
-            'password' => 'required|string|min:6|confirmed',
-            'image' => 'nullable|image',
-            // UserInformation fields
+            'password' => 'required|string|min:6',
             'bio' => 'nullable|string|max:1000',
             'gender' => 'required|in:male,female,other',
             'date_of_birth' => 'required|date|before:today',
             'religion_id' => 'nullable|exists:religions,id',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'search_preference' => 'required|array|min:1',
-            'search_preference.*' => 'in:male,female,other',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'search_preference' => 'required',
             'relation_goals' => 'nullable|array',
             'relation_goals.*' => 'exists:relation_goals,id',
             'interests' => 'nullable|array',
@@ -117,6 +115,9 @@ class UserController extends Controller
             'languages' => 'nullable|array',
             'languages.*' => 'exists:languages,id',
             'wallet_balance' => 'nullable|numeric|min:0',
+            'image' => 'nullable|image',
+            'images' => 'nullable|array',
+            'images.*' => 'nullable|image',
         ]);
 
         if ($validator->fails()) {
@@ -126,6 +127,7 @@ class UserController extends Controller
                 return back()->withErrors($validator)->withInput();
             }
         }
+        \DB::beginTransaction();
 
         $user = new User();
         $user->name = $request->name;
@@ -135,16 +137,27 @@ class UserController extends Controller
         $user->user_type = 'user';
         $user->password = bcrypt($request->password);
 
+        // Handle profile image (main image) using move() for consistency
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $ImageName = time() . '.' . $image->getClientOriginalExtension();
-            $img = Image::read($image->getPathname());
-            $img->resize(300, 300);
-            $img->save(base_path('public/uploads/images/users/') . $ImageName);
-            $user->image = 'public/uploads/images/users/' . $ImageName;
+            $ImageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $imgPath = 'public/uploads/images/users/';
+            $image->move(base_path($imgPath), $ImageName);
+            $user->image = $imgPath . $ImageName;
         }
 
         $user->save();
+
+        // Handle other images (multiple) using move() like single image upload
+        $otherImages = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $imgFile) {
+                $imgName = time() . '_' . uniqid() . '.' . $imgFile->getClientOriginalExtension();
+                $imgPath = "public/uploads/images/users/{$user->id}/";
+                $imgFile->move(base_path($imgPath), $imgName);
+                $otherImages[] = $imgPath . $imgName;
+            }
+        }
 
         // Create UserInformation
         $userInformation = new UserInformation();
@@ -155,12 +168,18 @@ class UserController extends Controller
         $userInformation->religion_id = $request->religion_id;
         $userInformation->latitude = $request->latitude;
         $userInformation->longitude = $request->longitude;
-        $userInformation->search_preference = $request->search_preference;
-        $userInformation->relation_goals = $request->relation_goals;
-        $userInformation->interests = $request->interests;
-        $userInformation->languages = $request->languages;
+        $userInformation->search_radius = $request->search_radius ?? 1.0;
+        $userInformation->country_code = $request->country_code;
+        $userInformation->phone = $request->phone;
+        $userInformation->search_preference = json_encode(is_array($request->search_preference) ? $request->search_preference : (empty($request->search_preference) ? [] : explode(',', $request->search_preference)));
+        $userInformation->relation_goals = json_encode(is_array($request->relation_goals) ? $request->relation_goals : (empty($request->relation_goals) ? [] : explode(',', $request->relation_goals)));
+        $userInformation->interests = json_encode(is_array($request->interests) ? $request->interests : (empty($request->interests) ? [] : explode(',', $request->interests)));
+        $userInformation->languages = json_encode(is_array($request->languages) ? $request->languages : (empty($request->languages) ? [] : explode(',', $request->languages)));
         $userInformation->wallet_balance = $request->wallet_balance ?? 0.00;
+        $userInformation->images = json_encode($otherImages);
         $userInformation->save();
+
+        \DB::commit();
 
         if (!$request->ajax()) {
             return redirect('users')->with('success', _lang('Information has been added.'));
@@ -213,15 +232,29 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $validator = \Validator::make($request->all(), [
-
             'name' => 'required|string|max:191',
             'email' => [
                 'nullable',
                 Rule::unique('users')->ignore($id),
             ],
             'status' => 'required',
+            'bio' => 'nullable|string|max:1000',
+            'gender' => 'required|in:male,female,other',
+            'date_of_birth' => 'required|date|before:today',
+            'religion_id' => 'nullable|exists:religions,id',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'search_preference' => 'required',
+            'relation_goals' => 'nullable|array',
+            'relation_goals.*' => 'exists:relation_goals,id',
+            'interests' => 'nullable|array',
+            'interests.*' => 'exists:interests,id',
+            'languages' => 'nullable|array',
+            'languages.*' => 'exists:languages,id',
+            'wallet_balance' => 'nullable|numeric|min:0',
             'image' => 'nullable|image',
-
+            'images' => 'nullable|array',
+            'images.*' => 'nullable|image',
         ]);
 
         if ($validator->fails()) {
@@ -232,22 +265,65 @@ class UserController extends Controller
             }
         }
 
-        $user = User::find($id);
+        \DB::beginTransaction();
+        try {
+            $user = User::find($id);
+            $user->name = $request->name;
+            $user->email = $request->email;
+            $user->status = $request->status;
 
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->status = $request->status;
+            // Handle profile image (main image)
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $ImageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $imgPath = 'public/uploads/images/users/';
+                $image->move(base_path($imgPath), $ImageName);
+                $user->image = $imgPath . $ImageName;
+            }
 
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $ImageName = time() . '.' . $image->getClientOriginalExtension();
-            $img = Image::read($image->getPathname());
-            $img->resize(300, 300);
-            $img->save(base_path('public/uploads/images/users/') . $ImageName);
-            $user->image = 'public/uploads/images/users/' . $ImageName;
+            $user->save();
+
+            // Handle other images (multiple)
+            $otherImages = [];
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $imgFile) {
+                    $imgName = time() . '_' . uniqid() . '.' . $imgFile->getClientOriginalExtension();
+                    $imgPath = "public/uploads/images/users/{$user->id}/";
+                    $imgFile->move(base_path($imgPath), $imgName);
+                    $otherImages[] = $imgPath . $imgName;
+                }
+            }
+
+            // Update or create UserInformation
+            $userInformation = UserInformation::firstOrNew(['user_id' => $user->id]);
+            $userInformation->bio = $request->bio;
+            $userInformation->gender = $request->gender;
+            $userInformation->date_of_birth = $request->date_of_birth;
+            $userInformation->religion_id = $request->religion_id;
+            $userInformation->latitude = $request->latitude;
+            $userInformation->longitude = $request->longitude;
+            $userInformation->search_radius = $request->search_radius ?? 100.0;
+            $userInformation->country_code = $request->country_code;
+            $userInformation->phone = $request->phone;
+            $userInformation->search_preference = $request->search_preference;
+            $userInformation->relation_goals = json_encode(is_array($request->relation_goals) ? $request->relation_goals : (empty($request->relation_goals) ? [] : explode(',', $request->relation_goals)));
+            $userInformation->interests = json_encode(is_array($request->interests) ? $request->interests : (empty($request->interests) ? [] : explode(',', $request->interests)));
+            $userInformation->languages = json_encode(is_array($request->languages) ? $request->languages : (empty($request->languages) ? [] : explode(',', $request->languages)));
+            $userInformation->wallet_balance = $request->wallet_balance ?? 0.00;
+            if (!empty($otherImages)) {
+                $userInformation->images = json_encode($otherImages);
+            }
+            $userInformation->save();
+
+            \DB::commit();
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            if ($request->ajax()) {
+                return response()->json(['result' => 'error', 'message' => [$e->getMessage()]]);
+            } else {
+                return back()->withErrors(['error' => $e->getMessage()])->withInput();
+            }
         }
-
-        $user->save();
 
         if (!$request->ajax()) {
             return redirect('users')->with('success', _lang('Information has been updated.'));
@@ -271,6 +347,109 @@ class UserController extends Controller
             return back()->with('success', _lang('Information has been deleted'));
         } else {
             return response()->json(['result' => 'success', 'message' => _lang('Information has been deleted sucessfully')]);
+        }
+    }
+
+    /**
+     * Show the wallet management page for a user.
+     */
+    public function wallet_manage($id)
+    {
+        $user = User::findOrFail($id);
+        $walletBalance = $user->wallet_balance ?? 0;
+        $walletLogs = \App\Models\WalletTransaction::where('user_id', $user->id)->orderByDesc('id')->get();
+        return view('backend.users.wallet_manage', compact('user', 'walletBalance', 'walletLogs'));
+    }
+
+    /**
+     * Handle add or subtract wallet balance for a user.
+     */
+    public function update_wallet(Request $request, $id)
+    {
+        $request->validate([
+            'type' => 'required|in:Credit,Debit',
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        $user = User::findOrFail($id);
+
+        $amount = $request->amount;
+        $type = $request->type;
+
+        // Calculate current balance
+        $currentBalance = $user->wallet_balance ?? 0;
+
+        if ($type === 'Debit' && $amount > $currentBalance) {
+            return back()->with('error', 'Insufficient wallet balance!');
+        }
+
+        $message = $type === 'Credit' ? 'Wallet credited successfully!' : 'Wallet debited successfully!';
+
+        \App\Models\WalletTransaction::create([
+            'user_id' => $user->id,
+            'amount' => $amount,
+            'status' => $type,
+        ]);
+
+        $user->wallet_balance = $type === 'Credit' ? $currentBalance + $amount : $currentBalance - $amount;
+        $user->save();
+
+        if (!$request->ajax()) {
+            return back()->with('success', $message);
+        } else {
+            return response()->json(['result' => 'success', 'message' => $message]);
+        }
+    }
+
+    /**
+     * Show the coin management page for a user.
+     */
+    public function coin_manage($id)
+    {
+        $user = User::findOrFail($id);
+        $coinBalance = $user->coin_balance ?? 0;
+        $coinLogs = \App\Models\CoinTransaction::where('user_id', $user->id)->orderByDesc('id')->get();
+        return view('backend.users.coin_manage', compact('user', 'coinBalance', 'coinLogs'));
+    }
+
+    /**
+     * Handle add or subtract coin balance for a user.
+     */
+    public function update_coin(Request $request, $id)
+    {
+        $request->validate([
+            'type' => 'required|in:Credit,Debit',
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        $user = User::findOrFail($id);
+
+        $amount = $request->amount;
+        $type = $request->type;
+
+        // Calculate current balance
+        $currentBalance = $user->coin_balance ?? 0;
+
+        if ($type === 'Debit' && $amount > $currentBalance) {
+            return back()->with('error', 'Insufficient coin balance!');
+        }
+
+        $message = $type === 'Credit' ? 'Coin added successfully!' : 'Coin subtracted successfully!';
+
+        \App\Models\CoinTransaction::create([
+            'user_id' => $user->id,
+            'amount' => $amount,
+            'status' => $type,
+        ]);
+
+ 
+        $user->coin_balance = $type === 'Credit' ? $currentBalance + $amount : $currentBalance - $amount;
+        $user->save();
+
+        if (!$request->ajax()) {
+            return back()->with('success', $message);
+        } else {
+            return response()->json(['result' => 'success', 'message' => $message]);
         }
     }
 }

@@ -54,9 +54,29 @@ class SubscriptionController extends Controller
             'subscription_id' => 'required|string',
             'amount' => 'required|string',
             'platform' => 'required|string|max:20',
-            'sid' => 'required_if:platform,web|string'
+            'sid' => 'required_if:platform,web|string',
+            'filter_include' => 'nullable|boolean',
+            'audio_video' => 'nullable|boolean',
+            'direct_chat' => 'nullable|boolean',
+            'chat' => 'nullable|boolean',
+            'like_menu' => 'nullable|boolean',
             
         ]);
+        $validator->sometimes('filter_include', 'nullable|boolean', function ($input) {
+            return $input->platform === 'web';
+        });
+        $validator->sometimes('audio_video', 'nullable|boolean', function ($input) {
+            return $input->platform === 'web';
+        });
+        $validator->sometimes('direct_chat', 'nullable|boolean', function ($input) {
+            return $input->platform === 'web';
+        });
+        $validator->sometimes('chat', 'nullable|boolean', function ($input) {
+            return $input->platform === 'web';
+        });
+        $validator->sometimes('like_menu', 'nullable|boolean', function ($input) {
+            return $input->platform === 'web';
+        });
 
         if ($validator->fails()) {
             return response()->json(['result' => false, 'message' => $validator->errors()->first()]);

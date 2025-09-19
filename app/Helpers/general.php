@@ -590,6 +590,21 @@ if (!function_exists('get_country_list')) {
     }
 }
 
+if (!function_exists('get_country_codes')) {
+    function get_country_codes($selected = '')
+    {
+        if ($selected == "") {
+            echo file_get_contents(app_path() . '/Helpers/country_codes.txt');
+        } else {
+            $pattern = '<option value="' . $selected . '">';
+            $replace = '<option value="' . $selected . '" selected="selected">';
+            $country_codes = file_get_contents(app_path() . '/Helpers/country_codes.txt');
+            $country_codes = str_replace($pattern, $replace, $country_codes);
+            echo $country_codes;
+        }
+    }
+}
+
 if (!function_exists('load_language')) {
     function load_language($active = '')
     {

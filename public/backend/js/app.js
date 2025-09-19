@@ -12,9 +12,12 @@
         $("select.select2").select2();
     }
 
-    //select2
+    //select2-multi: always enable search box
     if ($("select.select2-multi").length) {
-        $("select.select2-multi").select2({ multiple: true });
+        $("select.select2-multi").select2({
+            multiple: true,
+            minimumResultsForSearch: 0 // always show search box
+        });
     }
 
     //datepicker

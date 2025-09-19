@@ -9,6 +9,13 @@ class UserInformation extends Model
 {
     use HasFactory;
 
+    public function getDateOfBirthAttribute($value)
+    {
+        $date = $this->attributes['date_of_birth'] ?? $value;
+        return $date ? \Illuminate\Support\Carbon::parse($date)->format('Y-m-d') : null;
+    }
+    use HasFactory;
+
     protected $table = 'user_information';
 
     protected $fillable = [
@@ -23,7 +30,10 @@ class UserInformation extends Model
         'relation_goals',
         'interests',
         'languages',
-        'wallet_balance'
+        'wallet_balance',
+        'search_radius',
+        'country_code',
+        'phone',
     ];
 
     protected $casts = [
@@ -48,39 +58,71 @@ class UserInformation extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function religion()
-    {
-        return $this->belongsTo(Religion::class);
-    }
-
     // Get relation goals details
     public function getRelationGoalsDetailsAttribute()
     {
-        if (!$this->relation_goals) return collect();
+        $ids = $this->relation_goals;
+
+       
+        if (empty($ids)) return collect();
+        if (is_string($ids)) {
+            $decoded = json_decode($ids, true);
+            if (is_array($decoded)) {
+                $ids = $decoded;
+            } else {
+                return collect();
+            }
+        }
+        if (!is_array($ids) || empty($ids)) return collect();
         
-        return RelationGoal::whereIn('id', $this->relation_goals)->get();
+        $ids = array_map('intval', $ids);
+        return RelationGoal::whereIn('id', $ids)->get();
     }
 
     // Get interests details
     public function getInterestsDetailsAttribute()
     {
-        if (!$this->interests) return collect();
-        
-        return Interest::whereIn('id', $this->interests)->get();
+        $ids = $this->interests;
+        if (empty($ids)) return collect();
+        if (is_string($ids)) {
+            $decoded = json_decode($ids, true);
+            if (is_array($decoded)) {
+                $ids = $decoded;
+            } else {
+                return collect();
+            }
+        }
+        if (!is_array($ids) || empty($ids)) return collect();
+        $ids = array_map('intval', $ids);
+        return Interest::whereIn('id', $ids)->get();
     }
 
     // Get languages details
     public function getLanguagesDetailsAttribute()
     {
-        if (!$this->languages) return collect();
-        
-        return Language::whereIn('id', $this->languages)->get();
+        $ids = $this->languages;
+        if (empty($ids)) return collect();
+        if (is_string($ids)) {
+            $decoded = json_decode($ids, true);
+            if (is_array($decoded)) {
+                $ids = $decoded;
+            } else {
+                return collect();
+            }
+        }
+        if (!is_array($ids) || empty($ids)) return collect();
+        $ids = array_map('intval', $ids);
+        return Language::whereIn('id', $ids)->get();
     }
 
-    // Scope for filtering by gender
-    public function scopeByGender($query, $gender)
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function religion()
     {
-        return $query->where('gender', $gender);
+        return $this->hasOne('App\Models\Religion', 'id', 'religion_id')->withDefault();
     }
 
     // Scope for filtering by search preference
@@ -96,13 +138,5 @@ class UserInformation extends Model
         $maxDate = now()->subYears($minAge)->format('Y-m-d');
         
         return $query->whereBetween('date_of_birth', [$minDate, $maxDate]);
-    }
-
-    // Calculate age from date of birth
-    public function getAgeAttribute()
-    {
-        if (!$this->date_of_birth) return null;
-        
-        return $this->date_of_birth->age;
     }
 }
