@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Models\UserInformation;
 use App\Models\Interest;
 use App\Models\Language;
+use App\Models\Religion;
+use App\Models\RelationGoal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -30,8 +32,12 @@ class FakeUserGeneratorController extends Controller
             'radius' => 'nullable|numeric|min:0',
         ]);
 
+        \DB::beginTransaction();
+
         $interests = Interest::pluck('id')->toArray();
         $languages = Language::pluck('id')->toArray();
+        $religion = Religion::pluck('id')->toArray();
+        $relation_goals = RelationGoal::pluck('id')->toArray();
         $created = 0;
         for ($i = 0; $i < $request->count; $i++) {
 
@@ -50,21 +56,24 @@ class FakeUserGeneratorController extends Controller
             $userInformation->bio = fake()->realText(120);
             $userInformation->gender = $request->gender;
             $userInformation->date_of_birth = now()->subYears(rand(18, 40))->format('Y-m-d');
-            $userInformation->religion_id = null;
-            $userInformation->latitude = null;
-            $userInformation->longitude = null;
+            $userInformation->religion_id = $religion ? $religion[array_rand($religion)] : null;
+            $userInformation->latitude = fake()->latitude(20.6, 26.6);
+            $userInformation->longitude = fake()->longitude(88.0, 92.7);
             $userInformation->search_radius = $request->radius ?? 10.0;
             $userInformation->country_code = $request->country_code;
             $userInformation->phone = $request->phone_length ? str_pad(rand(0, pow(10, $request->phone_length)-1), $request->phone_length, '0', STR_PAD_LEFT) : null;
             $userInformation->search_preference = json_encode([$request->preference]);
-            $userInformation->relation_goals = json_encode([]);
+            $userInformation->relation_goals = json_encode([$relation_goals ? $relation_goals[array_rand($relation_goals)] : null]);
             $userInformation->interests = json_encode(array_slice($interests, 0, $request->interest_count));
             $userInformation->languages = json_encode(array_slice($languages, 0, $request->language_count));
             $userInformation->wallet_balance = 0.00;
             $userInformation->images = json_encode([]);
             $userInformation->save();
             $created++;
+
         }
+
+        \DB::commit();
         return back()->with('success', $created . ' fake users generated successfully.');
     }
 }
