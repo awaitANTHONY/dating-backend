@@ -85,6 +85,9 @@ Route::group(['middleware' => ['install']], function () {
 
         // Package CRUD
         Route::resource('packages', Controllers\PackageController::class);
+    // Fake User Generator
+    Route::get('fake-user-generator', [App\Http\Controllers\FakeUserGeneratorController::class, 'index'])->name('fake-user-generator.index');
+    Route::post('fake-user-generator/generate', [App\Http\Controllers\FakeUserGeneratorController::class, 'generate'])->name('fake-user-generator.generate');
         
     });
     

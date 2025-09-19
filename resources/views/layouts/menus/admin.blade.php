@@ -34,6 +34,12 @@
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Relation Goals') }}</span>
 	</a>
 </li>
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('fake-user-generator') }}">
+		<i class="fa fa-robot u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Fake User Generator') }}</span>
+	</a>
+</li>
 
 <li class="u-sidebar-nav-menu__item">
 	<a class="u-sidebar-nav-menu__link" href="{{ url('gifts') }}">
