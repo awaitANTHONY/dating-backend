@@ -30,7 +30,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Country Code') }}</label>
-                                <select class="form-control select2" name="country_code" data-selected="{{ optional($user->information)->country_code }}">
+                                <select class="form-control select2" name="country_code" data-selected="{{ optional($user->user_information)->country_code }}">
                                     <option value="">{{ _lang('Select One') }}</option>
                                     {!! get_country_codes() !!}
                                 </select>
@@ -39,7 +39,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Phone') }}</label>
-                                <input type="text" class="form-control" name="phone" value="{{ optional($user->information)->phone }}" placeholder="e.g. 5551234567">
+                                <input type="text" class="form-control" name="phone" value="{{ optional($user->user_information)->phone }}" placeholder="e.g. 5551234567">
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -59,7 +59,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Gender') }}</label>
-                                <select class="form-control select2" name="gender" data-selected="{{ optional($user->information)->gender }}" required>
+                                <select class="form-control select2" name="gender" data-selected="{{ optional($user->user_information)->gender }}" required>
                                     <option value="">{{ _lang('Select Gender') }}</option>
                                     <option value="male">{{ _lang('Male') }}</option>
                                     <option value="female">{{ _lang('Female') }}</option>
@@ -70,13 +70,13 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Date of Birth') }}</label>
-                                <input type="text" class="form-control datepicker" name="date_of_birth" value="{{ optional($user->information)->date_of_birth }}" required>
+                                <input type="text" class="form-control datepicker" name="date_of_birth" value="{{ optional($user->user_information)->date_of_birth }}" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Religion') }}</label>
-                                <select class="form-control select2" name="religion_id" data-selected="{{ optional($user->information)->religion_id }}">
+                                <select class="form-control select2" name="religion_id" data-selected="{{ optional($user->user_information)->religion_id }}">
                                     <option value="">{{ _lang('Select Religion') }}</option>
                                     {!! create_option('religions', 'id', 'title') !!}
                                 </select>
@@ -85,13 +85,13 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Wallet Balance') }}</label>
-                                <input type="number" step="0.01" min="0" class="form-control" name="wallet_balance" value="{{ optional($user->information)->wallet_balance ?? 0.00 }}" placeholder="0.00">
+                                <input type="number" step="0.01" min="0" class="form-control" name="wallet_balance" value="{{ optional($user->user_information)->wallet_balance ?? 0.00 }}" placeholder="0.00">
                             </div>
                         </div>
                         <div class="col-md-12">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Bio') }}</label>
-                                <textarea class="form-control" name="bio" rows="4" placeholder="{{ _lang('Tell us about yourself...') }}">{{ optional($user->information)->bio }}</textarea>
+                                <textarea class="form-control" name="bio" rows="4" placeholder="{{ _lang('Tell us about yourself...') }}">{{ optional($user->user_information)->bio }}</textarea>
                             </div>
                         </div>
                         <!-- Location Information -->
@@ -101,19 +101,19 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Latitude') }}</label>
-                                <input type="number" step="any" class="form-control" name="latitude" value="{{ optional($user->information)->latitude }}" placeholder="0.000000">
+                                <input type="number" step="any" class="form-control" name="latitude" value="{{ optional($user->user_information)->latitude }}" placeholder="0.000000">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Longitude') }}</label>
-                                <input type="number" step="any" class="form-control" name="longitude" value="{{ optional($user->information)->longitude }}" placeholder="0.000000">
+                                <input type="number" step="any" class="form-control" name="longitude" value="{{ optional($user->user_information)->longitude }}" placeholder="0.000000">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Search Radius (km)') }}</label>
-                                <input type="number" step="0.1" min="0" class="form-control" name="search_radius" value="{{ optional($user->information)->search_radius ?? 1.0 }}" placeholder="1.0">
+                                <input type="number" step="0.1" min="0" class="form-control" name="search_radius" value="{{ optional($user->user_information)->search_radius ?? 1.0 }}" placeholder="1.0">
                             </div>
                         </div>
                         <!-- Preferences Information -->
@@ -123,7 +123,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Search Preference') }}</label>
-                                <select class="form-control select2" name="search_preference" data-selected="{{ optional($user->information)->search_preference }}" required>
+                                <select class="form-control select2" name="search_preference" data-selected="{{ optional($user->user_information)->search_preference }}" required>
                                     <option value="male">{{ _lang('Male') }}</option>
                                     <option value="female">{{ _lang('Female') }}</option>
                                     <option value="both">{{ _lang('Both') }}</option>
@@ -133,7 +133,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Relation Goals') }}</label>
-                                <select class="form-control select2-multi" name="relation_goals[]" data-selected="{{ optional($user->information)->relation_goals }}" multiple>
+                                <select class="form-control select2-multi" name="relation_goals[]" data-selected="{{ optional($user->user_information)->relation_goals }}" multiple>
                                     {!! create_option('relation_goals', 'id', 'title', '', null) !!}
                                 </select>
                             </div>
@@ -141,7 +141,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Interests') }}</label>
-                                <select class="form-control select2-multi" name="interests[]" data-selected="{{ optional($user->information)->interests }}" multiple>
+                                <select class="form-control select2-multi" name="interests[]" data-selected="{{ optional($user->user_information)->interests }}" multiple>
                                     {!! create_option('interests', 'id', 'title', '', null) !!}
                                 </select>
                             </div>
@@ -149,7 +149,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Languages') }}</label>
-                                <select class="form-control select2-multi" name="languages[]" data-selected="{{ optional($user->information)->languages }}" multiple>
+                                <select class="form-control select2-multi" name="languages[]" data-selected="{{ optional($user->user_information)->languages }}" multiple>
                                     {!! create_option('languages', 'id', 'title', '', null) !!}
                                 </select>
                             </div>

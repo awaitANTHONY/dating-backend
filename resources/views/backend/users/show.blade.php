@@ -17,7 +17,7 @@
             <div class="card-body text-center">
                 <h5>{{ _lang('Other Picture') }}</h5>
                 @php
-                    $otherImagesRaw = optional($user->information)->images;
+                    $otherImagesRaw = optional($user->user_information)->images;
                     $otherImages = [];
                     if (is_array($otherImagesRaw)) {
                         $otherImages = $otherImagesRaw;
@@ -50,17 +50,17 @@
                     </div>
                     <div class="col-md-6">
                         <p><b>Email:</b> {{ strtoupper($user->email) }}</p>
-                        <p><b>Phone:</b> {{ optional($user->information)->country_code }}{{ optional($user->information)->phone }}</p>
-                        <p><b>Profile Bio:</b><br> {!! nl2br(e(optional($user->information)->bio)) !!}</p>
-                        <p><b>Search Preference:</b> {{ is_array(optional($user->information)->search_preference) ? implode(', ', optional($user->information)->search_preference) : (optional($user->information)->search_preference ?? '-') }}</p>
-                        <p><b>Gender:</b> {{ strtoupper(optional($user->information)->gender) }}</p>
-                        <p><b>Radius Search:</b> {{ optional($user->information)->search_radius ?? '-' }}KM</p>
+                        <p><b>Phone:</b> {{ optional($user->user_information)->country_code }}{{ optional($user->user_information)->phone }}</p>
+                        <p><b>Profile Bio:</b><br> {!! nl2br(e(optional($user->user_information)->bio)) !!}</p>
+                        <p><b>Search Preference:</b> {{ is_array(optional($user->user_information)->search_preference) ? implode(', ', optional($user->user_information)->search_preference) : (optional($user->user_information)->search_preference ?? '-') }}</p>
+                        <p><b>Gender:</b> {{ strtoupper(optional($user->user_information)->gender) }}</p>
+                        <p><b>Radius Search:</b> {{ optional($user->user_information)->search_radius ?? '-' }}KM</p>
                     </div>
                     <div class="col-md-6">
-                        <p><b>Birth Date:</b> {{ optional($user->information)->date_of_birth }}</p>
+                        <p><b>Birth Date:</b> {{ optional($user->user_information)->date_of_birth }}</p>
                         <p><b>Relation Goal:</b><br>
                             @php
-                                $goals = optional($user->information)->relation_goals_details;
+                                $goals = optional($user->user_information)->relation_goals_details;
                             @endphp
                             @if(is_iterable($goals) && count($goals))
                                 @foreach($goals as $goal)
@@ -73,7 +73,7 @@
                                 -
                             @endif
                         </p>
-                        <p><b>Religion:</b> {{ optional($user->information)->religion->title }}</p>
+                        <p><b>Religion:</b> {{ optional($user->user_information)->religion->title }}</p>
                         <p><b>Wallet Balance:</b> {{ $user->wallet_balance }}$</p>
                     </div>
                 </div>
@@ -91,7 +91,7 @@
             <div class="card-body">
                 <h5>{{ _lang('Interest') }}</h5>
                 @php
-                    $interests = optional($user->information)->interests_details;
+                    $interests = optional($user->user_information)->interests_details;
                 @endphp
                 @if(is_iterable($interests) && count($interests))
                     @foreach($interests as $interest)
@@ -110,7 +110,7 @@
             <div class="card-body">
                 <h5>{{ _lang('Languages Known') }}</h5>
                 @php
-                    $languages = optional($user->information)->languages_details;
+                    $languages = optional($user->user_information)->languages_details;
                 @endphp
                 @if(is_iterable($languages) && count($languages))
                     @foreach($languages as $language)

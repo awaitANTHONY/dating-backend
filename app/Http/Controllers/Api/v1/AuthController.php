@@ -5,22 +5,30 @@ namespace App\Http\Controllers\Api\v1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\UserInformation;
 use App\Models\AppModel;
 use Pion\Laravel\ChunkUpload\Exceptions\UploadMissingFileException;
 use Pion\Laravel\ChunkUpload\Handler\AbstractHandler;
 use Pion\Laravel\ChunkUpload\Handler\HandlerFactory;
 use Pion\Laravel\ChunkUpload\Receiver\FileReceiver;
 use Illuminate\Http\UploadedFile;
+use App\Utils\Overrider;
 
 class AuthController extends Controller
 {
+    
     public function signup(Request $request)
     {
-        if($request->provider == 'google' || $request->provider == 'apple' || $request->provider == 'facebook'){
-            $user = User::where('email', $request->email)->where('user_type', 'user')->exists();
+        $user = User::where('email', $request->email)->where('user_type', 'user')->first();
+        if($request->provider != 'email' ){
             if($user){
                 return $this->signin($request);
             }
+        }
+
+        if($user && $user->status == 3){
+            $user->delete();
+            $user = null;
         }
 
         $validator = \Validator::make($request->all(), [
@@ -46,7 +54,16 @@ class AuthController extends Controller
         $user->device_token = $request->device_token;
         $user->provider = $request->provider;
         $user->image = asset('public/default/profile.png');
-        $user->status = 1;
+        $user->status = $request->provider == 'email' ? 3 : 1;
+
+        // Generate and send OTP if provider is email
+        if ($request->provider == 'email') {
+            $otp = rand(100000, 999999);
+            $user->email_otp = \Hash::make($otp);
+            $user->email_verified_at = null;
+            Overrider::load('Settings');
+            \Mail::to($user->email)->send(new \App\Mail\EmailVerificationOtp($otp, $user->name));
+        }
 
         $user->save();
 
@@ -55,6 +72,62 @@ class AuthController extends Controller
             'status' => true,
             'access_token' => $tokenResult,
             'data' => $user,
+            'message' => $request->provider == 'email' ? 'Verification code sent to your email.' : 'Signup successful.'
+        ]);
+    }
+
+    public function verification(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'otp' => 'required|digits:6',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found.']);
+        }
+
+        if (\Hash::check($request->otp, $user->email_otp)) {
+            $user->email_verified_at = now();
+            $user->status = 1;
+            $user->email_otp = null;
+            $user->save();
+
+            $user->user_information = $user->user_information;
+            $user->is_profile_completed = $user->user_information ? true : false;
+
+            return response()->json(['status' => true, 'data' => $user, 'message' => 'Email verified successfully.']);
+        } else {
+            return response()->json(['status' => false, 'message' => 'Invalid OTP.']);
+        }
+    }
+
+    /**
+     * Resend OTP to the authenticated user's email.
+     * Requires Bearer token authentication.
+     */
+    public function resend_otp(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found.'], 401);
+        }
+        if ($user->provider !== 'email') {
+            return response()->json(['status' => false, 'message' => 'OTP is only available for email provider.'], 400);
+        }
+        $otp = rand(100000, 999999);
+        $user->email_otp = \Hash::make($otp);
+        $user->email_verified_at = null;
+        $user->save();
+        \App\Utils\Overrider::load('Settings');
+        \Mail::to($user->email)->send(new \App\Mail\EmailVerificationOtp($otp, $user->name));
+        return response()->json([
+            'status' => true,
+            'message' => 'A new verification code has been sent to your email.'
         ]);
     }
 
@@ -74,21 +147,28 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $request->email)->where('user_type', 'user')->first();
+
+        if(!$user ){
+            return response()->json([
+                'status' => false,
+                'message' => 'These credentials do not match our records.',
+            ]);
+        }
+
+        if($user && $user->status == 3){
+            $user->delete();
+            $user = null;
+            return response()->json([
+                'status' => false,
+                'message' => 'These credentials do not match our records.',
+            ]);
+        }
         
-        if(!$user || ($user->provider != 'google' && $user->provider != 'apple' && $user->provider != 'facebook')){
-            if ((!$user || !\Hash::check($request->password, $user->password)) ) {
+        if($user->provider == 'email'){
+            if (!\Hash::check($request->password, $user->password) ) {
                 return response()->json([
                     'status' => false,
                     'message' => 'These credentials do not match our records.',
-                ]);
-            }
-        }
-
-        if($request->provider == 'google' || $request->provider == 'apple' || $request->provider == 'facebook'){
-            if($request->provider != $user->provider){
-                return response()->json([
-                    'status' => false,
-                    'message' => 'These credentials do not match our recordsd.',
                 ]);
             }
         }
@@ -99,6 +179,10 @@ class AuthController extends Controller
 
         $user->save();
 
+        $data->user_information = $data->user_information;
+        $data->user_information->religion = $data->user_information ? $data->user_information->religion : null;
+        $data->is_profile_completed = $data->user_information ? true : false;
+
         $tokenResult = $user->createToken($request->device_token)->plainTextToken;
         return response()->json([
             'status' => true,
@@ -107,49 +191,96 @@ class AuthController extends Controller
         ]);
     }
 
-    public function signinWithPhone(Request $request)
+    public function user_information(Request $request)
     {
         $validator = \Validator::make($request->all(), [
-
-            'phone' => 'required',
-            'uid' => 'required'
-            
+            'name' => 'nullable|string|max:191',
+            'bio' => 'nullable|string|max:1000',
+            'gender' => 'required|in:male,female,other',
+            'date_of_birth' => 'required|date|before:today',
+            'religion_id' => 'nullable|exists:religions,id',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'search_preference' => 'required',
+            'relation_goals' => 'nullable|string',
+            'interests' => 'nullable|string',
+            'languages' => 'nullable|string',
+            'wallet_balance' => 'nullable|numeric|min:0',
+            'image' => 'nullable|image',
+            'images' => 'nullable|array',
+            'images.*' => 'nullable|image',
+            'country_code' => 'nullable|string|max:10',
+            'phone' => 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['result' => false, 'message' => $validator->errors()->first()]);
+            return response()->json(['result' => 'error', 'message' => $validator->errors()->first()]);
         }
 
-        $user = User::where('phone', $request->phone)->first();
-        if(!$user){
-            $user = new User();
+        \DB::beginTransaction();
 
-            $user->name = 'User';
-            $user->phone = $request->phone;
-            $user->password = \Hash::make($request->uid);
-            $user->user_type = 'user';
-            $user->device_token = $request->device_token;
-            $user->provider = 'phone';
-            $user->status = 1;
+        $user = $request->user();
 
+        if($request->name){
+            $user->name = $request->name;
             $user->save();
         }
 
-        $tokenResult = $user->createToken($request->device_token)->plainTextToken;
-        return response()->json([
-            'status' => true,
-            'access_token' => $tokenResult,
-            'data' => $user->makeHidden(['id', 'user_type', 'created_at', 'updated_at', 'email_verified_at', 'status']),
-        ]);
+        $otherImages = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $imgFile) {
+                $imgName = time() . '_' . uniqid() . '.' . $imgFile->getClientOriginalExtension();
+                $imgPath = "public/uploads/images/users/{$user->id}/";
+                $imgFile->move(base_path($imgPath), $imgName);
+                $otherImages[] = $imgPath . $imgName;
+            }
+        }
+        
+
+        if ($user->user_information) {
+            $userInformation = $user->user_information;
+        } else {
+            $userInformation = new UserInformation();
+        }
+        
+        $userInformation->user_id = $user->id; 
+        $userInformation->bio = $request->bio;
+        $userInformation->gender = $request->gender;
+        $userInformation->date_of_birth = $request->date_of_birth;
+        $userInformation->religion_id = $request->religion_id;
+        $userInformation->latitude = $request->latitude;
+        $userInformation->longitude = $request->longitude;
+        $userInformation->search_radius = $request->search_radius ?? 1.0;
+        $userInformation->country_code = $request->country_code;
+        $userInformation->phone = $request->phone;
+        $userInformation->search_preference = $request->search_preference;
+        $userInformation->relation_goals = $request->relation_goals;
+        $userInformation->interests = $request->interests;
+        $userInformation->languages = $request->languages;
+        $userInformation->wallet_balance = $request->wallet_balance ?? 0.00;
+        $userInformation->images = json_encode($otherImages);
+        $userInformation->save();
+
+        \DB::commit();
+        $user = $request->user();
+
+        $data->user_information = $data->user_information;
+        $data->user_information->religion = $data->user_information ? $data->user_information->religion : null;
+        $data->is_profile_completed = $data->user_information ? true : false;
+
+        return response()->json(['status' => true, 'user' => $data, 'message' => _lang('Information has been added sucessfully.')]);
     }
 
     public function user(Request $request)
     {
-        $user = $request->user();
-
+        $data = $request->user();
+        $data->user_information = $data->user_information;
+        $data->user_information->religion = $data->user_information ? $data->user_information->religion : null;
+        $data->is_profile_completed = $data->user_information ? true : false;
+        
         return response()->json([
             'status' => true,
-            'data' => $user,
+            'data' => $data,
         ]);
     }
 
@@ -264,4 +395,98 @@ class AuthController extends Controller
             ]);
         }
     }
+
+    public function forget_password(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'email' => 'required|string|email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Please enter valid email address.',
+            ]);
+        }
+
+        $otp = rand(100000, 999999);
+        // Store OTP in a new column or reuse email_otp if you want to verify before reset
+        $user->email_otp = \Hash::make($otp);
+        $user->save();
+
+        \App\Utils\Overrider::load('Settings');
+        \Mail::to($user->email)->send(new \App\Mail\EmailVerificationOtp($otp, $user->name));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'A password reset code has been sent to your email address.',
+        ]);
+    }
+
+    /**
+     * Verify OTP for password reset (forget password flow)
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function verify_forget_password(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'email' => 'required|string|email',
+            'otp' => 'required|digits:6',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $user = \App\Models\User::where('email', $request->email)->first();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found.']);
+        }
+
+        if (\Hash::check($request->otp, $user->email_otp)) {
+            // Mark OTP as used (optional: null it out)
+            $user->email_otp = null;
+            $user->save();
+
+            $tokenResult = $user->createToken($user->device_token)->plainTextToken;
+            return response()->json(['status' => true, 'access_token' => $tokenResult, 'message' => 'OTP verified. You can now reset your password.']);
+        } else {
+            return response()->json(['status' => false, 'message' => 'Invalid OTP.']);
+        }
+    }
+
+    /**
+     * Reset password for authenticated user (Bearer token required)
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function reset_password(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found.'], 401);
+        }
+
+        $user->password = \Hash::make($request->password);
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Password has been reset successfully.'
+        ]);
+    }
+
+    //
 }

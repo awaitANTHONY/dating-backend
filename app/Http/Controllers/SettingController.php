@@ -63,10 +63,10 @@ class SettingController extends Controller
                 $data['value'] = is_array($value) ? json_encode($value) : xss_clean($value); 
                 $data['updated_at'] = now();
                 if ($request->hasFile($key)) {
-                    $image = $request->file($key);
-                    $name = $key . '.' .$image->getClientOriginalExtension();
-                    $path = public_path('uploads/images/');
-                    $image->move($path, $name);
+                    $file = $request->file($key);
+                    $name = $key . '.' .$file->getClientOriginalExtension();
+                    $path = public_path('uploads/files/');
+                    $file->move($path, $name);
                     $data['value'] = $name; 
                     $data['updated_at'] = now();
                 }

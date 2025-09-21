@@ -10,6 +10,7 @@ use App\Models\Religion;
 use App\Models\RelationGoal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Faker\Factory as Faker;
 
 class FakeUserGeneratorController extends Controller
 {
@@ -39,26 +40,48 @@ class FakeUserGeneratorController extends Controller
         $religion = Religion::pluck('id')->toArray();
         $relation_goals = RelationGoal::pluck('id')->toArray();
         $created = 0;
+
+        
         for ($i = 0; $i < $request->count; $i++) {
 
+            $faker = Faker::create();
+
+            $genderFolder = $request->gender == 'male' ? 'male' : 'female';
+            $imageDir = public_path('uploads/images/users/' . $genderFolder);
+            $imageFiles = [];
+            if (is_dir($imageDir)) {
+                $imageFiles = array_values(array_filter(scandir($imageDir), function($file) use ($imageDir) {
+                    return is_file($imageDir . DIRECTORY_SEPARATOR . $file) && !in_array($file, ['.', '..']);
+                }));
+            }
+            if (!empty($imageFiles)) {
+                $randomImage = $imageFiles[array_rand($imageFiles)];
+                $image = 'public/uploads/images/users/' . $genderFolder . '/' . $randomImage;
+            } else {
+                $image = 'public/uploads/images/users/default.png';
+            }
+
             $user = new User();
-            $user->name = fake()->name();
-            $user->email = fake()->unique()->email();
+            $user->name = $faker->name($request->gender);
+            $user->email = $faker->unique()->email();
             $user->provider = 'email';
             $user->status = 1;
             $user->user_type = 'user';
             $user->password = bcrypt($request->password);
-            $user->image = 'public/uploads/images/users/default.png';
+            $user->image = $image;
+            $user->is_fake = 1;
+            $user->coin_balance = 0;
+            $user->wallet_balance = 0.00;
             $user->save();
 
             $userInformation = new UserInformation();
             $userInformation->user_id = $user->id;
-            $userInformation->bio = fake()->realText(120);
+            $userInformation->bio = $faker->realText(120);
             $userInformation->gender = $request->gender;
             $userInformation->date_of_birth = now()->subYears(rand(18, 40))->format('Y-m-d');
             $userInformation->religion_id = $religion ? $religion[array_rand($religion)] : null;
-            $userInformation->latitude = fake()->latitude(20.6, 26.6);
-            $userInformation->longitude = fake()->longitude(88.0, 92.7);
+            $userInformation->latitude = $faker->latitude(20.6, 26.6);
+            $userInformation->longitude = $faker->longitude(88.0, 92.7);
             $userInformation->search_radius = $request->radius ?? 10.0;
             $userInformation->country_code = $request->country_code;
             $userInformation->phone = $request->phone_length ? str_pad(rand(0, pow(10, $request->phone_length)-1), $request->phone_length, '0', STR_PAD_LEFT) : null;

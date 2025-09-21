@@ -14,6 +14,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        // Bind FirebaseService for dependency injection
+        $this->app->singleton(\App\Services\FirebaseService::class, function ($app) {
+            return new \App\Services\FirebaseService();
+        });
         // Bind ImageManager to the container
         $this->app->singleton('imagemanager', function ($app) {
             return new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());

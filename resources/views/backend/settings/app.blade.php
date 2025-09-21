@@ -201,52 +201,7 @@
                                 </div>
                             </div>
                         </form>
-                        <h3 class="mb-3 mt-3 header-title card-title">{{ _lang('Notification') }}</h3>
-                        <form method="post" class="ajax-submit2 params-card" autocomplete="off" action="{{ route('store_settings') }}">
-                            @csrf
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="form-group">
-                                        <label class="control-label">{{ _lang('Notification Type') }}</label>
-                                        <select class="form-control select2" name="android_notification_type" data-selected="{{ get_option('android_notification_type', 'fcm') }}" required>
-                                            {{-- <option value="onesignal">{{ _lang('One Signal') }}</option> --}}
-                                            <option value="fcm">{{ _lang('FCM') }}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 android_onesignal d-none">
-                                    <div class="form-group">
-                                        <label class="form-control-label">One Signal App ID</label>
-                                        <input type="text" name="android_onesignal_app_id" class="form-control" value="{{ get_option('android_onesignal_app_id', 'N/A') }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 android_onesignal d-none">
-                                    <div class="form-group">
-                                        <label class="form-control-label">One Signal Api Key</label>
-                                        <input type="text" name="android_onesignal_api_key" class="form-control" value="{{ get_option('android_onesignal_api_key', 'N/A') }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 android_fcm d-none">
-                                    <div class="form-group">
-                                        <label class="form-control-label">Firebase Server Key</label>
-                                        <input type="text" name="android_firebase_server_key" class="form-control" value="{{ get_option('android_firebase_server_key', 'N/A') }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 android_fcm d-none">
-                                    <div class="form-group">
-                                        <label class="form-control-label">Firebase Topics</label>
-                                        <input type="text" name="android_firebase_topics" class="form-control" value="{{ get_option('android_firebase_topics', 'N/A') }}" disabled required>
-                                    </div>
-                                </div>
-                                <div class="col-md-12">
-                                    <div class="form-group text-right">
-                                        <button type="submit" class="btn btn-primary btn-sm">
-                                            {{ _lang('Update') }}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
+                        
                     </div>
                 </div>
             </div>
@@ -351,52 +306,7 @@
                                 </div>
                             </div>
                         </form>
-                        <h3 class="mb-3 mt-3 header-title card-title">{{ _lang('Notification') }}</h3>
-                        <form method="post" class="ajax-submit2 params-card" autocomplete="off" action="{{ route('store_settings') }}">
-                            @csrf
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="form-group">
-                                        <label class="control-label">{{ _lang('Notification Type') }}</label>
-                                        <select class="form-control select2" name="ios_notification_type" data-selected="{{ get_option('ios_notification_type', 'fcm') }}" required>
-                                            {{-- <option value="onesignal">{{ _lang('One Signal') }}</option> --}}
-                                            <option value="fcm">{{ _lang('FCM') }}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 ios_onesignal d-none">
-                                    <div class="form-group">
-                                        <label class="form-control-label">One Signal App ID</label>
-                                        <input type="text" name="ios_onesignal_app_id" class="form-control" value="{{ get_option('ios_onesignal_app_id', 'N/A') }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 ios_onesignal d-none">
-                                    <div class="form-group">
-                                        <label class="form-control-label">One Signal Api Key</label>
-                                        <input type="text" name="ios_onesignal_api_key" class="form-control" value="{{ get_option('ios_onesignal_api_key', 'N/A') }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 ios_fcm d-none">
-                                    <div class="form-group">
-                                        <label class="form-control-label">Firebase Server Key</label>
-                                        <input type="text" name="ios_firebase_server_key" class="form-control" value="{{ get_option('ios_firebase_server_key', 'N/A') }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 ios_fcm d-none">
-                                    <div class="form-group">
-                                        <label class="form-control-label">Firebase Topics</label>
-                                        <input type="text" name="ios_firebase_topics" class="form-control" value="{{ get_option('ios_firebase_topics', 'N/A') }}" disabled required>
-                                    </div>
-                                </div>
-                                <div class="col-md-12">
-                                    <div class="form-group text-right">
-                                        <button type="submit" class="btn btn-primary btn-sm">
-                                            {{ _lang('Update') }}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
+                       
                     </div>
                 </div>
             </div>

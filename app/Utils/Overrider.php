@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Utilities;
+namespace App\Utils;
 
 class Overrider
 {
@@ -18,10 +18,12 @@ class Overrider
         config(['app.timezone' => get_option('timezone')]);
 
         // Email
-        $email_protocol = get_option('mail_type');
+        $email_protocol = 'smtp';
         config(['mail.driver' => $email_protocol]);
-        config(['mail.from.name' => get_option('from_name')]);
-        config(['mail.from.address' => get_option('from_email')]);
+        config(['mail.from' => [
+            'address' => get_option('from_mail'),
+            'name' => get_option('from_name'),
+        ]]);
 
         if ($email_protocol == 'smtp') {
             config(['mail.host' => get_option('smtp_host')]);

@@ -52,6 +52,12 @@ class UserInformation extends Model
         'updated_at'
     ];
 
+    protected $appends = [
+        'relation_goals_details',
+        'interests_details',
+        'languages_details',
+    ];
+
     // Relationships
     public function user()
     {

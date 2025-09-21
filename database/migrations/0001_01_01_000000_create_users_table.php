@@ -22,6 +22,10 @@ return new class extends Migration
             $table->string('provider')->default('email');
             $table->integer('subscription_id')->nullable();
             $table->string('expire_at')->nullable();
+            $table->string('coin_balance')->default('0');
+            $table->string('wallet_balance')->default('0.00');
+            $table->tinyInteger('is_fake')->default(0)->comment('1=Yes, 0=No');
+            $table->string('device_token')->nullable();
             $table->tinyInteger('status')->default(1)->comment('1=Active, 0=Inactive');
             $table->rememberToken();
             $table->timestamps();

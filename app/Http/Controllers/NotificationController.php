@@ -9,7 +9,6 @@ use DataTables;
 
 class NotificationController extends Controller
 {
-
     /**
      * Display a listing of the resource.
      *
@@ -88,7 +87,7 @@ class NotificationController extends Controller
         $notification->image_type = $request->image_type;
         $notification->image_url = $request->image_url;
         $notification->action_url = $request->action_url;
-        $notification->app = 'football_app';
+        // $notification->app = 'football_app';
 
         if($request->hasFile('image')){
             $file = $request->file('image');
