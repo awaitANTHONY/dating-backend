@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\v1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\FirebaseService;
-use Illuminate\Support\Facades\Auth;
 
 class ChatController extends Controller
 {
@@ -19,26 +18,37 @@ class ChatController extends Controller
     // 1. Start chat (private or group)
     public function startChat(Request $request)
     {
+        // Get current user (may be null in quick local tests); use a fallback
+        // placeholder id for unauthenticated calls during development.
         $user = $request->user();
+        $user_id = $user->id ?? 28;
+
         $receiverId = $request->input('receiver_id');
-        if (!$receiverId) {
+        if (! $receiverId) {
             return response()->json(['status' => false, 'message' => 'receiver_id is required.']);
         }
-        $groupId = $user->id < $receiverId ? $user->id . '_' . $receiverId : $receiverId . '_' . $user->id;
-        $groupRef = $this->firebase->getDatabase()->getReference('chat_groups/' . $groupId);
-        $group = $groupRef->getValue();
-        if (!$group) {
+
+        $groupId = $user_id < $receiverId
+            ? $user_id . '_' . $receiverId
+            : $receiverId . '_' . $user_id;
+
+        $group = $this->firebase->getChatGroup($groupId);
+
+        if (! $group) {
             $groupData = [
                 'members' => [
-                    $user->id => true,
+                    $user_id => true,
                     $receiverId => true,
                 ],
                 'type' => 'private',
                 'last_message' => '',
                 'last_timestamp' => null,
             ];
-            $groupRef->set($groupData);
+
+            // Persist via our FirebaseService helper
+            $this->firebase->setChatGroup($groupId, $groupData);
         }
+
         return response()->json(['status' => true, 'group_id' => $groupId]);
     }
 
@@ -72,12 +82,16 @@ class ChatController extends Controller
     public function chatList(Request $request)
     {
         $user = $request->user();
-        $groups = $this->firebase->getDatabase()->getReference('chat_groups')->getValue() ?? [];
+        $user = $request->user();
+        $userId = $user->id ?? 28;
+
+        // Use the FirebaseService method that reads the inverted index
+        // `user_chat_groups/{userId}` so we don't need to fetch all groups.
+        $groups = $this->firebase->getChatGroupsForUser($userId);
+
         $userGroups = [];
         foreach ($groups as $groupId => $group) {
-            if (isset($group['members'][$user->id])) {
-                $userGroups[] = array_merge(['group_id' => $groupId], $group);
-            }
+            $userGroups[] = array_merge(['group_id' => $groupId], $group);
         }
         usort($userGroups, function($a, $b) {
             return ($b['last_timestamp'] ?? 0) <=> ($a['last_timestamp'] ?? 0);

@@ -108,7 +108,7 @@ class LanguageController extends Controller
 
         $language->save();
         
-        cache()->flush();
+        clearCacheByKey('languages');
 
         if(! $request->ajax()){
             return back()->with('success', _lang('Information has been added sucessfully.'));
@@ -186,8 +186,8 @@ class LanguageController extends Controller
         }
 
         $language->save();
-        
-        cache()->flush();
+
+        clearCacheByKey('languages');
 
         if(! $request->ajax()){
             return redirect('languages')->with('success', _lang('Information has been updated sucessfully.'));
@@ -206,9 +206,9 @@ class LanguageController extends Controller
     {
         $language = Language::find($id);
         $language->delete();
-        
-        cache()->flush();
-        
+
+        clearCacheByKey('languages');
+
         if(! $request->ajax()){
             return redirect('languages')->with('success', _lang('Information has been deleted sucessfully.'));
         }else{

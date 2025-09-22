@@ -177,7 +177,19 @@
                                 <div class="col-md-12">
                                     <div class="form-group">
                                         <label class="control-label">{{ _lang('Firebase Json') }} <span class="text-danger">(Service Account)</span></label>
-                                        <input type="file" class="form-control dropify" name="firebase_json" data-allowed-file-extensions="json" data-default-file="{{ asset('public/uploads/files/' . get_option('firebase_json')) }}" required>
+                                        <input type="file" class="form-control dropify" name="firebase_json" data-allowed-file-extensions="json" data-default-file="{{ public_path('uploads/files/' . get_option('firebase_json')) }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Firebase Project Id</label>
+                                        <input type="text" name="firebase_project_id" class="form-control" value="{{ get_option('firebase_project_id', 'N/A') }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label class="form-control-label">Firebase Database URL</label>
+                                        <input type="text" name="firebase_database_url" class="form-control" value="{{ get_option('firebase_database_url', 'N/A') }}" required>
                                     </div>
                                 </div>
                                 <div class="col-md-12">

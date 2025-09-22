@@ -109,7 +109,7 @@ class InterestController extends Controller
 
         $interest->save();
         
-        cache()->flush();
+        clearCacheByKey('interests');
 
         if(! $request->ajax()){
             return back()->with('success', _lang('Information has been added sucessfully.'));
@@ -188,8 +188,8 @@ class InterestController extends Controller
         }
 
         $interest->save();
-        
-        cache()->flush();
+
+        clearCacheByKey('interests');
 
         if(! $request->ajax()){
             return redirect('interests')->with('success', _lang('Information has been updated sucessfully.'));
@@ -208,9 +208,9 @@ class InterestController extends Controller
     {
         $interest = Interest::find($id);
         $interest->delete();
-        
-        cache()->flush();
-        
+
+        clearCacheByKey('interests');
+
         if(! $request->ajax()){
             return redirect('interests')->with('success', _lang('Information has been deleted sucessfully.'));
         }else{

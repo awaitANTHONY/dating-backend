@@ -14,14 +14,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        // Bind FirebaseService for dependency injection
-        $this->app->singleton(\App\Services\FirebaseService::class, function ($app) {
-            return new \App\Services\FirebaseService();
-        });
         // Bind ImageManager to the container
         $this->app->singleton('imagemanager', function ($app) {
             return new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
         });
+
+        // Firebase-specific bindings have been moved to
+        // App\Providers\FirebaseServiceProvider to keep this provider focused
+        // on application-wide services. PSR-7/PSR-17 bindings are registered
+        // there as well so Kreait and Guzzle dependencies can be resolved.
     }
 
     /**

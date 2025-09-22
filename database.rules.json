@@ -1,0 +1,47 @@
+{
+    "rules": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "users": {
+            "$uid": {
+                ".read": "auth != null && auth.uid == $uid",
+                ".write": "auth != null && auth.uid == $uid"
+            }
+        },
+        "chat_groups": {
+            ".indexOn": [
+                "members/28"
+            ],
+            "$groupId": {
+                ".read": "auth != null && data.child('members').hasChild(auth.uid)",
+                ".write": "auth != null && data.child('members').hasChild(auth.uid)",
+                "members": {
+                    ".validate": "newData.isObject()"
+                },
+                "last_message": {
+                    ".validate": "newData.isString()"
+                },
+                "last_timestamp": {
+                    ".validate": "newData.isNumber()"
+                }
+            }
+        },
+        "chat_messages": {
+            "$groupId": {
+                "$messageId": {
+                    ".read": "auth != null && root.child('chat_groups').child($groupId).child('members').hasChild(auth.uid)",
+                    ".write": "auth != null && root.child('chat_groups').child($groupId).child('members').hasChild(auth.uid)",
+                    "sender_id": {
+                        ".validate": "newData.isNumber()"
+                    },
+                    "message": {
+                        ".validate": "newData.isString() && newData.val().length > 0"
+                    },
+                    "timestamp": {
+                        ".validate": "newData.isNumber()"
+                    }
+                }
+            }
+        }
+    }
+}

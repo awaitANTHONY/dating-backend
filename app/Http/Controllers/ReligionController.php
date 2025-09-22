@@ -96,7 +96,7 @@ class ReligionController extends Controller
 
         $religion->save();
         
-        cache()->flush();
+        clearCacheByKey('religions');
 
         if(! $request->ajax()){
             return back()->with('success', _lang('Information has been added sucessfully.'));
@@ -165,8 +165,8 @@ class ReligionController extends Controller
         $religion->status = $request->status;
 
         $religion->save();
-        
-        cache()->flush();
+
+        clearCacheByKey('religions');
 
         if(! $request->ajax()){
             return redirect('religions')->with('success', _lang('Information has been updated sucessfully.'));
@@ -185,9 +185,9 @@ class ReligionController extends Controller
     {
         $religion = Religion::find($id);
         $religion->delete();
-        
-        cache()->flush();
-        
+
+        clearCacheByKey('religions');
+
         if(! $request->ajax()){
             return redirect('religions')->with('success', _lang('Information has been deleted sucessfully.'));
         }else{

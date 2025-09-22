@@ -590,6 +590,19 @@ if (!function_exists('get_country_list')) {
     }
 }
 
+if (! function_exists('clearCacheByKey')) {
+    /**
+     * Clear cache by key
+     *
+     * @param  string  $key
+     * @return bool
+     */
+    function clearCacheByKey(string $key): bool
+    {
+        return \Cache::forget($key);
+    }
+}
+
 if (!function_exists('get_country_codes')) {
     function get_country_codes($selected = '')
     {

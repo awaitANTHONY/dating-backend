@@ -78,7 +78,7 @@ class RelationGoalController extends Controller
         $relationGoal->status = $request->status;
         $relationGoal->save();
         
-        cache()->flush();
+        clearCacheByKey('relation_goals');
 
         if(! $request->ajax()){
             return back()->with('success', _lang('Information has been added sucessfully.'));
@@ -128,8 +128,8 @@ class RelationGoalController extends Controller
         $relationGoal->subtitle = $request->subtitle;
         $relationGoal->status = $request->status;
         $relationGoal->save();
-        
-        cache()->flush();
+
+        clearCacheByKey('relation_goals');
 
         if(! $request->ajax()){
             return redirect('relation_goals')->with('success', _lang('Information has been updated sucessfully.'));
@@ -142,9 +142,9 @@ class RelationGoalController extends Controller
     {
         $relationGoal = RelationGoal::find($id);
         $relationGoal->delete();
-        
-        cache()->flush();
-        
+
+        clearCacheByKey('relation_goals');
+
         if(! $request->ajax()){
             return redirect('relation_goals')->with('success', _lang('Information has been deleted sucessfully.'));
         }else{
