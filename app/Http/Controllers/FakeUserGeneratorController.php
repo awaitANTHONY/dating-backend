@@ -85,7 +85,7 @@ class FakeUserGeneratorController extends Controller
             $userInformation->search_radius = $request->radius ?? 10.0;
             $userInformation->country_code = $request->country_code;
             $userInformation->phone = $request->phone_length ? str_pad(rand(0, pow(10, $request->phone_length)-1), $request->phone_length, '0', STR_PAD_LEFT) : null;
-            $userInformation->search_preference = json_encode([$request->preference]);
+            $userInformation->search_preference = $request->preference;
             $userInformation->relation_goals = json_encode([$relation_goals ? $relation_goals[array_rand($relation_goals)] : null]);
             $userInformation->interests = json_encode(array_slice($interests, 0, $request->interest_count));
             $userInformation->languages = json_encode(array_slice($languages, 0, $request->language_count));

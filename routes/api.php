@@ -46,8 +46,9 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('user_update', [Controllers\Api\v1\AuthController::class, 'user_update']);
         Route::post('upload_profile', [Controllers\Api\v1\AuthController::class, 'upload_profile']);
         Route::post('change_password', [Controllers\Api\v1\AuthController::class, 'change_password']);
-        
         Route::post('reset_password', [Controllers\Api\v1\AuthController::class, 'reset_password']);
+
+        Route::any('profiles/recommendations', [Controllers\Api\v1\ProfileController::class, 'recommendations']);
         
         Route::post('favorite', [Controllers\Api\v1\ApiController::class, 'favorite']);
         Route::post('favorites', [Controllers\Api\v1\ApiController::class, 'favorites']);

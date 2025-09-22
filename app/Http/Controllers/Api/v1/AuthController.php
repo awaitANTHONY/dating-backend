@@ -264,11 +264,11 @@ class AuthController extends Controller
         \DB::commit();
         $user = $request->user();
 
-        $data->user_information = $data->user_information;
-        $data->user_information->religion = $data->user_information ? $data->user_information->religion : null;
-        $data->is_profile_completed = $data->user_information ? true : false;
+        $user->user_information = $user->user_information;
+        $user->user_information->religion = $user->user_information ? $user->user_information->religion : null;
+        $user->is_profile_completed = $user->user_information ? true : false;
 
-        return response()->json(['status' => true, 'user' => $data, 'message' => _lang('Information has been added sucessfully.')]);
+        return response()->json(['status' => true, 'user' => $user, 'message' => _lang('Information has been added sucessfully.')]);
     }
 
     public function user(Request $request)

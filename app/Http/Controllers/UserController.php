@@ -171,7 +171,7 @@ class UserController extends Controller
         $userInformation->search_radius = $request->search_radius ?? 1.0;
         $userInformation->country_code = $request->country_code;
         $userInformation->phone = $request->phone;
-        $userInformation->search_preference = json_encode(is_array($request->search_preference) ? $request->search_preference : (empty($request->search_preference) ? [] : explode(',', $request->search_preference)));
+        $userInformation->search_preference = $request->search_preference;
         $userInformation->relation_goals = json_encode(is_array($request->relation_goals) ? $request->relation_goals : (empty($request->relation_goals) ? [] : explode(',', $request->relation_goals)));
         $userInformation->interests = json_encode(is_array($request->interests) ? $request->interests : (empty($request->interests) ? [] : explode(',', $request->interests)));
         $userInformation->languages = json_encode(is_array($request->languages) ? $request->languages : (empty($request->languages) ? [] : explode(',', $request->languages)));

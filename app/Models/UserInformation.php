@@ -38,12 +38,12 @@ class UserInformation extends Model
 
     protected $casts = [
         'date_of_birth' => 'date',
-        'search_preference' => 'array',
+        'search_preference' => 'string',
         'relation_goals' => 'array',
         'interests' => 'array',
         'languages' => 'array',
-        'latitude' => 'decimal:8',
-        'longitude' => 'decimal:8',
+        'latitude' => 'string',
+        'longitude' => 'string',
         'wallet_balance' => 'decimal:2'
     ];
 
@@ -129,20 +129,5 @@ class UserInformation extends Model
     public function religion()
     {
         return $this->hasOne('App\Models\Religion', 'id', 'religion_id')->withDefault();
-    }
-
-    // Scope for filtering by search preference
-    public function scopeBySearchPreference($query, $preference)
-    {
-        return $query->whereJsonContains('search_preference', $preference);
-    }
-
-    // Scope for filtering by age range
-    public function scopeByAgeRange($query, $minAge, $maxAge)
-    {
-        $minDate = now()->subYears($maxAge)->format('Y-m-d');
-        $maxDate = now()->subYears($minAge)->format('Y-m-d');
-        
-        return $query->whereBetween('date_of_birth', [$minDate, $maxDate]);
     }
 }
