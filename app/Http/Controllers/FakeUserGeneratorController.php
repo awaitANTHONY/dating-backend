@@ -8,12 +8,17 @@ use App\Models\Interest;
 use App\Models\Language;
 use App\Models\Religion;
 use App\Models\RelationGoal;
+use App\Models\RelationshipStatus;
+use App\Models\Ethnicity;
+use App\Models\Education;
+use App\Models\CareerField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Faker\Factory as Faker;
 
 class FakeUserGeneratorController extends Controller
 {
+    
     public function index(Request $request)
     {
         return view('backend.users.fake_user_generator');
@@ -39,6 +44,10 @@ class FakeUserGeneratorController extends Controller
         $languages = Language::pluck('id')->toArray();
         $religion = Religion::pluck('id')->toArray();
         $relation_goals = RelationGoal::pluck('id')->toArray();
+        $relationship_status = RelationshipStatus::pluck('id')->toArray();
+        $ethnicities = Ethnicity::pluck('id')->toArray();
+        $educations = Education::pluck('id')->toArray();
+        $career_fields = CareerField::pluck('id')->toArray();
         $created = 0;
 
         
@@ -80,8 +89,18 @@ class FakeUserGeneratorController extends Controller
             $userInformation->gender = $request->gender;
             $userInformation->date_of_birth = now()->subYears(rand(18, 40))->format('Y-m-d');
             $userInformation->religion_id = $religion ? $religion[array_rand($religion)] : null;
-            $userInformation->latitude = $faker->latitude(20.6, 26.6);
-            $userInformation->longitude = $faker->longitude(88.0, 92.7);
+            
+            // Set latitude and longitude based on country code
+            if ($request->country_code) {
+                $coordinates = getCountryCoordinates($request->country_code);
+                $userInformation->latitude = $coordinates['lat'];
+                $userInformation->longitude = $coordinates['lng'];
+            } else {
+                // Default coordinates if no country code provided
+                $userInformation->latitude = $faker->latitude(20.6, 26.6);
+                $userInformation->longitude = $faker->longitude(88.0, 92.7);
+            }
+            
             $userInformation->search_radius = $request->radius ?? 10.0;
             $userInformation->country_code = $request->country_code;
             $userInformation->phone = $request->phone_length ? str_pad(rand(0, pow(10, $request->phone_length)-1), $request->phone_length, '0', STR_PAD_LEFT) : null;
@@ -89,7 +108,14 @@ class FakeUserGeneratorController extends Controller
             $userInformation->relation_goals = json_encode([$relation_goals ? $relation_goals[array_rand($relation_goals)] : null]);
             $userInformation->interests = json_encode(array_slice($interests, 0, $request->interest_count));
             $userInformation->languages = json_encode(array_slice($languages, 0, $request->language_count));
-            $userInformation->wallet_balance = 0.00;
+            $userInformation->is_zodiac_sign_matter = (bool)rand(0,1);
+            $userInformation->is_food_preference_matter = (bool)rand(0,1);
+            $userInformation->age = \Illuminate\Support\Carbon::parse($userInformation->date_of_birth)->diffInYears(now());
+            $userInformation->relationship_status_id = $relationship_status ? $relationship_status[array_rand($relationship_status)] : null;
+            $userInformation->ethnicity_id = $ethnicities ? $ethnicities[array_rand($ethnicities)] : null;
+            $userInformation->alkohol = $faker->randomElement(['dont_drink', 'drink_frequently', 'drink_socially', 'prefer_not_to_say']);
+            $userInformation->smoke = $faker->randomElement(['dont_smoke', 'smoke_regularly', 'smoke_occasionally', 'prefer_not_to_say']);
+            $userInformation->education_id = $educations ? $educations[array_rand($educations)] : null; 
             $userInformation->images = json_encode([]);
             $userInformation->save();
             $created++;
@@ -99,4 +125,6 @@ class FakeUserGeneratorController extends Controller
         \DB::commit();
         return back()->with('success', $created . ' fake users generated successfully.');
     }
+
+    
 }

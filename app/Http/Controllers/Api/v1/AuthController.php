@@ -179,9 +179,12 @@ class AuthController extends Controller
 
         $user->save();
 
-        $data->user_information = $data->user_information;
-        $data->user_information->religion = $data->user_information ? $data->user_information->religion : null;
-        $data->is_profile_completed = $data->user_information ? true : false;
+        $user->is_profile_completed = $user->user_information ? true : false;
+
+        if($user->is_profile_completed) {
+            $user->user_information = $user->user_information;
+            $user->user_information->religion = $user->user_information ? $user->user_information->religion : null;
+        }
 
         $tokenResult = $user->createToken($request->device_token)->plainTextToken;
         return response()->json([
@@ -197,20 +200,30 @@ class AuthController extends Controller
             'name' => 'nullable|string|max:191',
             'bio' => 'nullable|string|max:1000',
             'gender' => 'required|in:male,female,other',
-            'date_of_birth' => 'required|date|before:today',
             'religion_id' => 'nullable|exists:religions,id',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
             'search_preference' => 'required',
-            'relation_goals' => 'nullable|string',
-            'interests' => 'nullable|string',
-            'languages' => 'nullable|string',
+            'relation_goals' => 'nullable|array',
+            'interests' => 'nullable|array',
+            'languages' => 'nullable|array',
             'wallet_balance' => 'nullable|numeric|min:0',
             'image' => 'nullable|image',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image',
             'country_code' => 'nullable|string|max:10',
             'phone' => 'nullable|string|max:20',
+            'is_zodiac_sign_matter' => 'nullable|boolean',
+            'is_food_preference_matter' => 'nullable|boolean',
+            'age' => 'nullable|integer|min:18|max:100',
+            'relationship_status_id' => 'nullable|exists:relationship_statuses,id',
+            'ethnicity_id' => 'nullable|exists:ethnicities,id',
+            'alkohol' => 'nullable|in:dont_drink,drink_frequently,drink_socially,prefer_not_to_say',
+            'smoke' => 'nullable|in:dont_smoke,smoke_regularly,smoke_occasionally,prefer_not_to_say',
+            'education_id' => 'nullable|exists:educations,id',
+            'preffered_age' => 'nullable|string|max:50',
+            'height' => 'nullable|integer|min:100|max:300',
+            'carrer_field_id' => 'nullable|exists:career_fields,id',
         ]);
 
         if ($validator->fails()) {
@@ -257,16 +270,31 @@ class AuthController extends Controller
         $userInformation->relation_goals = $request->relation_goals;
         $userInformation->interests = $request->interests;
         $userInformation->languages = $request->languages;
-        $userInformation->wallet_balance = $request->wallet_balance ?? 0.00;
         $userInformation->images = json_encode($otherImages);
+        $userInformation->is_zodiac_sign_matter = $request->is_zodiac_sign_matter ?? false;
+        $userInformation->is_food_preference_matter = $request->is_food_preference_matter ?? false;
+        $userInformation->age = $request->age;
+        $userInformation->relationship_status_id = $request->relationship_status_id;
+        $userInformation->ethnicity_id = $request->ethnicity_id;
+        $userInformation->alkohol = $request->alkohol;
+        $userInformation->smoke = $request->smoke;
+        $userInformation->education_id = $request->education_id;
+        $userInformation->preffered_age = $request->preffered_age;
+        $userInformation->height = $request->height;
+        $userInformation->carrer_field_id = $request->carrer_field_id;
         $userInformation->save();
 
         \DB::commit();
         $user = $request->user();
+        // $user->load('user_information');
 
-        $user->user_information = $user->user_information;
-        $user->user_information->religion = $user->user_information ? $user->user_information->religion : null;
-        $user->is_profile_completed = $user->user_information ? true : false;
+        // $user->user_information = $user->user_information;
+        // $user->user_information->religion = $user->user_information ? $user->user_information->religion : null;
+        // $user->user_information->relationship_status = $user->user_information ? $user->user_information->relationshipStatus : null;
+        // $user->user_information->ethnicity = $user->user_information ? $user->user_information->ethnicity : null;
+        // $user->user_information->education = $user->user_information ? $user->user_information->education : null;
+        // $user->user_information->career_field = $user->user_information ? $user->user_information->careerField : null;
+        // $user->is_profile_completed = $user->user_information ? true : false;
 
         return response()->json(['status' => true, 'user' => $user, 'message' => _lang('Information has been added sucessfully.')]);
     }
@@ -274,8 +302,7 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         $data = $request->user();
-        $data->user_information = $data->user_information;
-        $data->user_information->religion = $data->user_information ? $data->user_information->religion : null;
+        
         $data->is_profile_completed = $data->user_information ? true : false;
         
         return response()->json([

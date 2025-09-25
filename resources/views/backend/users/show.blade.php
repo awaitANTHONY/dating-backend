@@ -54,10 +54,23 @@
                         <p><b>Profile Bio:</b><br> {!! nl2br(e(optional($user->user_information)->bio)) !!}</p>
                         <p><b>Search Preference:</b> {{ is_array(optional($user->user_information)->search_preference) ? implode(', ', optional($user->user_information)->search_preference) : (optional($user->user_information)->search_preference ?? '-') }}</p>
                         <p><b>Gender:</b> {{ strtoupper(optional($user->user_information)->gender) }}</p>
+                        <p><b>Age:</b> {{ optional($user->user_information)->age ?? '-' }}</p>
+                        <p><b>Height:</b> {{ optional($user->user_information)->height ? optional($user->user_information)->height . ' cm' : '-' }}</p>
+                        <p><b>Preferred Age Range:</b> {{ optional($user->user_information)->preffered_age ?? '-' }}</p>
                         <p><b>Radius Search:</b> {{ optional($user->user_information)->search_radius ?? '-' }}KM</p>
                     </div>
                     <div class="col-md-6">
                         <p><b>Birth Date:</b> {{ optional($user->user_information)->date_of_birth }}</p>
+                        <p><b>Religion:</b> {{ optional($user->user_information)->religion->title ?? '-' }}</p>
+                        <p><b>Relationship Status:</b> {{ optional($user->user_information)->relationshipStatus->title ?? '-' }}</p>
+                        <p><b>Ethnicity:</b> {{ optional($user->user_information)->ethnicity->title ?? '-' }}</p>
+                        <p><b>Education:</b> {{ optional($user->user_information)->education->title ?? '-' }}</p>
+                        <p><b>Career Field:</b> {{ optional($user->user_information)->careerField->title ?? '-' }}</p>
+                        <p><b>Alcohol:</b> {{ optional($user->user_information)->alkohol ? ucwords(str_replace('_', ' ', optional($user->user_information)->alkohol)) : '-' }}</p>
+                        <p><b>Smoking:</b> {{ optional($user->user_information)->smoke ? ucwords(str_replace('_', ' ', optional($user->user_information)->smoke)) : '-' }}</p>
+                        <p><b>Zodiac Sign Matters:</b> {{ optional($user->user_information)->is_zodiac_sign_matter ? 'Yes' : 'No' }}</p>
+                        <p><b>Food Preference Matters:</b> {{ optional($user->user_information)->is_food_preference_matter ? 'Yes' : 'No' }}</p>
+                        <p><b>Wallet Balance:</b> {{ $user->wallet_balance }}$</p>
                         <p><b>Relation Goal:</b><br>
                             @php
                                 $goals = optional($user->user_information)->relation_goals_details;
@@ -65,7 +78,6 @@
                             @if(is_iterable($goals) && count($goals))
                                 @foreach($goals as $goal)
                                     <span class="d-inline-block text-center mx-2">
-                                        
                                         {{ $goal->title }}
                                     </span>
                                 @endforeach
@@ -73,8 +85,6 @@
                                 -
                             @endif
                         </p>
-                        <p><b>Religion:</b> {{ optional($user->user_information)->religion->title }}</p>
-                        <p><b>Wallet Balance:</b> {{ $user->wallet_balance }}$</p>
                     </div>
                 </div>
             </div>

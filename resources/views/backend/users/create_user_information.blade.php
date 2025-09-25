@@ -23,11 +23,11 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Gender') }} <span class="text-danger">*</span></label>
-                                <select class="form-control select2" name="gender" required>
+                                <select class="form-control select2" name="gender" data-selected="{{ old('gender') }}" required>
                                     <option value="">{{ _lang('Select Gender') }}</option>
-                                    <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>{{ _lang('Male') }}</option>
-                                    <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>{{ _lang('Female') }}</option>
-                                    <option value="other" {{ old('gender') == 'other' ? 'selected' : '' }}>{{ _lang('Other') }}</option>
+                                    <option value="male">{{ _lang('Male') }}</option>
+                                    <option value="female">{{ _lang('Female') }}</option>
+                                  
                                 </select>
                             </div>
                         </div>
@@ -46,6 +46,117 @@
                                     <option value="">{{ _lang('Select Religion') }}</option>
                                     {!! create_option('religions', 'id', 'name', old('religion_id')) !!}
                                 </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Age') }}</label>
+                                <input type="number" min="18" max="100" class="form-control" name="age" value="{{ old('age') }}" placeholder="18">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Relationship Status') }}</label>
+                                <select class="form-control select2" name="relationship_status_id">
+                                    <option value="">{{ _lang('Select Relationship Status') }}</option>
+                                    {!! create_option('relationship_statuses', 'id', 'title', old('relationship_status_id')) !!}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Ethnicity') }}</label>
+                                <select class="form-control select2" name="ethnicity_id">
+                                    <option value="">{{ _lang('Select Ethnicity') }}</option>
+                                    {!! create_option('ethnicities', 'id', 'title', old('ethnicity_id')) !!}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Education') }}</label>
+                                <select class="form-control select2" name="education_id">
+                                    <option value="">{{ _lang('Select Education') }}</option>
+                                    {!! create_option('educations', 'id', 'title', old('education_id')) !!}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Career Field') }}</label>
+                                <select class="form-control select2" name="carrer_field_id">
+                                    <option value="">{{ _lang('Select Career Field') }}</option>
+                                    {!! create_option('career_fields', 'id', 'title', old('carrer_field_id')) !!}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Alcohol') }}</label>
+                                <select class="form-control select2" name="alkohol" data-selected="{{ old('alkohol') }}">
+                                    <option value="">{{ _lang('Select Alcohol Preference') }}</option>
+                                    <option value="dont_drink">{{ _lang('Don\'t Drink') }}</option>
+                                    <option value="drink_socially">{{ _lang('Drink Socially') }}</option>
+                                    <option value="drink_frequently">{{ _lang('Drink Frequently') }}</option>
+                                    <option value="prefer_not_to_say">{{ _lang('Prefer Not to Say') }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Smoking') }}</label>
+                                <select class="form-control select2" name="smoke" data-selected="{{ old('smoke') }}">
+                                    <option value="">{{ _lang('Select Smoking Preference') }}</option>
+                                    <option value="dont_smoke">{{ _lang('Don\'t Smoke') }}</option>
+                                    <option value="smoke_occasionally">{{ _lang('Smoke Occasionally') }}</option>
+                                    <option value="smoke_regularly">{{ _lang('Smoke Regularly') }}</option>
+                                    <option value="prefer_not_to_say">{{ _lang('Prefer Not to Say') }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Height (cm)') }}</label>
+                                <input type="number" min="100" max="300" class="form-control" name="height" value="{{ old('height') }}" placeholder="170">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="control-label">{{ _lang('Preferred Age Range') }}</label>
+                                <input type="text" class="form-control" name="preffered_age" value="{{ old('preffered_age') }}" placeholder="25-35">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="hidden" name="is_zodiac_sign_matter" value="0">
+                                    <input class="form-check-input" type="checkbox" name="is_zodiac_sign_matter" value="1" id="zodiac_sign_matter" {{ old('is_zodiac_sign_matter') ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="zodiac_sign_matter">
+                                        {{ _lang('Zodiac Sign Compatibility Matters') }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="hidden" name="is_food_preference_matter" value="0">
+                                    <input class="form-check-input" type="checkbox" name="is_food_preference_matter" value="1" id="food_preference_matter" {{ old('is_food_preference_matter') ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="food_preference_matter">
+                                        {{ _lang('Food Preference Compatibility Matters') }}
+                                    </label>
+                                </div>
                             </div>
                         </div>
 

@@ -34,6 +34,18 @@ class UserInformation extends Model
         'search_radius',
         'country_code',
         'phone',
+        'images',
+        'is_zodiac_sign_matter',
+        'is_food_preference_matter',
+        'age',
+        'relationship_status_id',
+        'ethnicity_id',
+        'alkohol',
+        'smoke',
+        'education_id',
+        'preffered_age',
+        'tall',
+        'carrer_field_id',
     ];
 
     protected $casts = [
@@ -56,6 +68,10 @@ class UserInformation extends Model
         'relation_goals_details',
         'interests_details',
         'languages_details',
+        'relationship_status_details',
+        'ethnicity_details',
+        'education_details',
+        'career_field_details',
     ];
 
     // Relationships
@@ -121,6 +137,30 @@ class UserInformation extends Model
         return Language::whereIn('id', $ids)->get();
     }
 
+    // Get relationship status details
+    public function getRelationshipStatusDetailsAttribute()
+    {
+        return $this->relationshipStatus;
+    }
+
+    // Get ethnicity details
+    public function getEthnicityDetailsAttribute()
+    {
+        return $this->ethnicity;
+    }
+
+    // Get education details
+    public function getEducationDetailsAttribute()
+    {
+        return $this->education;
+    }
+
+    // Get career field details
+    public function getCareerFieldDetailsAttribute()
+    {
+        return $this->careerField;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -129,5 +169,25 @@ class UserInformation extends Model
     public function religion()
     {
         return $this->hasOne('App\Models\Religion', 'id', 'religion_id')->withDefault();
+    }
+
+    public function relationshipStatus()
+    {
+        return $this->hasOne('App\Models\RelationshipStatus', 'id', 'relationship_status_id')->withDefault();
+    }
+
+    public function ethnicity()
+    {
+        return $this->hasOne('App\Models\Ethnicity', 'id', 'ethnicity_id')->withDefault();
+    }
+
+    public function education()
+    {
+        return $this->hasOne('App\Models\Education', 'id', 'education_id')->withDefault();
+    }
+
+    public function careerField()
+    {
+        return $this->hasOne('App\Models\CareerField', 'id', 'carrer_field_id')->withDefault();
     }
 }

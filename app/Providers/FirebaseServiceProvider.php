@@ -21,7 +21,7 @@ class FirebaseServiceProvider extends ServiceProvider
     public function register()
     {
         // Bind Guzzle ClientInterface with a handler that appends .json to
-        if (! $this->app->bound(GuzzleClientInterface::class)) {
+        if (! $this->app->bound(GuzzleClientInterface::class) && env('APP_INSTALLED', false) == true) {
             $this->app->singleton(GuzzleClientInterface::class, function () {
                 $stack = \GuzzleHttp\HandlerStack::create();
 
@@ -57,7 +57,7 @@ class FirebaseServiceProvider extends ServiceProvider
         }
 
         // Bind Kreait UrlBuilder using configured database URL.
-        if (! $this->app->bound(KreaitUrlBuilder::class)) {
+        if (! $this->app->bound(KreaitUrlBuilder::class) && env('APP_INSTALLED', false) == true) {
             $this->app->bind(KreaitUrlBuilder::class, function () {
                 $databaseUrl = get_option('firebase_database_url');
                 if (empty($databaseUrl)) {
@@ -85,7 +85,7 @@ class FirebaseServiceProvider extends ServiceProvider
         // Ensure a Kreait Database instance is bound using the discovered
         // credentials (path or decoded array). This avoids permission issues
         // when the package's provider resolved credentials earlier.
-        if (! $this->app->bound(KreaitDatabase::class)) {
+        if (! $this->app->bound(KreaitDatabase::class) && env('APP_INSTALLED', false) == true) {
             $this->app->singleton(KreaitDatabase::class, function () {
 
                 $factory = new KreaitFactory();
@@ -120,13 +120,19 @@ class FirebaseServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $firebaseCredentials = 'public/uploads/files/' . get_option('firebase_json');
-        if ($firebaseCredentials && file_exists($firebaseCredentials) && is_readable($firebaseCredentials)) {
-            $content = @file_get_contents($firebaseCredentials);
-            $decoded = @json_decode($content, true);
-            if (is_array($decoded)) {
-                // Overwrite the runtime config value so Kreait receives the array
-                config(['firebase.projects.app.credentials' => $decoded]);
+        if(env('APP_INSTALLED', false) == true){
+            // If the credentials are stored as a JSON file path, decode it and
+            // override the runtime config value so Kreait receives the array.
+            // This avoids permission issues when the package's provider runs
+            // earlier than our provider.
+           $firebaseCredentials = 'public/uploads/files/' . get_option('firebase_json');
+            if ($firebaseCredentials && file_exists($firebaseCredentials) && is_readable($firebaseCredentials)) {
+                $content = @file_get_contents($firebaseCredentials);
+                $decoded = @json_decode($content, true);
+                if (is_array($decoded)) {
+                    // Overwrite the runtime config value so Kreait receives the array
+                    config(['firebase.projects.app.credentials' => $decoded]);
+                }
             }
         }
     }

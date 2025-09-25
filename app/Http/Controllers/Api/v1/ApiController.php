@@ -10,6 +10,10 @@ use App\Models\Interest;
 use App\Models\Language;
 use App\Models\RelationGoal;
 use App\Models\Religion;
+use App\Models\RelationshipStatus;
+use App\Models\Ethnicity;
+use App\Models\Education;
+use App\Models\CareerField;
 
 use Illuminate\Http\Request;
 use Cache;
@@ -135,7 +139,59 @@ class ApiController extends Controller
         return response()->json(['status' => true, 'data' => $religions]);
     }
 
-    public function pre_signup(Request $request)
+    public function relationship_statuses(Request $request)
+    {
+        $relationship_statuses = Cache::rememberForever("relationship_statuses", function (){
+            $relationship_statuses = RelationshipStatus::where('status', 1)
+                                    ->orderBy('id', 'DESC')
+                                    ->get();
+
+            return $relationship_statuses;
+        });
+
+        return response()->json(['status' => true, 'data' => $relationship_statuses]);
+    }
+
+    public function ethnicities(Request $request)
+    {
+        $ethnicities = Cache::rememberForever("ethnicities", function (){
+            $ethnicities = Ethnicity::where('status', 1)
+                                    ->orderBy('id', 'DESC')
+                                    ->get();
+
+            return $ethnicities;
+        });
+
+        return response()->json(['status' => true, 'data' => $ethnicities]);
+    }
+
+    public function educations(Request $request)
+    {
+        $educations = Cache::rememberForever("educations", function (){
+            $educations = Education::where('status', 1)
+                                    ->orderBy('id', 'DESC')
+                                    ->get();
+
+            return $educations;
+        });
+
+        return response()->json(['status' => true, 'data' => $educations]);
+    }
+
+    public function career_fields(Request $request)
+    {
+        $career_fields = Cache::rememberForever("career_fields", function (){
+            $career_fields = CareerField::where('status', 1)
+                                    ->orderBy('id', 'DESC')
+                                    ->get();
+
+            return $career_fields;
+        });
+
+        return response()->json(['status' => true, 'data' => $career_fields]);
+    }
+
+    public function onboarding(Request $request)
     {
         $data = [
             'status' => true,
@@ -143,7 +199,11 @@ class ApiController extends Controller
             'interests' => $this->interests($request)->getData()->data,
             'languages' => $this->languages($request)->getData()->data,
             'relation_goals' => $this->relation_goals($request)->getData()->data,
-            'religions' => $this->religions($request)->getData()->data
+            'religions' => $this->religions($request)->getData()->data,
+            'relationship_statuses' => $this->relationship_statuses($request)->getData()->data,
+            'ethnicities' => $this->ethnicities($request)->getData()->data,
+            'educations' => $this->educations($request)->getData()->data,
+            'career_fields' => $this->career_fields($request)->getData()->data
         ];
         return response()->json(['status' => true, 'data' => $data]);
     }

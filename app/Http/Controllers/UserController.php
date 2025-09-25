@@ -114,10 +114,20 @@ class UserController extends Controller
             'interests.*' => 'exists:interests,id',
             'languages' => 'nullable|array',
             'languages.*' => 'exists:languages,id',
-            'wallet_balance' => 'nullable|numeric|min:0',
             'image' => 'nullable|image',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image',
+            'is_zodiac_sign_matter' => 'nullable|boolean',
+            'is_food_preference_matter' => 'nullable|boolean',
+            'age' => 'nullable|integer|min:18|max:100',
+            'relationship_status_id' => 'nullable|exists:relationship_statuses,id',
+            'ethnicity_id' => 'nullable|exists:ethnicities,id',
+            'alkohol' => 'nullable|in:dont_drink,drink_frequently,drink_socially,prefer_not_to_say',
+            'smoke' => 'nullable|in:dont_smoke,smoke_regularly,smoke_occasionally,prefer_not_to_say',
+            'education_id' => 'nullable|exists:educations,id',
+            'preffered_age' => 'nullable|string',
+            'height' => 'nullable|integer|min:100|max:300',
+            'carrer_field_id' => 'nullable|exists:career_fields,id',
         ]);
 
         if ($validator->fails()) {
@@ -175,8 +185,18 @@ class UserController extends Controller
         $userInformation->relation_goals = json_encode(is_array($request->relation_goals) ? $request->relation_goals : (empty($request->relation_goals) ? [] : explode(',', $request->relation_goals)));
         $userInformation->interests = json_encode(is_array($request->interests) ? $request->interests : (empty($request->interests) ? [] : explode(',', $request->interests)));
         $userInformation->languages = json_encode(is_array($request->languages) ? $request->languages : (empty($request->languages) ? [] : explode(',', $request->languages)));
-        $userInformation->wallet_balance = $request->wallet_balance ?? 0.00;
         $userInformation->images = json_encode($otherImages);
+        $userInformation->is_zodiac_sign_matter = $request->is_zodiac_sign_matter ?? false;
+        $userInformation->is_food_preference_matter = $request->is_food_preference_matter ?? false;
+        $userInformation->age = $request->age;
+        $userInformation->relationship_status_id = $request->relationship_status_id;
+        $userInformation->ethnicity_id = $request->ethnicity_id;
+        $userInformation->alkohol = $request->alkohol;
+        $userInformation->smoke = $request->smoke;
+        $userInformation->education_id = $request->education_id;
+        $userInformation->preffered_age = $request->preffered_age;
+        $userInformation->height = $request->height;
+        $userInformation->carrer_field_id = $request->carrer_field_id;
         $userInformation->save();
 
         \DB::commit();
@@ -251,10 +271,20 @@ class UserController extends Controller
             'interests.*' => 'exists:interests,id',
             'languages' => 'nullable|array',
             'languages.*' => 'exists:languages,id',
-            'wallet_balance' => 'nullable|numeric|min:0',
             'image' => 'nullable|image',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image',
+            'is_zodiac_sign_matter' => 'nullable|boolean',
+            'is_food_preference_matter' => 'nullable|boolean',
+            'age' => 'nullable|integer|min:18|max:100',
+            'relationship_status_id' => 'nullable|exists:relationship_statuses,id',
+            'ethnicity_id' => 'nullable|exists:ethnicities,id',
+            'alkohol' => 'nullable|in:dont_drink,drink_frequently,drink_socially,prefer_not_to_say',
+            'smoke' => 'nullable|in:dont_smoke,smoke_regularly,smoke_occasionally,prefer_not_to_say',
+            'education_id' => 'nullable|exists:educations,id',
+            'preffered_age' => 'nullable|string',
+            'height' => 'nullable|integer|min:100|max:300',
+            'carrer_field_id' => 'nullable|exists:career_fields,id',
         ]);
 
         if ($validator->fails()) {
@@ -309,10 +339,20 @@ class UserController extends Controller
             $userInformation->relation_goals = json_encode(is_array($request->relation_goals) ? $request->relation_goals : (empty($request->relation_goals) ? [] : explode(',', $request->relation_goals)));
             $userInformation->interests = json_encode(is_array($request->interests) ? $request->interests : (empty($request->interests) ? [] : explode(',', $request->interests)));
             $userInformation->languages = json_encode(is_array($request->languages) ? $request->languages : (empty($request->languages) ? [] : explode(',', $request->languages)));
-            $userInformation->wallet_balance = $request->wallet_balance ?? 0.00;
             if (!empty($otherImages)) {
                 $userInformation->images = json_encode($otherImages);
             }
+            $userInformation->is_zodiac_sign_matter = $request->is_zodiac_sign_matter ?? false;
+            $userInformation->is_food_preference_matter = $request->is_food_preference_matter ?? false;
+            $userInformation->age = $request->age;
+            $userInformation->relationship_status_id = $request->relationship_status_id;
+            $userInformation->ethnicity_id = $request->ethnicity_id;
+            $userInformation->alkohol = $request->alkohol;
+            $userInformation->smoke = $request->smoke;
+            $userInformation->education_id = $request->education_id;
+            $userInformation->preffered_age = $request->preffered_age;
+            $userInformation->height = $request->height;
+            $userInformation->carrer_field_id = $request->carrer_field_id;
             $userInformation->save();
 
             \DB::commit();

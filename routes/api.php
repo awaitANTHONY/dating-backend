@@ -24,7 +24,11 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
     Route::post('relation_goals', [Controllers\Api\v1\ApiController::class, 'relation_goals']);
     Route::post('religions', [Controllers\Api\v1\ApiController::class, 'religions']);
     Route::post('languages', [Controllers\Api\v1\ApiController::class, 'languages']);
-    Route::post('pre_signup', [Controllers\Api\v1\ApiController::class, 'pre_signup']);
+    Route::post('relationship_statuses', [Controllers\Api\v1\ApiController::class, 'relationship_statuses']);
+    Route::post('ethnicities', [Controllers\Api\v1\ApiController::class, 'ethnicities']);
+    Route::post('educations', [Controllers\Api\v1\ApiController::class, 'educations']);
+    Route::post('career_fields', [Controllers\Api\v1\ApiController::class, 'career_fields']);
+    Route::post('onboarding', [Controllers\Api\v1\ApiController::class, 'onboarding']);
     //Auth Controller
     Route::post('signup', [Controllers\Api\v1\AuthController::class, 'signup']);
     Route::post('signin', [Controllers\Api\v1\AuthController::class, 'signin']);
@@ -49,6 +53,8 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('reset_password', [Controllers\Api\v1\AuthController::class, 'reset_password']);
 
         Route::any('profiles/recommendations', [Controllers\Api\v1\ProfileController::class, 'recommendations']);
+        Route::post('profiles/search', [Controllers\Api\v1\ProfileController::class, 'search']);
+        Route::post('profiles/compatibility', [Controllers\Api\v1\ProfileController::class, 'profile_compatibility']);
         
         Route::post('favorite', [Controllers\Api\v1\ApiController::class, 'favorite']);
         Route::post('favorites', [Controllers\Api\v1\ApiController::class, 'favorites']);

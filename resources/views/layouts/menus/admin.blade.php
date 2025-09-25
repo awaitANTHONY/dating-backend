@@ -34,6 +34,35 @@
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Relation Goals') }}</span>
 	</a>
 </li>
+
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('relationship-statuses') }}">
+		<i class="fa fa-heart u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Relationship Status') }}</span>
+	</a>
+</li>
+
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('ethnicities') }}">
+		<i class="fa fa-globe u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Ethnicities') }}</span>
+	</a>
+</li>
+
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('educations') }}">
+		<i class="fa fa-graduation-cap u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Educations') }}</span>
+	</a>
+</li>
+
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('career-fields') }}">
+		<i class="fa fa-briefcase u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Career Fields') }}</span>
+	</a>
+</li>
+
 <li class="u-sidebar-nav-menu__item">
 	<a class="u-sidebar-nav-menu__link" href="{{ url('fake-user-generator') }}">
 		<i class="fa fa-robot u-sidebar-nav-menu__item-icon"></i>

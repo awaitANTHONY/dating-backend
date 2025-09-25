@@ -34,7 +34,6 @@
                     <option value="">Select One</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
-                    <option value="both">Both</option>
                 </select>
             </div>
             <div class="form-group">
