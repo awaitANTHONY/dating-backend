@@ -285,16 +285,9 @@ class AuthController extends Controller
         $userInformation->save();
 
         \DB::commit();
-        $user = $request->user();
-        // $user->load('user_information');
-
-        // $user->user_information = $user->user_information;
-        // $user->user_information->religion = $user->user_information ? $user->user_information->religion : null;
-        // $user->user_information->relationship_status = $user->user_information ? $user->user_information->relationshipStatus : null;
-        // $user->user_information->ethnicity = $user->user_information ? $user->user_information->ethnicity : null;
-        // $user->user_information->education = $user->user_information ? $user->user_information->education : null;
-        // $user->user_information->career_field = $user->user_information ? $user->user_information->careerField : null;
-        // $user->is_profile_completed = $user->user_information ? true : false;
+        
+        $user = User::find($user->id);
+        $user->is_profile_completed = $user->user_information ? true : false;
 
         return response()->json(['status' => true, 'user' => $user, 'message' => _lang('Information has been added sucessfully.')]);
     }
