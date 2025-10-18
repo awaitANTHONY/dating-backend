@@ -30,8 +30,6 @@ return new class extends Migration
             $table->index('target_user_id');
             $table->index('deleted_at');
 
-            // Check constraint to ensure user_id < target_user_id
-            $table->rawIndex('(user_id < target_user_id)', 'check_user_order');
         });
     }
 
