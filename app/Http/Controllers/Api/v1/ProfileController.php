@@ -791,10 +791,10 @@ class ProfileController extends Controller
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function details(Request $request)
+    public function details(Request $request, $id)
     {
         $user = $request->user();
-        $targetUserId = $request->input('id');
+        $targetUserId = $id;
 
         // Validate required parameter
         if (!$targetUserId) {

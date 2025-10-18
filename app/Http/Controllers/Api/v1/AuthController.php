@@ -60,7 +60,7 @@ class AuthController extends Controller
 
         // Generate and send OTP if provider is email
         if ($request->provider == 'email') {
-            $otp = $isDevelopment ? 000000 : rand(100000, 999999);
+            $otp = $isDevelopment ? 111111 : rand(100000, 999999);
             $user->email_otp = \Hash::make($otp);
             $user->email_verified_at = null;
             if(!$isDevelopment){
@@ -75,7 +75,7 @@ class AuthController extends Controller
         return response()->json([
             'status' => true,
             'access_token' => $tokenResult,
-            'data' => $user,
+            'data' =>  $user,
             'message' => $request->provider == 'email' ? 'Verification code sent to your email.' : 'Signup successful.'
         ]);
     }
@@ -167,7 +167,7 @@ class AuthController extends Controller
                 'message' => 'These credentials do not match our records.',
             ]);
         }
-        
+
         if($user->provider == 'email'){
             if (!\Hash::check($request->password, $user->password) ) {
                 return response()->json([

@@ -18,25 +18,25 @@ use App\Http\Controllers;
 Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
 {
     //Api Controller
-    Route::post('settings', [Controllers\Api\v1\ApiController::class, 'settings']);
-    Route::post('sliders', [Controllers\Api\v1\ApiController::class, 'sliders']);
-    Route::post('interests', [Controllers\Api\v1\ApiController::class, 'interests']);
-    Route::post('relation_goals', [Controllers\Api\v1\ApiController::class, 'relation_goals']);
-    Route::post('religions', [Controllers\Api\v1\ApiController::class, 'religions']);
-    Route::post('languages', [Controllers\Api\v1\ApiController::class, 'languages']);
-    Route::post('relationship_statuses', [Controllers\Api\v1\ApiController::class, 'relationship_statuses']);
-    Route::post('ethnicities', [Controllers\Api\v1\ApiController::class, 'ethnicities']);
-    Route::post('educations', [Controllers\Api\v1\ApiController::class, 'educations']);
-    Route::post('career_fields', [Controllers\Api\v1\ApiController::class, 'career_fields']);
-    Route::post('onboarding', [Controllers\Api\v1\ApiController::class, 'onboarding']);
+    Route::get('settings', [Controllers\Api\v1\ApiController::class, 'settings']);
+    Route::get('sliders', [Controllers\Api\v1\ApiController::class, 'sliders']);
+    Route::get('interests', [Controllers\Api\v1\ApiController::class, 'interests']);
+    Route::get('relation_goals', [Controllers\Api\v1\ApiController::class, 'relation_goals']);
+    Route::get('religions', [Controllers\Api\v1\ApiController::class, 'religions']);
+    Route::get('languages', [Controllers\Api\v1\ApiController::class, 'languages']);
+    Route::get('relationship_statuses', [Controllers\Api\v1\ApiController::class, 'relationship_statuses']);
+    Route::get('ethnicities', [Controllers\Api\v1\ApiController::class, 'ethnicities']);
+    Route::get('educations', [Controllers\Api\v1\ApiController::class, 'educations']);
+    Route::get('career_fields', [Controllers\Api\v1\ApiController::class, 'career_fields']);
+    Route::get('onboarding', [Controllers\Api\v1\ApiController::class, 'onboarding']);
     //Auth Controller
     Route::post('signup', [Controllers\Api\v1\AuthController::class, 'signup']);
     Route::post('signin', [Controllers\Api\v1\AuthController::class, 'signin']);
     Route::post('signinWithPhone', [Controllers\Api\v1\AuthController::class, 'signinWithPhone']);
     Route::post('forget_password', [Controllers\Api\v1\AuthController::class, 'forget_password']);
-        Route::post('verify_forget_password', [Controllers\Api\v1\AuthController::class, 'verify_forget_password']);
+    Route::post('verify_forget_password', [Controllers\Api\v1\AuthController::class, 'verify_forget_password']);
     //SubscriptionController
-    Route::post('subscriptions', [Controllers\Api\v1\SubscriptionController::class, 'subscriptions']);
+    Route::get('subscriptions', [Controllers\Api\v1\SubscriptionController::class, 'subscriptions']);
 
 
 
@@ -46,16 +46,15 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('verification', [Controllers\Api\v1\AuthController::class, 'verification']);
         Route::post('resend_otp', [Controllers\Api\v1\AuthController::class, 'resend_otp']);
         Route::post('user_information', [Controllers\Api\v1\AuthController::class, 'user_information']);
-        Route::post('user', [Controllers\Api\v1\AuthController::class, 'user']);
+        Route::get('user', [Controllers\Api\v1\AuthController::class, 'user']);
         Route::post('user_update', [Controllers\Api\v1\AuthController::class, 'user_update']);
         Route::post('upload_profile', [Controllers\Api\v1\AuthController::class, 'upload_profile']);
         Route::post('change_password', [Controllers\Api\v1\AuthController::class, 'change_password']);
         Route::post('reset_password', [Controllers\Api\v1\AuthController::class, 'reset_password']);
 
-        Route::any('profiles/recommendations', [Controllers\Api\v1\ProfileController::class, 'recommendations']);
-        Route::post('profiles/search', [Controllers\Api\v1\ProfileController::class, 'search']);
-        Route::post('profiles/compatibility', [Controllers\Api\v1\ProfileController::class, 'profile_compatibility']);
-        Route::post('profiles/details', [Controllers\Api\v1\ProfileController::class, 'details']);
+        Route::get('profiles/recommendations', [Controllers\Api\v1\ProfileController::class, 'recommendations']);
+        Route::get('profiles/compatibility', [Controllers\Api\v1\ProfileController::class, 'profile_compatibility']);
+        Route::get('profiles/details/{id}', [Controllers\Api\v1\ProfileController::class, 'details']);
         
         // User Interactions
         Route::post('interactions', [Controllers\Api\v1\UserInteractionController::class, 'store']);
