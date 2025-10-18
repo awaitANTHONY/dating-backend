@@ -56,13 +56,17 @@ class AuthController extends Controller
         $user->image = asset('public/default/profile.png');
         $user->status = $request->provider == 'email' ? 3 : 1;
 
+        $isDevelopment = env('APP_DEBUG') == true;
+
         // Generate and send OTP if provider is email
         if ($request->provider == 'email') {
-            $otp = rand(100000, 999999);
+            $otp = $isDevelopment ? 000000 : rand(100000, 999999);
             $user->email_otp = \Hash::make($otp);
             $user->email_verified_at = null;
-            Overrider::load('Settings');
-            \Mail::to($user->email)->send(new \App\Mail\EmailVerificationOtp($otp, $user->name));
+            if(!$isDevelopment){
+                Overrider::load('Settings');
+                \Mail::to($user->email)->send(new \App\Mail\EmailVerificationOtp($otp, $user->name));
+            }
         }
 
         $user->save();
@@ -263,7 +267,7 @@ class AuthController extends Controller
         $userInformation->religion_id = $request->religion_id;
         $userInformation->latitude = $request->latitude;
         $userInformation->longitude = $request->longitude;
-        $userInformation->search_radius = $request->search_radius ?? 1.0;
+        $userInformation->search_radius = $request->search_radius ?? 1000;
         $userInformation->country_code = $request->country_code;
         $userInformation->phone = $request->phone;
         $userInformation->search_preference = $request->search_preference;

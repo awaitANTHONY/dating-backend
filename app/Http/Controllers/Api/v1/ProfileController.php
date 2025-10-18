@@ -10,14 +10,27 @@ use App\Models\Interest;
 use App\Models\Language;
 use App\Models\RelationGoal;
 use App\Models\Religion;
+use App\Models\UserInformation;
+use App\Models\UserInteraction;
+use App\Models\UserMatch;
+use App\Models\UserBlock;
+use App\Models\RelationshipStatus;
+use App\Models\Ethnicity;
+use App\Models\Education;
+use App\Models\CareerField;
 
 class ProfileController extends Controller
 {
+    /**
+     * Unified method for both recommendations and search
+     * When no filters are provided, it works as recommendations with smart matching
+     * When filters are provided, it works as filtered search
+     */
     public function recommendations(Request $request)
     {
         $user = $request->user();
         
-        // Get user information directly from raw table
+        // Get user information using model relationship
         $userInformation = $user ? $user->user_information : null;
         
         if (!$userInformation) {
@@ -27,95 +40,115 @@ class ProfileController extends Controller
             ], 400);
         }
 
+        // Check if this is a search request (has filters) or recommendations request (no filters)
+        $isSearchRequest = $this->hasSearchFilters($request);
+        
+        // For search requests, don't use cache as they are dynamic
+        if ($isSearchRequest) {
+            return $this->handleSearchWithFilters($request, $user, $userInformation);
+        }
+
+        // For recommendations, use cache with user-specific key
+        $cacheKey = "recommendations_user_{$user->id}";
+        
+        return Cache::remember($cacheKey, 3600, function() use ($request, $user, $userInformation) {
+            return $this->generateRecommendations($request, $user, $userInformation);
+        });
+    }
+
+    /**
+     * Generate recommendations without caching (used by cache callback)
+     */
+    private function generateRecommendations(Request $request, $user, $userInformation)
+    {
         // Get current user's preferences and location
         $currentLat = $userInformation->latitude ?? 0;
         $currentLng = $userInformation->longitude ?? 0;
-        $searchRadius = $userInformation->search_radius ?? 100; // Use user's actual search radius, default 100km
+        $searchRadius = $userInformation->search_radius ?? 1000;
         $searchPreference = $userInformation->search_preference ?? 'male';
 
-        $searchRadius = 350; //temporarily increased to include the 307km user for testing
-        
-        // Debug: Log current user coordinates and search settings (remove this later)
-        \Log::info('Recommendations Debug', [
-            'current_user_id' => $user->id,
-            'current_lat' => $currentLat,
-            'current_lng' => $currentLng,
-            'search_radius' => $searchRadius,
-            'search_preference' => $searchPreference
-        ]);
-
-        // Start with a simple query first to get all potential matches
-        $query = \DB::table('users as u')
-            ->join('user_information as ui', 'ui.user_id', '=', 'u.id')
-            ->select([
-                'u.id',
-                'u.name',
-                'u.email',
-                'u.image',
-                'ui.bio',
-                'ui.gender',
-                'ui.date_of_birth',
-                'ui.age',
-                'ui.height',
-                'ui.relation_goals',
-                'ui.interests',
-                'ui.languages',
-                'ui.latitude',
-                'ui.longitude',
-                'ui.religion_id',
-                'ui.relationship_status_id',
-                'ui.ethnicity_id',
-                'ui.education_id',
-                'ui.carrer_field_id',
-                'ui.alkohol',
-                'ui.smoke',
-                'ui.preffered_age',
-                'ui.is_zodiac_sign_matter',
-                'ui.is_food_preference_matter',
-                'ui.country_code',
-                \DB::raw("(
-                    6371 * acos(
-                        cos(radians({$currentLat})) *
-                        cos(radians(ui.latitude)) *
-                        cos(radians(ui.longitude) - radians({$currentLng})) +
-                        sin(radians({$currentLat})) *
-                        sin(radians(ui.latitude))
-                    )
-                ) AS distance")
-            ])
-            ->where('u.id', '!=', $user->id)
-            ->where('u.status', 1);
-
-        // Apply gender filter - always filter by gender preference (no 'both' option)
-        $query->where('ui.gender', $searchPreference);
+        // Build query for recommendations with smart matching
+        $query = User::with(['user_information'])
+            ->whereHas('user_information', function($q) use ($searchPreference) {
+                $q->where('gender', $searchPreference);
+            })
+            ->where('id', '!=', $user->id)
+            ->where('status', 1)
+            ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->whereDoesntHave('blockedUsers', function($q) use ($user) {
+                $q->where('blocked_user_id', $user->id);
+            });
 
         // Apply distance filter if coordinates are available
         if ($currentLat != 0 && $currentLng != 0) {
-            $query->whereRaw("(
-                6371 * acos(
-                    cos(radians({$currentLat})) *
-                    cos(radians(ui.latitude)) *
-                    cos(radians(ui.longitude) - radians({$currentLng})) +
-                    sin(radians({$currentLat})) *
-                    sin(radians(ui.latitude))
-                )
-            ) <= {$searchRadius}");
+            $query->whereHas('user_information', function($q) use ($currentLat, $currentLng, $searchRadius) {
+                $q->whereRaw("(
+                    6371 * acos(
+                        cos(radians({$currentLat})) *
+                        cos(radians(latitude)) *
+                        cos(radians(longitude) - radians({$currentLng})) +
+                        sin(radians({$currentLat})) *
+                        sin(radians(latitude))
+                    )
+                ) <= {$searchRadius}");
+            });
         }
         
-        $results = $query->orderBy(\DB::raw("(
-            6371 * acos(
-                cos(radians({$currentLat})) *
-                cos(radians(ui.latitude)) *
-                cos(radians(ui.longitude) - radians({$currentLng})) +
-                sin(radians({$currentLat})) *
-                sin(radians(ui.latitude))
-            )
-        )"))->limit(50)->get();
+        $results = $query->limit(100)->get();
+
+        // Transform results and add distance calculation
+        $transformedResults = $results->map(function($user) use ($currentLat, $currentLng) {
+            $userInfo = $user->user_information;
+            if (!$userInfo) return null;
+
+            // Calculate distance
+            $distance = $this->calculateDistance(
+                $currentLat, $currentLng,
+                $userInfo->latitude, $userInfo->longitude
+            );
+
+            return (object) [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'image' => $user->image,
+                'images' => $userInfo->images,
+                'bio' => $userInfo->bio,
+                'gender' => $userInfo->gender,
+                'date_of_birth' => $userInfo->date_of_birth,
+                'age' => $userInfo->age,
+                'height' => $userInfo->height,
+                'relation_goals' => $userInfo->relation_goals,
+                'interests' => $userInfo->interests,
+                'languages' => $userInfo->languages,
+                'latitude' => $userInfo->latitude,
+                'longitude' => $userInfo->longitude,
+                'religion_id' => $userInfo->religion_id,
+                'relationship_status_id' => $userInfo->relationship_status_id,
+                'ethnicity_id' => $userInfo->ethnicity_id,
+                'education_id' => $userInfo->education_id,
+                'carrer_field_id' => $userInfo->carrer_field_id,
+                'alkohol' => $userInfo->alkohol,
+                'smoke' => $userInfo->smoke,
+                'preffered_age' => $userInfo->preffered_age,
+                'is_zodiac_sign_matter' => $userInfo->is_zodiac_sign_matter,
+                'is_food_preference_matter' => $userInfo->is_food_preference_matter,
+                'country_code' => $userInfo->country_code,
+                'distance' => $distance,
+                
+                // Add detailed attributes from UserInformation model accessors
+                'relation_goals_details' => $userInfo->relation_goals_details,
+                'interests_details' => $userInfo->interests_details,
+
+            ];
+        })->filter()->values();
 
         // Debug: Log found users (remove this later)
         \Log::info('Found Users Debug', [
-            'total_found' => $results->count(),
-            'users' => $results->map(function($user) {
+            'total_found' => $transformedResults->count(),
+            'users' => $transformedResults->map(function($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -127,7 +160,7 @@ class ProfileController extends Controller
             })->toArray()
         ]);
 
-        // Decode current user's values robustly (handle double-encoded JSON strings)
+        // Get current user's decoded preferences for compatibility scoring
         $userRelationGoals = $userInformation->relation_goals ?? [];
         $userInterests = $userInformation->interests ?? [];
         $userLanguages = $userInformation->languages ?? [];
@@ -156,8 +189,8 @@ class ProfileController extends Controller
         }
         $userLanguages = is_array($userLanguages) ? $userLanguages : [];
 
-        // Calculate enhanced match scores including new profile fields
-        $scoredResults = $results->map(function($profile) use ($userInformation, $userRelationGoals, $userInterests, $userLanguages, $searchRadius) {
+        // Calculate enhanced match scores for recommendations
+        $scoredResults = $transformedResults->map(function($profile) use ($userInformation, $userRelationGoals, $userInterests, $userLanguages, $searchRadius) {
             $score = 0;
 
             // Get profile's preferences - handle double-encoded JSON strings
@@ -165,7 +198,7 @@ class ProfileController extends Controller
             $profileInterests = $profile->interests;
             $profileLanguages = $profile->languages;
 
-            // First decode removes outer quotes, second decode parses the JSON array
+            // Decode JSON fields
             if (is_string($profileRelationGoals)) {
                 $profileRelationGoals = json_decode($profileRelationGoals, true);
                 if (is_string($profileRelationGoals)) {
@@ -190,13 +223,13 @@ class ProfileController extends Controller
             }
             $profileLanguages = is_array($profileLanguages) ? $profileLanguages : [];
 
-            // Core compatibility scoring (existing)
+            // Core compatibility scoring
             $rgOverlap = !empty($userRelationGoals) && !empty($profileRelationGoals) ? array_values(array_intersect($userRelationGoals, $profileRelationGoals)) : [];
             $langOverlap = !empty($userLanguages) && !empty($profileLanguages) ? array_values(array_intersect($userLanguages, $profileLanguages)) : [];
             $intOverlap = !empty($userInterests) && !empty($profileInterests) ? array_values(array_intersect($userInterests, $profileInterests)) : [];
 
             if (!empty($rgOverlap)) {
-                $score += 3; // Increased from 2 - relationship goals are very important
+                $score += 3; // Relationship goals are very important
             }
             if (!empty($langOverlap)) {
                 $score += 2; // Language compatibility
@@ -205,19 +238,18 @@ class ProfileController extends Controller
                 $score += 1; // Shared interests
             }
             if ($profile->distance <= $searchRadius) {
-                $score += 4; // Increased from 3 - proximity is crucial
+                $score += 4; // Proximity is crucial
             }
 
-            // NEW ENHANCED COMPATIBILITY SCORING
-
-            // 1. Religion Compatibility (High importance for many users)
+            // Enhanced compatibility scoring
+            // Religion Compatibility
             if ($userInformation->religion_id && $profile->religion_id) {
                 if ($userInformation->religion_id == $profile->religion_id) {
                     $score += 3; // Same religion
                 }
             }
 
-            // 2. Lifestyle Compatibility - Alcohol
+            // Lifestyle Compatibility - Alcohol
             if ($userInformation->alkohol && $profile->alkohol) {
                 if ($userInformation->alkohol == $profile->alkohol) {
                     $score += 2; // Same alcohol preference
@@ -231,7 +263,7 @@ class ProfileController extends Controller
                 }
             }
 
-            // 3. Lifestyle Compatibility - Smoking
+            // Lifestyle Compatibility - Smoking
             if ($userInformation->smoke && $profile->smoke) {
                 if ($userInformation->smoke == $profile->smoke) {
                     $score += 2; // Same smoking preference
@@ -245,16 +277,16 @@ class ProfileController extends Controller
                 }
             }
 
-            // 4. Education Level Compatibility
+            // Education Level Compatibility
             if ($userInformation->education_id && $profile->education_id) {
                 if ($userInformation->education_id == $profile->education_id) {
                     $score += 2; // Same education level
                 } elseif (abs($userInformation->education_id - $profile->education_id) <= 1) {
-                    $score += 1; // Similar education level (adjacent IDs)
+                    $score += 1; // Similar education level
                 }
             }
 
-            // 5. Age Compatibility & Age Preference Matching
+            // Age Compatibility & Age Preference Matching
             if ($userInformation->age && $profile->age) {
                 $ageDiff = abs($userInformation->age - $profile->age);
                 if ($ageDiff <= 2) {
@@ -268,7 +300,6 @@ class ProfileController extends Controller
 
             // Age preference compatibility check
             if ($userInformation->preffered_age && $profile->age) {
-                // Parse preferred age range (e.g., "25-35", "18-25")
                 if (preg_match('/(\d+)-(\d+)/', $userInformation->preffered_age, $matches)) {
                     $minAge = (int)$matches[1];
                     $maxAge = (int)$matches[2];
@@ -278,7 +309,7 @@ class ProfileController extends Controller
                 }
             }
 
-            // 6. Height Compatibility (if both have height preferences)
+            // Height Compatibility
             if ($userInformation->height && $profile->height) {
                 $heightDiff = abs($userInformation->height - $profile->height);
                 if ($heightDiff <= 10) { // Within 10cm
@@ -286,21 +317,21 @@ class ProfileController extends Controller
                 }
             }
 
-            // 7. Career Field Compatibility
+            // Career Field Compatibility
             if ($userInformation->carrer_field_id && $profile->carrer_field_id) {
                 if ($userInformation->carrer_field_id == $profile->carrer_field_id) {
                     $score += 2; // Same career field
                 }
             }
 
-            // 8. Relationship Status Compatibility
+            // Relationship Status Compatibility
             if ($userInformation->relationship_status_id && $profile->relationship_status_id) {
                 if ($userInformation->relationship_status_id == $profile->relationship_status_id) {
                     $score += 1; // Same relationship status
                 }
             }
 
-            // 9. Special Compatibility Preferences
+            // Special Compatibility Preferences
             if ($userInformation->is_zodiac_sign_matter && $profile->is_zodiac_sign_matter) {
                 $score += 1; // Both care about zodiac signs
             }
@@ -309,7 +340,7 @@ class ProfileController extends Controller
                 $score += 1; // Both care about food preferences
             }
 
-            // 10. Bonus for Complete Profiles
+            // Bonus for Complete Profiles
             $userFieldCount = 0;
             $profileFieldCount = 0;
             
@@ -348,170 +379,172 @@ class ProfileController extends Controller
     }
 
     /**
-     * Search profiles by query and optional filters.
-     * Accepts:
-     * - q: text to search by name or email
-     * - gender: male|female|both
-     * - interests[]: array of interest ids
-     * - languages[]: array of language ids
-     * - relation_goals[]: array of relation goal ids
-     * - lat, lng, radius: to filter by distance (km)
+     * Helper method to check if request has search filters
      */
-    public function search(Request $request)
+    private function hasSearchFilters(Request $request)
     {
-        $user = $request->user();
-        
-        // Get user information directly from raw table
-        $userInformation = $user ? $user->user_information : null;
-        
-        if (!$userInformation) {
-            return response()->json([
-                'status' => false, 
-                'message' => 'User profile information not found. Please complete your profile first.'
-            ], 400);
+        $searchParams = [
+            'q', 'gender', 'interests', 'languages', 'relation_goals',
+            'religion_id', 'relationship_status_id', 'ethnicity_id', 
+            'education_id', 'carrer_field_id', 'alkohol', 'smoke',
+            'min_age', 'max_age', 'min_height', 'max_height', 'radius'
+        ];
+
+        foreach ($searchParams as $param) {
+            if ($request->has($param) && !is_null($request->input($param))) {
+                return true;
+            }
         }
 
+        return false;
+    }
+
+    /**
+     * Handle search with filters - optimized for filtering
+     */
+    private function handleSearchWithFilters(Request $request, $user, $userInformation)
+    {
         $q = $request->input('q');
-        $gender = $request->input('gender', 'male'); // Default to 'male', no 'both' option
+        $gender = $request->input('gender', $userInformation->search_preference ?? 'male');
         $interests = $request->input('interests', []);
         $languages = $request->input('languages', []);
         $relationGoals = $request->input('relation_goals', []);
-        // Use authenticated user's location instead of client coordinates
         $latitude = $userInformation->latitude;
         $longitude = $userInformation->longitude;
         $radius = $request->input('radius', $userInformation->search_radius ?? 50);
 
-        // Build raw SQL for speed with bindings
-        $selectBase = "u.id,u.name,u.email,u.image,ui.bio,ui.gender,ui.date_of_birth,ui.age,ui.height,ui.relation_goals,ui.interests,ui.languages,ui.latitude,ui.longitude,ui.religion_id,ui.relationship_status_id,ui.ethnicity_id,ui.education_id,ui.carrer_field_id,ui.alkohol,ui.smoke,ui.preffered_age";
+        // Build Eloquent query for better performance and readability
+        $query = User::with(['user_information'])
+            ->whereHas('user_information', function($q) use ($gender) {
+                $q->where('gender', $gender);
+            })
+            ->where('id', '!=', $user->id)
+            ->where('status', 1)
+            ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->whereDoesntHave('blockedUsers', function($q) use ($user) {
+                $q->where('blocked_user_id', $user->id);
+            });
 
-        // Prefer authenticated user's stored location and search radius when available
-        if (!empty($userInformation->search_radius)) {
-            $radius = $userInformation->search_radius;
-        }
-
-        $bindings = [];
-        if ($latitude !== null && $longitude !== null) {
-            $distanceExpr = "(6371 * acos(cos(radians(?)) * cos(radians(ui.latitude)) * cos(radians(ui.longitude) - radians(?)) + sin(radians(?)) * sin(radians(ui.latitude))))";
-            $select = "SELECT {$selectBase}, {$distanceExpr} AS distance";
-            // distance placeholders: lat, lng, lat
-            $bindings[] = $latitude;
-            $bindings[] = $longitude;
-            $bindings[] = $latitude;
-        } else {
-            $select = "SELECT {$selectBase}, NULL AS distance";
-        }
-
-        $sql = "$select FROM users u JOIN user_information ui ON ui.user_id = u.id WHERE u.id != ? AND u.status = 1";
-        $bindings[] = $user ? $user->id : 0;
-
+        // Apply text search filter
         if ($q) {
-            $sql .= " AND (u.name LIKE ? OR u.email LIKE ?)";
-            $bindings[] = "%{$q}%";
-            $bindings[] = "%{$q}%";
+            $query->where(function($query) use ($q) {
+                $query->where('name', 'like', "%{$q}%")
+                      ->orWhere('email', 'like', "%{$q}%");
+            });
         }
 
-        $religionId = $request->input('religion_id');
-        $relationshipStatusId = $request->input('relationship_status_id');
-        $ethnicityId = $request->input('ethnicity_id');
-        $educationId = $request->input('education_id');
-        $careerFieldId = $request->input('carrer_field_id');
-        $alkohol = $request->input('alkohol');
-        $smoke = $request->input('smoke');
+        // Apply profile filters
+        $this->applyProfileFilters($query, $request);
+
+        // Apply distance filter
+        if ($latitude !== null && $longitude !== null) {
+            $query->whereHas('user_information', function($q) use ($latitude, $longitude, $radius) {
+                $q->whereRaw("(
+                    6371 * acos(
+                        cos(radians({$latitude})) *
+                        cos(radians(latitude)) *
+                        cos(radians(longitude) - radians({$longitude})) +
+                        sin(radians({$latitude})) *
+                        sin(radians(latitude))
+                    )
+                ) <= {$radius}");
+            });
+        }
+
+        $results = $query->limit(50)->get();
+
+        // Transform results with distance calculation
+        $transformedResults = $results->map(function($user) use ($latitude, $longitude) {
+            $userInfo = $user->user_information;
+            if (!$userInfo) return null;
+
+            // Calculate distance
+            $distance = $this->calculateDistance(
+                $latitude, $longitude,
+                $userInfo->latitude, $userInfo->longitude
+            );
+
+            return (object) [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'image' => $user->image,
+                'images' => $userInfo->images,
+                'bio' => $userInfo->bio,
+                'gender' => $userInfo->gender,
+                'date_of_birth' => $userInfo->date_of_birth,
+                'age' => $userInfo->age,
+                'height' => $userInfo->height,
+                'relation_goals' => $userInfo->relation_goals,
+                'interests' => $userInfo->interests,
+                'languages' => $userInfo->languages,
+                'latitude' => $userInfo->latitude,
+                'longitude' => $userInfo->longitude,
+                'religion_id' => $userInfo->religion_id,
+                'relationship_status_id' => $userInfo->relationship_status_id,
+                'ethnicity_id' => $userInfo->ethnicity_id,
+                'education_id' => $userInfo->education_id,
+                'carrer_field_id' => $userInfo->carrer_field_id,
+                'alkohol' => $userInfo->alkohol,
+                'smoke' => $userInfo->smoke,
+                'preffered_age' => $userInfo->preffered_age,
+                'distance' => $distance,
+                
+                // Add detailed attributes from UserInformation model accessors
+                'relation_goals_details' => $userInfo->relation_goals_details,
+                'interests_details' => $userInfo->interests_details,
+
+            ];
+        })->filter()->values();
+
+        // For search results, sort by distance instead of compatibility score
+        if ($latitude !== null && $longitude !== null) {
+            $transformedResults = $transformedResults->sortBy('distance')->values();
+        }
+
+        return response()->json(['status' => true, 'data' => $transformedResults]);
+    }
+
+    /**
+     * Apply profile-based filters to the query
+     */
+    private function applyProfileFilters($query, Request $request)
+    {
+        $filters = [
+            'religion_id', 'relationship_status_id', 'ethnicity_id', 
+            'education_id', 'carrer_field_id', 'alkohol', 'smoke'
+        ];
+
+        foreach ($filters as $filter) {
+            $value = $request->input($filter);
+            if ($value) {
+                $query->whereHas('user_information', function($q) use ($filter, $value) {
+                    $q->where($filter, $value);
+                });
+            }
+        }
+
+        // Age filters
         $minAge = $request->input('min_age');
         $maxAge = $request->input('max_age');
+        if ($minAge || $maxAge) {
+            $query->whereHas('user_information', function($q) use ($minAge, $maxAge) {
+                if ($minAge) $q->where('age', '>=', $minAge);
+                if ($maxAge) $q->where('age', '<=', $maxAge);
+            });
+        }
+
+        // Height filters
         $minHeight = $request->input('min_height');
         $maxHeight = $request->input('max_height');
-
-        // Apply gender filter - always filter by gender (no 'both' option)
-        $sql .= " AND ui.gender = ?";
-        $bindings[] = $gender;
-
-        if ($religionId) {
-            $sql .= " AND ui.religion_id = ?";
-            $bindings[] = $religionId;
+        if ($minHeight || $maxHeight) {
+            $query->whereHas('user_information', function($q) use ($minHeight, $maxHeight) {
+                if ($minHeight) $q->where('height', '>=', $minHeight);
+                if ($maxHeight) $q->where('height', '<=', $maxHeight);
+            });
         }
-
-        if ($relationshipStatusId) {
-            $sql .= " AND ui.relationship_status_id = ?";
-            $bindings[] = $relationshipStatusId;
-        }
-
-        if ($ethnicityId) {
-            $sql .= " AND ui.ethnicity_id = ?";
-            $bindings[] = $ethnicityId;
-        }
-
-        if ($educationId) {
-            $sql .= " AND ui.education_id = ?";
-            $bindings[] = $educationId;
-        }
-
-        if ($careerFieldId) {
-            $sql .= " AND ui.carrer_field_id = ?";
-            $bindings[] = $careerFieldId;
-        }
-
-        if ($alkohol) {
-            $sql .= " AND ui.alkohol = ?";
-            $bindings[] = $alkohol;
-        }
-
-        if ($smoke) {
-            $sql .= " AND ui.smoke = ?";
-            $bindings[] = $smoke;
-        }
-
-        if ($minAge) {
-            $sql .= " AND ui.age >= ?";
-            $bindings[] = $minAge;
-        }
-
-        if ($maxAge) {
-            $sql .= " AND ui.age <= ?";
-            $bindings[] = $maxAge;
-        }
-
-        if ($minHeight) {
-            $sql .= " AND ui.height >= ?";
-            $bindings[] = $minHeight;
-        }
-
-        if ($maxHeight) {
-            $sql .= " AND ui.height <= ?";
-            $bindings[] = $maxHeight;
-        }
-
-        // Add HAVING distance <= ? when coords are provided (uses alias from SELECT)
-        if ($latitude !== null && $longitude !== null) {
-            $sql .= " HAVING distance <= ?";
-            $bindings[] = $radius;
-            $sql .= " ORDER BY distance ASC";
-        } else {
-            $sql .= " ORDER BY u.id DESC";
-        }
-
-        $sql .= " LIMIT 50";
-
-        $rows = collect(\DB::select($sql, $bindings));
-
-        // Decode JSON fields that may be double-encoded
-        $results = $rows->map(function($profile) {
-            foreach (['relation_goals','interests','languages'] as $field) {
-                if (isset($profile->{$field})) {
-                    $val = $profile->{$field};
-                    if (is_string($val)) {
-                        $decoded = json_decode($val, true);
-                        if (is_string($decoded)) {
-                            $decoded = json_decode($decoded, true) ?? [];
-                        }
-                        $profile->{$field} = is_array($decoded) ? $decoded : [];
-                    }
-                }
-            }
-            return $profile;
-        });
-
-        return response()->json(['status' => true, 'data' => $results]);
     }
 
     /**
@@ -750,5 +783,193 @@ class ProfileController extends Controller
         }
 
         return $compatibility;
+    }
+
+    /**
+     * Get detailed user profile information by user ID
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function details(Request $request)
+    {
+        $user = $request->user();
+        $targetUserId = $request->input('id');
+
+        // Validate required parameter
+        if (!$targetUserId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User ID is required.'
+            ], 400);
+        }
+
+        // Get current user information using model relationship
+        $userInformation = $user->user_information;
+        
+        if (!$userInformation) {
+            return response()->json([
+                'status' => false, 
+                'message' => 'User profile information not found. Please complete your profile first.'
+            ], 400);
+        }
+
+        try {
+            // Get target user with complete profile information using Eloquent models
+            $targetUser = User::with([
+                'user_information.religion',
+                'user_information.relationshipStatus', 
+                'user_information.ethnicity',
+                'user_information.education',
+                'user_information.careerField'
+            ])
+            ->where('id', $targetUserId)
+            ->where('status', 1)
+            ->first();
+
+            if (!$targetUser || !$targetUser->user_information) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found or inactive.'
+                ], 404);
+            }
+
+            // Calculate distance from current user
+            $distance = $this->calculateDistance(
+                $userInformation->latitude,
+                $userInformation->longitude,
+                $targetUser->user_information->latitude,
+                $targetUser->user_information->longitude
+            );
+
+            // Prepare profile data with all information
+            $profileData = $targetUser;
+
+            // Calculate compatibility with current user
+            $compatibility = $this->calculateDetailedCompatibility($userInformation, (object) $profileData);
+
+            // Check if users have interacted before using models
+            $interactionStatus = $this->getInteractionStatusUsingModels($user->id, $targetUserId);
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'profile' => $profileData,
+                    'compatibility' => $compatibility,
+                    'interaction_status' => $interactionStatus,
+                    'distance' => $distance ? round($distance, 1) . ' km' : 'Unknown'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to retrieve user details.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    /**
+     * Calculate distance between two points using Haversine formula
+     */
+    private function calculateDistance($lat1, $lng1, $lat2, $lng2)
+    {
+        if (is_null($lat1) || is_null($lng1) || is_null($lat2) || is_null($lng2)) {
+            return null;
+        }
+
+        $earthRadius = 6371; // Earth's radius in kilometers
+
+        $latDelta = deg2rad($lat2 - $lat1);
+        $lngDelta = deg2rad($lng2 - $lng1);
+
+        $a = sin($latDelta / 2) * sin($latDelta / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($lngDelta / 2) * sin($lngDelta / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
+    }
+
+    /**
+     * Get interaction status between two users using Eloquent models
+     */
+    private function getInteractionStatusUsingModels($currentUserId, $targetUserId)
+    {
+        // Check if current user has swiped on target user
+        $myInteraction = UserInteraction::where('user_id', $currentUserId)
+            ->where('target_user_id', $targetUserId)
+            ->first();
+
+        // Check if target user has swiped on current user
+        $theirInteraction = UserInteraction::where('user_id', $targetUserId)
+            ->where('target_user_id', $currentUserId)
+            ->first();
+
+        // Check if they are matched
+        $isMatched = UserMatch::where(function($query) use ($currentUserId, $targetUserId) {
+                $query->where('user_id', min($currentUserId, $targetUserId))
+                      ->where('target_user_id', max($currentUserId, $targetUserId));
+            })
+            ->whereNull('deleted_at')
+            ->exists();
+
+        // Check if either user has blocked the other
+        $isBlocked = UserBlock::where(function($query) use ($currentUserId, $targetUserId) {
+                $query->where('user_id', $currentUserId)
+                      ->where('blocked_user_id', $targetUserId);
+            })
+            ->orWhere(function($query) use ($currentUserId, $targetUserId) {
+                $query->where('user_id', $targetUserId)
+                      ->where('blocked_user_id', $currentUserId);
+            })
+            ->exists();
+
+        return [
+            'my_action' => $myInteraction ? $myInteraction->action : null,
+            'their_action' => $theirInteraction ? $theirInteraction->action : null,
+            'is_matched' => $isMatched,
+            'is_blocked' => $isBlocked,
+            'can_interact' => !$isBlocked,
+            'interaction_date' => $myInteraction ? $myInteraction->created_at : null
+        ];
+    }
+
+    /**
+     * Enrich profile data with detailed information for interests, languages, etc.
+     * (Deprecated: Now using UserInformation model accessors)
+     */
+    private function enrichProfileData($profile)
+    {
+        // This method is now deprecated as we use model accessors
+        // in UserInformation model for better data handling
+        return $profile;
+    }
+
+    /**
+     * Get interaction status between two users
+     * (Deprecated: Use getInteractionStatusUsingModels instead)
+     */
+    private function getInteractionStatus($currentUserId, $targetUserId)
+    {
+        // Redirect to model-based method
+        return $this->getInteractionStatusUsingModels($currentUserId, $targetUserId);
+    }
+
+    /**
+     * Clear recommendations cache for a specific user
+     * Call this method when user profile data is updated
+     */
+    public function clearRecommendationsCache($userId = null)
+    {
+        if ($userId) {
+            $cacheKey = "recommendations_user_{$userId}";
+            Cache::forget($cacheKey);
+        } else {
+            // Clear all recommendation caches (use with caution)
+            Cache::flush();
+        }
     }
 }

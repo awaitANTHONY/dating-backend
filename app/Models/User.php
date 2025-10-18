@@ -92,4 +92,20 @@ class User extends Authenticatable
     {
         return $this->hasOne(UserInformation::class);
     }
+
+    /**
+     * Users that this user has blocked
+     */
+    public function blockedUsers()
+    {
+        return $this->hasMany(UserBlock::class, 'user_id');
+    }
+
+    /**
+     * Users that have blocked this user
+     */
+    public function blockedByUsers()
+    {
+        return $this->hasMany(UserBlock::class, 'blocked_user_id');
+    }
 }
