@@ -11,6 +11,8 @@ use App\Models\Payment;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
+use App\Utils\Overrider;
 
 class SubscriptionController extends Controller
 {
@@ -19,12 +21,12 @@ class SubscriptionController extends Controller
     {
         $validator = Validator::make($request->all(), [
 
-            'platform' => 'required|string|max:20',
+            'platform' => 'required|string|in:ios,android'
             
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['result' => false, 'message' => $validator->errors()->first()]);
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
         }
 
         $platform = $request->platform;
@@ -46,37 +48,16 @@ class SubscriptionController extends Controller
         return response()->json(['status' => $status, 'data' => $subscriptions]);
     }
 
-    // Update Subscription
-    public function subscription_update(Request $request)
+    // Subscribe (RevenueCat Integration)
+    public function subscribe(Request $request)
     {
         $validator = Validator::make($request->all(), [
-
-            'subscription_id' => 'required|string',
-            'amount' => 'required|string',
-            'platform' => 'required|string|max:20',
-            'sid' => 'required_if:platform,web|string',
-            'filter_include' => 'nullable|boolean',
-            'audio_video' => 'nullable|boolean',
-            'direct_chat' => 'nullable|boolean',
-            'chat' => 'nullable|boolean',
-            'like_menu' => 'nullable|boolean',
-            
+            'product_id' => 'required|string',
+            'transaction_id' => 'nullable|string',
+            'original_transaction_id' => 'nullable|string',
+            'amount' => 'nullable|string',
+            'platform' => 'required|string|in:ios,android'
         ]);
-        $validator->sometimes('filter_include', 'nullable|boolean', function ($input) {
-            return $input->platform === 'web';
-        });
-        $validator->sometimes('audio_video', 'nullable|boolean', function ($input) {
-            return $input->platform === 'web';
-        });
-        $validator->sometimes('direct_chat', 'nullable|boolean', function ($input) {
-            return $input->platform === 'web';
-        });
-        $validator->sometimes('chat', 'nullable|boolean', function ($input) {
-            return $input->platform === 'web';
-        });
-        $validator->sometimes('like_menu', 'nullable|boolean', function ($input) {
-            return $input->platform === 'web';
-        });
 
         if ($validator->fails()) {
             return response()->json(['result' => false, 'message' => $validator->errors()->first()]);
@@ -85,99 +66,47 @@ class SubscriptionController extends Controller
         $user = $request->user();
         $payment = new Payment();
 
-        // Check User Subscription & Payment Activate or Not for Web
-        if($request->platform == 'web')
-        {
-            $payment_exists = Payment::where('sid', $request->sid)->first();
-            
-            if($payment_exists)
-            {
-                $user->subscription_name = $user->subscription->name;
-                return response()->json([
-                    'status' => true,
-                    'data' => $user->makeHidden(['id', 'user_type', 'created_at', 'updated_at', 'apps', 'app_id', 'email_verified_at', 'status', 'subscription', 'verification', 'forget_code']),
-                ]);
-            }
-            else
-            {
-                $subscription = Subscription::find($request->subscription_id);
-
-                if($user->expired_at != null && $user->expired_at > now())
-                {
-                    $expired_at = $user->expired_at;
-                    $date = date("Y-m-d H:i:s", strtotime("+{$subscription->duration} {$subscription->duration_type}", \Carbon\Carbon::parse($expired_at)->timestamp));
-                }
-                else
-                {
-                    $date = date("Y-m-d H:i:s", strtotime("+{$subscription->duration} {$subscription->duration_type}", now()->timestamp));
-                }
-
-                $user->expired_at = $date;
-                $user->subscription_id = $subscription->id;
-                $user->subscribe_from_web = 1;
-
-                $user->save();
-
-                $payment->user_id = $user->id;
-                $payment->subscription_id = $subscription->id;
-                $payment->date = now();
-                $payment->amount = $request->amount;
-                $payment->platform = $request->platform;
-
-                $payment->save();
-
-                Cache::forget("payments_" . $user->id);
-
-                $user->subscription_name = $user->subscription->name;
-
-                // Send Mail
-                $this->send_message($user, $payment, "Subscription Invoice", "Subscription Invoice");
-
-                return response()->json([
-                    'status' => true,
-                    'data' => $user->makeHidden(['id', 'user_type', 'created_at', 'updated_at', 'apps', 'app_id', 'email_verified_at', 'status', 'subscription', 'verification', 'forget_code']),
-                ]);
-            }
+        // Find subscription by product_id (RevenueCat product identifier)
+        $subscription = Subscription::where('product_id', $request->product_id)->first();
+        
+        if (!$subscription) {
+            return response()->json(['result' => false, 'message' => 'Product not found.']);
         }
-        else
+    
+        if($user->expired_at != null && $user->expired_at > now())
         {
-            $subscription = Subscription::find($request->subscription_id);
-    
-            if($user->expired_at != null && $user->expired_at > now())
-            {
-                $expired_at = $user->expired_at;
-                $date = date("Y-m-d H:i:s", strtotime("+{$subscription->duration} {$subscription->duration_type}", \Carbon\Carbon::parse($expired_at)->timestamp));
-            }
-            else
-            {
-                $date = date("Y-m-d H:i:s", strtotime("+{$subscription->duration} {$subscription->duration_type}", now()->timestamp));
-            }
-    
-            $user->expired_at = $date;
-            $user->subscription_id = $subscription->id;
-    
-            $user->save();
-    
-            $payment->user_id = $user->id;
-            $payment->subscription_id = $subscription->id;
-            $payment->date = now();
-            $payment->amount = $request->amount;
-            $payment->platform = $request->platform;
-    
-            $payment->save();
-
-            Cache::forget("payments_" . $user->id);
-
-            $user->subscription_name = $user->subscription->name;
-
-            // Send Mail
-            $this->send_message($user, $payment, "Subscription Invoice", "Subscription Invoice");
-            
-            return response()->json([
-                'status' => true,
-                'data' => $user->makeHidden(['id', 'user_type', 'created_at', 'updated_at', 'apps', 'app_id', 'email_verified_at', 'status', 'subscription', 'verification', 'forget_code']),
-            ]);
+            $expired_at = $user->expired_at;
+            $date = date("Y-m-d H:i:s", strtotime("+{$subscription->duration} {$subscription->duration_type}", \Carbon\Carbon::parse($expired_at)->timestamp));
+        } else {
+            $date = date("Y-m-d H:i:s", strtotime("+{$subscription->duration} {$subscription->duration_type}", now()->timestamp));
         }
+
+        $user->expired_at = $date;
+        $user->subscription_id = $subscription->id;
+
+        $user->save();
+
+        $payment->user_id = $user->id;
+        $payment->subscription_id = $subscription->id;
+        $payment->date = now();
+        $payment->amount = $request->amount ;
+        $payment->platform = $request->platform;
+        $payment->transaction_id = $request->transaction_id;
+        $payment->original_transaction_id = $request->original_transaction_id;
+
+        $payment->save();
+
+        Cache::forget("payments_" . $user->id);
+
+        $user->subscription_name = $user->subscription->name;
+
+        // Send Mail
+        $this->send_mail($user, $payment);
+        
+        return response()->json([
+            'status' => true,
+            'data' => $user->makeHidden(['id', 'user_type', 'created_at', 'updated_at', 'apps', 'app_id', 'email_verified_at', 'status', 'subscription', 'verification', 'forget_code']),
+        ]);
     }
 
     // Subscription Expired
@@ -220,11 +149,12 @@ class SubscriptionController extends Controller
             return response()->json(['result' => false, 'message' => 'Product not found.']);
         }
 
-        $payments = Payment::where('user_id', $user->id)
+        $payment = Payment::where('user_id', $user->id)
                         ->where('subscription_id', $subscription->id)
+                        ->latest()
                         ->first();
 
-        if(!$payments){
+        if(!$payment){
             return response()->json(['result' => false, 'message' => 'illegal activity.']);
         }
                       
@@ -267,37 +197,15 @@ class SubscriptionController extends Controller
     }
 
     // Send Mail
-    public function send_message($user, $payment, $subject, $message)
+    public function send_mail($user, $payment)
     {
         @ini_set('max_execution_time', 0);
         @set_time_limit(0);
 
-        // Timezone
-        config(['app.timezone' => get_option('timezone')]);
-
-        // Email
-        config(['mail.driver' => 'smtp']);
-        config(['mail.from.name' => get_option('from_name')]);
-        config(['mail.from.address' => get_option('from_mail')]);
-        config(['mail.host' => get_option('smtp_host')]);
-        config(['mail.port' => get_option('smtp_port')]);
-        config(['mail.username' => get_option('smtp_username')]);
-        config(['mail.password' => get_option('smtp_password')]);
-        config(['mail.encryption' => get_option('smtp_encryption')]);
-
-        
-        $mail  = new \stdClass();
-        $mail->name = $user->name;
-        $mail->email = $user->email;
-        $mail->subject = $subject;
-        $mail->message = $message;
-        $mail->payment = $payment;
-        $mail->user = $user;
-        $mail->app_name = get_option('from_name');
-
+        \App\Utils\Overrider::load('Settings');
 
         try {
-            Mail::to($user->email)->send(new InvoiceMail($mail));
+            Mail::to($user->email)->send(new InvoiceMail($user, $payment));
             return json_encode(array('result' => true, 'message' => _lang('Your Message send sucessfully.')));
         } catch (\Exception $e) {
             return json_encode(array('result' => false, 'message' => _lang('Error Occured, Please try again !')));

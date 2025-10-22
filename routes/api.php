@@ -19,16 +19,16 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
 {
     //Api Controller
     Route::get('settings', [Controllers\Api\v1\ApiController::class, 'settings']);
-    Route::get('sliders', [Controllers\Api\v1\ApiController::class, 'sliders']);
-    Route::get('interests', [Controllers\Api\v1\ApiController::class, 'interests']);
-    Route::get('relation_goals', [Controllers\Api\v1\ApiController::class, 'relation_goals']);
-    Route::get('religions', [Controllers\Api\v1\ApiController::class, 'religions']);
-    Route::get('languages', [Controllers\Api\v1\ApiController::class, 'languages']);
-    Route::get('relationship_statuses', [Controllers\Api\v1\ApiController::class, 'relationship_statuses']);
-    Route::get('ethnicities', [Controllers\Api\v1\ApiController::class, 'ethnicities']);
-    Route::get('educations', [Controllers\Api\v1\ApiController::class, 'educations']);
-    Route::get('career_fields', [Controllers\Api\v1\ApiController::class, 'career_fields']);
-    Route::get('onboarding', [Controllers\Api\v1\ApiController::class, 'onboarding']);
+    Route::any('sliders', [Controllers\Api\v1\ApiController::class, 'sliders']);
+    Route::any('interests', [Controllers\Api\v1\ApiController::class, 'interests']);
+    Route::any('relation_goals', [Controllers\Api\v1\ApiController::class, 'relation_goals']);
+    Route::any('religions', [Controllers\Api\v1\ApiController::class, 'religions']);
+    Route::any('languages', [Controllers\Api\v1\ApiController::class, 'languages']);
+    Route::any('relationship_statuses', [Controllers\Api\v1\ApiController::class, 'relationship_statuses']);
+    Route::any('ethnicities', [Controllers\Api\v1\ApiController::class, 'ethnicities']);
+    Route::any('educations', [Controllers\Api\v1\ApiController::class, 'educations']);
+    Route::any('career_fields', [Controllers\Api\v1\ApiController::class, 'career_fields']);
+    Route::any('onboarding', [Controllers\Api\v1\ApiController::class, 'onboarding']);
     //Auth Controller
     Route::post('signup', [Controllers\Api\v1\AuthController::class, 'signup']);
     Route::post('signin', [Controllers\Api\v1\AuthController::class, 'signin']);
@@ -76,10 +76,10 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('favorites', [Controllers\Api\v1\ApiController::class, 'favorites']);
 
         //SubscriptionController
-        Route::post('subscription_update', [Controllers\Api\v1\SubscriptionController::class, 'subscription_update']);
-        Route::post('subscription_expired', [Controllers\Api\v1\SubscriptionController::class, 'subscription_expired']);
-        Route::post('subscription_restore', [Controllers\Api\v1\SubscriptionController::class, 'subscription_restore']);
-        Route::post('payments', [Controllers\Api\v1\SubscriptionController::class, 'payments']);
+        Route::post('subscription/subscribe', [Controllers\Api\v1\SubscriptionController::class, 'subscribe']);
+        Route::post('subscription/expired', [Controllers\Api\v1\SubscriptionController::class, 'subscription_expired']);
+        Route::post('subscription/restore', [Controllers\Api\v1\SubscriptionController::class, 'subscription_restore']);
+        Route::get('subscription/history', [Controllers\Api\v1\SubscriptionController::class, 'payments']);
 
 
         // --- Chat API (Firebase Realtime) ---

@@ -21,6 +21,8 @@ class Payment extends Model
         'date', 
         'amount', 
         'platform',
+        'transaction_id',
+        'original_transaction_id',
         'user'
     ];
 
