@@ -114,7 +114,7 @@ class ProfileController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'image' => $user->image,
-                'images' => $userInfo->images,
+                'images' => $userInfo->images ,
                 'bio' => $userInfo->bio,
                 'gender' => $userInfo->gender,
                 'date_of_birth' => $userInfo->date_of_birth,

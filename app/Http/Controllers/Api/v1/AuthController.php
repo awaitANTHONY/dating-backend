@@ -380,6 +380,73 @@ class AuthController extends Controller
         $handler = $save->handler();
     }
 
+    public function upload_images(Request $request)
+    {   
+        $validator = \Validator::make($request->all(), [
+            'images' => 'required|array|max:10',
+            'images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:10240', // 10MB max per image
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $user = $request->user();
+        $uploadedImages = [];
+
+        try {
+            \DB::beginTransaction();
+
+            // Create user-specific directory
+            $userPath = "public/uploads/images/users/{$user->id}/";
+            if (!file_exists(base_path($userPath))) {
+                mkdir(base_path($userPath), 0755, true);
+            }
+
+            // Process each uploaded image
+            foreach ($request->file('images') as $index => $imageFile) {
+                $extension = $imageFile->getClientOriginalExtension();
+                $fileName = time() . '_' . uniqid() . '_' . $index . '.' . $extension;
+                
+                // Move file to user directory
+                $imageFile->move(base_path($userPath), $fileName);
+                
+                $uploadedImages[] = [
+                    'path' => $userPath . $fileName,
+                    'url' => asset($userPath . $fileName),
+                    'filename' => $fileName,
+                    'size' => $imageFile->getSize(),
+                    'original_name' => $imageFile->getClientOriginalName()
+                ];
+            }
+
+            // Update user information with new images
+            $userInfo = $user->user_information;
+            if ($userInfo) {
+                $existingImages = json_decode($userInfo->images, true) ?? [];
+                $allImages = array_merge($existingImages, array_column($uploadedImages, 'path'));
+                $userInfo->images = json_encode($allImages);
+                $userInfo->save();
+            }
+
+            \DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Images uploaded successfully',
+            
+            ]);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'message' => 'Image upload failed: ' . $e->getMessage(),
+            ]);
+        }
+    }
+    
+
     public function change_password(Request $request)
     {
         $validator = \Validator::make($request->all(), [

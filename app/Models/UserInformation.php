@@ -9,14 +9,36 @@ class UserInformation extends Model
 {
     use HasFactory;
 
+    protected $table = 'user_information';
+
     public function getDateOfBirthAttribute($value)
     {
         $date = $this->attributes['date_of_birth'] ?? $value;
         return $date ? \Illuminate\Support\Carbon::parse($date)->format('Y-m-d') : null;
     }
-    use HasFactory;
 
-    protected $table = 'user_information';
+    public function getImagesAttribute($value)
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return is_array($value) ? $value : [];
+    }
+
+    public function setImagesAttribute($value)
+    {
+        if (is_array($value)) {
+            $this->attributes['images'] = json_encode($value);
+        } elseif (is_string($value)) {
+            // If it's already a JSON string, validate it
+            $decoded = json_decode($value, true);
+            $this->attributes['images'] = is_array($decoded) ? $value : json_encode([]);
+        } else {
+            $this->attributes['images'] = json_encode([]);
+        }
+    }
+    
 
     protected $fillable = [
         'user_id',
@@ -56,6 +78,7 @@ class UserInformation extends Model
         'languages' => 'array',
         'latitude' => 'string',
         'longitude' => 'string',
+        'images' => 'array',
         'wallet_balance' => 'decimal:2'
     ];
 

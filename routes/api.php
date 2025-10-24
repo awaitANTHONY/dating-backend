@@ -49,6 +49,11 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::get('user', [Controllers\Api\v1\AuthController::class, 'user']);
         Route::post('user_update', [Controllers\Api\v1\AuthController::class, 'user_update']);
         Route::post('upload_profile', [Controllers\Api\v1\AuthController::class, 'upload_profile']);
+        
+        // Image Upload Routes
+        Route::post('upload_images', [Controllers\Api\v1\AuthController::class, 'upload_images']);
+        
+        
         Route::post('change_password', [Controllers\Api\v1\AuthController::class, 'change_password']);
         Route::post('reset_password', [Controllers\Api\v1\AuthController::class, 'reset_password']);
 
