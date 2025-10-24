@@ -141,24 +141,11 @@ class ProfileController extends Controller
                 // Add detailed attributes from UserInformation model accessors
                 'relation_goals_details' => $userInfo->relation_goals_details,
                 'interests_details' => $userInfo->interests_details,
+                'ethnicity_details' => $userInfo->ethnicity_details,
+                'languages_details' => $userInfo->languages_details,
 
             ];
         })->filter()->values();
-
-        // Debug: Log found users (remove this later)
-        \Log::info('Found Users Debug', [
-            'total_found' => $transformedResults->count(),
-            'users' => $transformedResults->map(function($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'gender' => $user->gender,
-                    'distance' => $user->distance,
-                    'lat' => $user->latitude,
-                    'lng' => $user->longitude
-                ];
-            })->toArray()
-        ]);
 
         // Get current user's decoded preferences for compatibility scoring
         $userRelationGoals = $userInformation->relation_goals ?? [];
@@ -495,6 +482,8 @@ class ProfileController extends Controller
                 // Add detailed attributes from UserInformation model accessors
                 'relation_goals_details' => $userInfo->relation_goals_details,
                 'interests_details' => $userInfo->interests_details,
+                'ethnicity_details' => $userInfo->ethnicity_details,
+                'languages_details' => $userInfo->languages_details,
 
             ];
         })->filter()->values();
