@@ -41,7 +41,7 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
 
 
     //Auth Controller
-    Route::middleware('auth:sanctum')->group( function () {
+    Route::middleware(['auth:sanctum', 'token.expiry'])->group( function () {
         
         Route::post('verification', [Controllers\Api\v1\AuthController::class, 'verification']);
         Route::post('resend_otp', [Controllers\Api\v1\AuthController::class, 'resend_otp']);

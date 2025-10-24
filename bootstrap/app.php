@@ -26,7 +26,14 @@ use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+        });
     })->create();
     
     // Register our Firebase provider so the Firebase bindings are available.
