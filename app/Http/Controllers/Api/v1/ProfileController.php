@@ -14,6 +14,8 @@ use App\Models\UserInformation;
 use App\Models\UserInteraction;
 use App\Models\UserMatch;
 use App\Models\UserBlock;
+use App\Models\ProfileVisitor;
+use App\Models\ProfileBoost;
 use App\Models\RelationshipStatus;
 use App\Models\Ethnicity;
 use App\Models\Education;
@@ -136,6 +138,8 @@ class ProfileController extends Controller
                 'is_zodiac_sign_matter' => $userInfo->is_zodiac_sign_matter,
                 'is_food_preference_matter' => $userInfo->is_food_preference_matter,
                 'country_code' => $userInfo->country_code,
+                'is_verified' => $userInfo->is_verified ?? false,
+                'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 
                 // Add detailed attributes from UserInformation model accessors
@@ -360,9 +364,24 @@ class ProfileController extends Controller
             ];
             
             return $profile;
+        });
+
+        // Get boosted users and prioritize them
+        $boostedUserIds = ProfileBoost::getActiveBoostedUsers();
+        
+        // Separate boosted and regular profiles
+        $boostedProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
+            return in_array($profile->id, $boostedUserIds);
         })->sortByDesc('match_score')->values();
 
-        return response()->json(['status' => true, 'data' => $scoredResults]);
+        $regularProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
+            return !in_array($profile->id, $boostedUserIds);
+        })->sortByDesc('match_score')->values();
+
+        // Combine: boosted profiles first, then regular profiles
+        $finalResults = $boostedProfiles->concat($regularProfiles)->values();
+
+        return response()->json(['status' => true, 'data' => $finalResults]);
     }
 
     /**
@@ -477,6 +496,8 @@ class ProfileController extends Controller
                 'alkohol' => $userInfo->alkohol,
                 'smoke' => $userInfo->smoke,
                 'preffered_age' => $userInfo->preffered_age,
+                'is_verified' => $userInfo->is_verified ?? false,
+                'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 
                 // Add detailed attributes from UserInformation model accessors
@@ -534,6 +555,31 @@ class ProfileController extends Controller
                 if ($maxHeight) $q->where('height', '<=', $maxHeight);
             });
         }
+    }
+
+    /**
+     * Get user's profile completion status and tasks
+     */
+    public function profile_completion(Request $request)
+    {
+        $user = $request->user();
+        
+        // Get user information using model relationship
+        $userInformation = $user ? $user->user_information : null;
+        
+        if (!$userInformation) {
+            return response()->json([
+                'status' => false, 
+                'message' => 'User profile information not found. Please complete your profile first.'
+            ], 400);
+        }
+
+        // Use cache for profile completion - refreshes every 30 minutes
+        $cacheKey = "profile_completion_user_{$user->id}";
+        
+        return Cache::remember($cacheKey, 1800, function() use ($user, $userInformation) {
+            return $this->calculateProfileCompletion($user, $userInformation);
+        });
     }
 
     /**
@@ -775,6 +821,135 @@ class ProfileController extends Controller
     }
 
     /**
+     * Calculate profile completion percentage and tasks
+     */
+    private function calculateProfileCompletion($user, $userInformation)
+    {
+        $tasks = [];
+        $completedTasks = 0;
+        $totalTasks = 7; // Total number of completion tasks
+
+        // 1. Add Photos (Check if user has multiple images)
+        $images = is_string($userInformation->images) ? json_decode($userInformation->images, true) : ($userInformation->images ?? []);
+        $imageCount = is_array($images) ? count(array_filter($images)) : 0;
+        
+        $tasks[] = [
+            'id' => 'add_photos',
+            'title' => 'Add 2/3 photos',
+            'description' => 'Let your personality shine through',
+            'completed' => $imageCount >= 2,
+            'action_text' => $imageCount >= 2 ? 'Complete' : 'Add photos',
+            'completion_text' => $imageCount >= 2 ? '✓ Photos added' : "Add {$imageCount}/3 photos"
+        ];
+        if ($imageCount >= 2) $completedTasks++;
+
+        // 2. Write About Me (Bio)
+        $hasBio = !empty($userInformation->bio);
+        $tasks[] = [
+            'id' => 'write_bio',
+            'title' => 'Write your "About me"',
+            'description' => "We'll find better matches for you",
+            'completed' => $hasBio,
+            'action_text' => $hasBio ? 'Complete' : 'Write bio',
+            'completion_text' => $hasBio ? '✓ Bio complete' : 'Write about yourself'
+        ];
+        if ($hasBio) $completedTasks++;
+
+        // 3. Add Interests/Hobbies
+        $interests = is_string($userInformation->interests) ? json_decode($userInformation->interests, true) : ($userInformation->interests ?? []);
+        $hasInterests = is_array($interests);
+        
+        $tasks[] = [
+            'id' => 'add_interests',
+            'title' => 'Write more about you',
+            'description' => 'Tell about your hobbies and passions',
+            'completed' => $hasInterests,
+            'action_text' => $hasInterests ? 'Complete' : 'Add interests',
+            'completion_text' => $hasInterests ? '✓ Interests added' : 'Add your interests'
+        ];
+        if ($hasInterests) $completedTasks++;
+
+        // 4. Fill Profile Info (Age, location, basic info)
+        $hasBasicInfo = !empty($userInformation->age) && 
+                       !empty($userInformation->gender) && 
+                       !empty($userInformation->latitude) && 
+                       !empty($userInformation->longitude);
+        
+        $tasks[] = [
+            'id' => 'fill_profile_info',
+            'title' => 'Fill up your profile info',
+            'description' => "We'll find better matches for you",
+            'completed' => $hasBasicInfo,
+            'action_text' => $hasBasicInfo ? 'Complete' : 'Fill info',
+            'completion_text' => $hasBasicInfo ? '✓ Profile info complete' : 'Add basic information'
+        ];
+        if ($hasBasicInfo) $completedTasks++;
+
+        // 5. Get Verified (Check actual verification status)
+        $isVerified = $userInformation->is_verified ?? false;
+        $tasks[] = [
+            'id' => 'get_verified',
+            'title' => 'Get verified',
+            'description' => 'Verified members get 30% more likes',
+            'completed' => $isVerified,
+            'action_text' => $isVerified ? 'Verified' : 'Get verified',
+            'completion_text' => $isVerified ? '✓ Account verified' : 'Verify your account'
+        ];
+        if ($isVerified) $completedTasks++;
+
+        // 6. Join Communities (Interests/Groups)
+        $relationGoals = is_string($userInformation->relation_goals) ? json_decode($userInformation->relation_goals, true) : ($userInformation->relation_goals ?? []);
+        $languages = is_string($userInformation->languages) ? json_decode($userInformation->languages, true) : ($userInformation->languages ?? []);
+        
+        $hasCommunitiesInfo = (is_array($relationGoals) && count($relationGoals) >= 1) && 
+                             (is_array($languages) && count($languages) >= 1);
+        
+        $tasks[] = [
+            'id' => 'join_communities',
+            'title' => 'Join 3 communities',
+            'description' => 'Show others what interests you',
+            'completed' => $hasCommunitiesInfo,
+            'action_text' => $hasCommunitiesInfo ? 'Complete' : 'Join communities',
+            'completion_text' => $hasCommunitiesInfo ? '✓ Communities joined' : 'Join interest communities'
+        ];
+        if ($hasCommunitiesInfo) $completedTasks++;
+
+        // 7. Upgrade to Premium (Always show as incomplete for monetization)
+        $isPremium = false; // Check user subscription status
+        $tasks[] = [
+            'id' => 'upgrade_premium',
+            'title' => 'Upgrade to Premium',
+            'description' => 'Unlock all benefits',
+            'completed' => $isPremium,
+            'action_text' => $isPremium ? 'Premium' : 'Upgrade',
+            'completion_text' => $isPremium ? '✓ Premium member' : 'Unlock premium features'
+        ];
+        if ($isPremium) $completedTasks++;
+
+        // Calculate completion percentage
+        $completionPercentage = round(($completedTasks / $totalTasks) * 100);
+
+        $completion = [
+            'completion_percentage' => $completionPercentage,
+            'completed_tasks' => $completedTasks,
+            'total_tasks' => $totalTasks,
+            'title' => 'Profile completion',
+            'subtitle' => 'Men with fully filled profiles receive twice as many matches.',
+            'tasks' => $tasks,
+            'benefits' => [
+                'more_matches' => $completionPercentage >= 80,
+                'better_visibility' => $completionPercentage >= 60,
+                'algorithm_boost' => $completionPercentage >= 40
+            ]
+        ];
+
+        return response()->json([
+            'status' => true,
+            'data' => $completion
+        ]);
+    }
+
+    /**
      * Get detailed user profile information by user ID
      *
      * @param Request $request
@@ -821,6 +996,17 @@ class ProfileController extends Controller
                     'status' => false,
                     'message' => 'User not found or inactive.'
                 ], 404);
+            }
+
+            // Track profile visit (async to not block response)
+            try {
+                ProfileVisitor::trackVisit($user->id, $targetUserId);
+                
+                // Clear the profile visitors cache for the target user so the visit appears immediately
+                Cache::forget("profile_visitors_user_{$targetUserId}");
+            } catch (\Exception $e) {
+                // Log the error but don't fail the request
+                \Log::error('Failed to track profile visit: ' . $e->getMessage());
             }
 
             // Calculate distance from current user
@@ -948,6 +1134,407 @@ class ProfileController extends Controller
     }
 
     /**
+     * Get daily soulmates - most compatible people (premium feature)
+     * This list is updated daily and shows only the highest compatibility matches
+     */
+    public function soulmates(Request $request)
+    {
+        $user = $request->user();
+        
+        // Get user information using model relationship
+        $userInformation = $user ? $user->user_information : null;
+        
+        if (!$userInformation) {
+            return response()->json([
+                'status' => false, 
+                'message' => 'User profile information not found. Please complete your profile first.'
+            ], 400);
+        }
+
+        // Check if user has premium subscription (optional - remove if not needed)
+        // if (!$user->hasActiveSubscription()) {
+        //     return response()->json([
+        //         'status' => false, 
+        //         'message' => 'Soulmates feature requires premium subscription.'
+        //     ], 403);
+        // }
+
+        // Use daily cache for soulmates - refreshes every 24 hours
+        $today = now()->format('Y-m-d');
+        $cacheKey = "soulmates_user_{$user->id}_date_{$today}";
+        
+        return Cache::remember($cacheKey, now()->addDay(), function() use ($request, $user, $userInformation) {
+            return $this->generateSoulmates($request, $user, $userInformation);
+        });
+    }
+
+    /**
+     * Generate soulmates list with highest compatibility scores
+     */
+    private function generateSoulmates(Request $request, $user, $userInformation)
+    {
+        // Get current user's preferences and location
+        $currentLat = $userInformation->latitude ?? 0;
+        $currentLng = $userInformation->longitude ?? 0;
+        $searchRadius = ($userInformation->search_radius ?? 1000) * 2; // Expand radius for soulmates
+        $searchPreference = $userInformation->search_preference ?? 'male';
+
+        // Build query for high-quality profiles only
+        $query = User::with(['user_information'])
+            ->whereHas('user_information', function($q) use ($searchPreference) {
+                $q->where('gender', $searchPreference)
+                  // Only include users with complete profiles for soulmates
+                  ->whereNotNull('bio')
+                  ->whereNotNull('age')
+                  ->whereNotNull('religion_id')
+                  ->whereNotNull('education_id')
+                  ->whereNotNull('carrer_field_id')
+                  ->where('bio', '!=', '')
+                  ->where('age', '>', 0);
+            })
+            ->where('id', '!=', $user->id)
+            ->where('status', 1)
+            ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->whereDoesntHave('blockedUsers', function($q) use ($user) {
+                $q->where('blocked_user_id', $user->id);
+            })
+            // Exclude users already swiped on (for fresh soulmates)
+            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+
+        // Apply expanded distance filter for soulmates
+        if ($currentLat != 0 && $currentLng != 0) {
+            $query->whereHas('user_information', function($q) use ($currentLat, $currentLng, $searchRadius) {
+                $q->whereRaw("(
+                    6371 * acos(
+                        cos(radians({$currentLat})) *
+                        cos(radians(latitude)) *
+                        cos(radians(longitude) - radians({$currentLng})) +
+                        sin(radians({$currentLat})) *
+                        sin(radians(latitude))
+                    )
+                ) <= {$searchRadius}");
+            });
+        }
+        
+        $results = $query->limit(1000)->get(); // Get more candidates for better filtering
+
+        // Transform results and add distance calculation
+        $transformedResults = $results->map(function($user) use ($currentLat, $currentLng) {
+            $userInfo = $user->user_information;
+            if (!$userInfo) return null;
+
+            // Calculate distance
+            $distance = $this->calculateDistance(
+                $currentLat, $currentLng,
+                $userInfo->latitude, $userInfo->longitude
+            );
+
+            return (object) [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'image' => $user->image,
+                'images' => $userInfo->images,
+                'bio' => $userInfo->bio,
+                'gender' => $userInfo->gender,
+                'date_of_birth' => $userInfo->date_of_birth,
+                'age' => $userInfo->age,
+                'height' => $userInfo->height,
+                'relation_goals' => $userInfo->relation_goals,
+                'interests' => $userInfo->interests,
+                'languages' => $userInfo->languages,
+                'latitude' => $userInfo->latitude,
+                'longitude' => $userInfo->longitude,
+                'religion_id' => $userInfo->religion_id,
+                'relationship_status_id' => $userInfo->relationship_status_id,
+                'ethnicity_id' => $userInfo->ethnicity_id,
+                'education_id' => $userInfo->education_id,
+                'carrer_field_id' => $userInfo->carrer_field_id,
+                'alkohol' => $userInfo->alkohol,
+                'smoke' => $userInfo->smoke,
+                'preffered_age' => $userInfo->preffered_age,
+                'is_zodiac_sign_matter' => $userInfo->is_zodiac_sign_matter,
+                'is_food_preference_matter' => $userInfo->is_food_preference_matter,
+                'country_code' => $userInfo->country_code,
+                'is_verified' => $userInfo->is_verified ?? false,
+                'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'distance' => $distance,
+                
+                // Add detailed attributes
+                'relation_goals_details' => $userInfo->relation_goals_details,
+                'interests_details' => $userInfo->interests_details,
+                'ethnicity_details' => $userInfo->ethnicity_details,
+                'languages_details' => $userInfo->languages_details,
+            ];
+        })->filter()->values();
+
+        // Get current user's decoded preferences for enhanced compatibility scoring
+        $userRelationGoals = $userInformation->relation_goals ?? [];
+        $userInterests = $userInformation->interests ?? [];
+        $userLanguages = $userInformation->languages ?? [];
+
+        // Decode JSON fields for current user
+        if (is_string($userRelationGoals)) {
+            $userRelationGoals = json_decode($userRelationGoals, true);
+            if (is_string($userRelationGoals)) {
+                $userRelationGoals = json_decode($userRelationGoals, true) ?? [];
+            }
+        }
+        $userRelationGoals = is_array($userRelationGoals) ? $userRelationGoals : [];
+
+        if (is_string($userInterests)) {
+            $userInterests = json_decode($userInterests, true);
+            if (is_string($userInterests)) {
+                $userInterests = json_decode($userInterests, true) ?? [];
+            }
+        }
+        $userInterests = is_array($userInterests) ? $userInterests : [];
+
+        if (is_string($userLanguages)) {
+            $userLanguages = json_decode($userLanguages, true);
+            if (is_string($userLanguages)) {
+                $userLanguages = json_decode($userLanguages, true) ?? [];
+            }
+        }
+        $userLanguages = is_array($userLanguages) ? $userLanguages : [];
+
+        // Calculate ENHANCED compatibility scores for soulmates
+        $scoredResults = $transformedResults->map(function($profile) use ($userInformation, $userRelationGoals, $userInterests, $userLanguages, $searchRadius) {
+            $score = 0;
+
+            // Get profile's preferences
+            $profileRelationGoals = $profile->relation_goals;
+            $profileInterests = $profile->interests;
+            $profileLanguages = $profile->languages;
+
+            // Decode JSON fields for profile
+            if (is_string($profileRelationGoals)) {
+                $profileRelationGoals = json_decode($profileRelationGoals, true);
+                if (is_string($profileRelationGoals)) {
+                    $profileRelationGoals = json_decode($profileRelationGoals, true) ?? [];
+                }
+            }
+            $profileRelationGoals = is_array($profileRelationGoals) ? $profileRelationGoals : [];
+
+            if (is_string($profileInterests)) {
+                $profileInterests = json_decode($profileInterests, true);
+                if (is_string($profileInterests)) {
+                    $profileInterests = json_decode($profileInterests, true) ?? [];
+                }
+            }
+            $profileInterests = is_array($profileInterests) ? $profileInterests : [];
+
+            if (is_string($profileLanguages)) {
+                $profileLanguages = json_decode($profileLanguages, true);
+                if (is_string($profileLanguages)) {
+                    $profileLanguages = json_decode($profileLanguages, true) ?? [];
+                }
+            }
+            $profileLanguages = is_array($profileLanguages) ? $profileLanguages : [];
+
+            // ENHANCED SOULMATE SCORING (Higher thresholds and more criteria)
+            
+            // 1. Core Compatibility (Higher weights for soulmates)
+            $rgOverlap = !empty($userRelationGoals) && !empty($profileRelationGoals) ? array_values(array_intersect($userRelationGoals, $profileRelationGoals)) : [];
+            $langOverlap = !empty($userLanguages) && !empty($profileLanguages) ? array_values(array_intersect($userLanguages, $profileLanguages)) : [];
+            $intOverlap = !empty($userInterests) && !empty($profileInterests) ? array_values(array_intersect($userInterests, $profileInterests)) : [];
+
+            if (!empty($rgOverlap)) {
+                $score += 10; // Increased from 3 - relationship goals are crucial for soulmates
+            }
+            if (!empty($langOverlap)) {
+                $score += 8; // Increased from 2 - communication is key
+            }
+            if (!empty($intOverlap)) {
+                $score += 6; // Increased from 1 - shared interests create bonds
+            }
+
+            // 2. Essential Compatibility Requirements for Soulmates
+            
+            // Religion Compatibility (Higher scoring)
+            if ($userInformation->religion_id && $profile->religion_id) {
+                if ($userInformation->religion_id == $profile->religion_id) {
+                    $score += 15; // Increased from 3 - spiritual alignment
+                }
+            }
+
+            // Lifestyle Perfect Match (Alcohol & Smoking)
+            if ($userInformation->alkohol && $profile->alkohol) {
+                if ($userInformation->alkohol == $profile->alkohol) {
+                    $score += 10; // Perfect lifestyle match
+                } elseif (
+                    ($userInformation->alkohol == 'drink_socially' && $profile->alkohol == 'drink_frequently') ||
+                    ($userInformation->alkohol == 'drink_frequently' && $profile->alkohol == 'drink_socially')
+                ) {
+                    $score += 5; // Compatible but not perfect
+                }
+            }
+
+            if ($userInformation->smoke && $profile->smoke) {
+                if ($userInformation->smoke == $profile->smoke) {
+                    $score += 10; // Perfect smoking match
+                } elseif (
+                    ($userInformation->smoke == 'smoke_occasionally' && $profile->smoke == 'smoke_regularly') ||
+                    ($userInformation->smoke == 'smoke_regularly' && $profile->smoke == 'smoke_occasionally')
+                ) {
+                    $score += 5; // Compatible but not perfect
+                }
+            }
+
+            // 3. Education & Intellectual Compatibility
+            if ($userInformation->education_id && $profile->education_id) {
+                if ($userInformation->education_id == $profile->education_id) {
+                    $score += 12; // Same education level
+                } elseif (abs($userInformation->education_id - $profile->education_id) <= 1) {
+                    $score += 8; // Similar education level
+                }
+            }
+
+            // Career Field Synergy
+            if ($userInformation->carrer_field_id && $profile->carrer_field_id) {
+                if ($userInformation->carrer_field_id == $profile->carrer_field_id) {
+                    $score += 10; // Same career field - understanding work life
+                }
+            }
+
+            // 4. Age & Life Stage Compatibility (Stricter for soulmates)
+            if ($userInformation->age && $profile->age) {
+                $ageDiff = abs($userInformation->age - $profile->age);
+                if ($ageDiff <= 2) {
+                    $score += 15; // Perfect age match
+                } elseif ($ageDiff <= 3) {
+                    $score += 12; // Very close age
+                } elseif ($ageDiff <= 5) {
+                    $score += 8; // Close age
+                } elseif ($ageDiff <= 7) {
+                    $score += 4; // Acceptable age difference
+                }
+                // Beyond 7 years gets no points for soulmates
+            }
+
+            // Age preference perfect matching
+            if ($userInformation->preffered_age && $profile->age) {
+                if (preg_match('/(\d+)-(\d+)/', $userInformation->preffered_age, $matches)) {
+                    $minAge = (int)$matches[1];
+                    $maxAge = (int)$matches[2];
+                    if ($profile->age >= $minAge && $profile->age <= $maxAge) {
+                        $score += 8; // Profile age perfectly fits user's preference
+                    }
+                }
+            }
+
+            // 5. Physical Compatibility
+            if ($userInformation->height && $profile->height) {
+                $heightDiff = abs($userInformation->height - $profile->height);
+                if ($heightDiff <= 5) { // Within 5cm - very close
+                    $score += 5;
+                } elseif ($heightDiff <= 10) { // Within 10cm - close
+                    $score += 3;
+                }
+            }
+
+            // 6. Distance Scoring (Proximity matters for soulmates)
+            if ($profile->distance <= 15) {
+                $score += 20; // Very close - easy to meet
+            } elseif ($profile->distance <= 30) {
+                $score += 15; // Close enough for regular dates
+            } elseif ($profile->distance <= 50) {
+                $score += 10; // Reasonable distance
+            } elseif ($profile->distance <= $searchRadius) {
+                $score += 5; // Within extended search radius
+            }
+
+            // 7. Special Preferences Alignment
+            if ($userInformation->is_zodiac_sign_matter && $profile->is_zodiac_sign_matter) {
+                $score += 5; // Both care about zodiac compatibility
+            }
+
+            if ($userInformation->is_food_preference_matter && $profile->is_food_preference_matter) {
+                $score += 5; // Both care about food preferences
+            }
+
+            // 8. Relationship Status Harmony
+            if ($userInformation->relationship_status_id && $profile->relationship_status_id) {
+                if ($userInformation->relationship_status_id == $profile->relationship_status_id) {
+                    $score += 8; // Same relationship mindset
+                }
+            }
+
+            // 9. Profile Completeness Bonus (Both should have rich profiles)
+            $userFieldCount = 0;
+            $profileFieldCount = 0;
+            
+            $checkFields = ['bio', 'religion_id', 'relationship_status_id', 'ethnicity_id', 'education_id', 'carrer_field_id', 'alkohol', 'smoke', 'age', 'height'];
+            
+            foreach ($checkFields as $field) {
+                if (!empty($userInformation->$field)) $userFieldCount++;
+                if (!empty($profile->$field)) $profileFieldCount++;
+            }
+            
+            // Higher bonus for soulmates - both need complete profiles
+            if ($userFieldCount >= 8 && $profileFieldCount >= 8) {
+                $score += 15; // Both profiles are very comprehensive
+            } elseif ($userFieldCount >= 6 && $profileFieldCount >= 6) {
+                $score += 10; // Both profiles are reasonably complete
+            }
+
+            $profile->soulmate_score = $score;
+            $profile->soulmate_details = [
+                'total_score' => $score,
+                'relation_goals_match' => !empty($rgOverlap),
+                'language_match' => !empty($langOverlap),
+                'interests_match' => !empty($intOverlap),
+                'religion_match' => ($userInformation->religion_id && $profile->religion_id && $userInformation->religion_id == $profile->religion_id),
+                'lifestyle_match' => (
+                    ($userInformation->alkohol && $profile->alkohol && $userInformation->alkohol == $profile->alkohol) &&
+                    ($userInformation->smoke && $profile->smoke && $userInformation->smoke == $profile->smoke)
+                ),
+                'education_match' => ($userInformation->education_id && $profile->education_id && $userInformation->education_id == $profile->education_id),
+                'age_perfect_match' => ($userInformation->age && $profile->age && abs($userInformation->age - $profile->age) <= 3),
+                'close_distance' => ($profile->distance <= 30),
+                'compatibility_percentage' => min(100, round(($score / 150) * 100, 1))
+            ];
+            
+            return $profile;
+        });
+
+        // Filter for TRUE SOULMATES - only the highest compatibility scores
+        $soulmates = $scoredResults
+            ->filter(function($profile) {
+                // Only include profiles with soulmate score >= 80 (high threshold)
+                return $profile->soulmate_score >= 80;
+            })
+            ->sortByDesc('soulmate_score')
+            ->take(15) // Limit to top 15 soulmates per day
+            ->values();
+
+        
+
+        return response()->json(['status' => true, 'data' => $soulmates]);
+    }
+
+    /**
+     * Clear soulmates cache for a specific user or all users
+     */
+    public function clearSoulmatesCache($userId = null)
+    {
+        if ($userId) {
+            $today = now()->format('Y-m-d');
+            $cacheKey = "soulmates_user_{$userId}_date_{$today}";
+            Cache::forget($cacheKey);
+        } else {
+            // Clear all soulmates caches (admin function)
+            $pattern = "soulmates_user_*";
+            // Note: This requires Redis or a cache store that supports pattern deletion
+            Cache::flush(); // Alternative: clear all cache (use with caution)
+        }
+    }
+
+    /**
      * Clear recommendations cache for a specific user
      * Call this method when user profile data is updated
      */
@@ -956,9 +1543,98 @@ class ProfileController extends Controller
         if ($userId) {
             $cacheKey = "recommendations_user_{$userId}";
             Cache::forget($cacheKey);
+            
+            // Also clear soulmates cache when profile changes
+            $this->clearSoulmatesCache($userId);
+            
+            // Also clear profile completion cache when profile changes
+            $this->clearProfileCompletionCache($userId);
         } else {
             // Clear all recommendation caches (use with caution)
             Cache::flush();
+        }
+    }
+
+    /**
+     * Clear profile completion cache for a specific user
+     * Call this method when user profile data is updated
+     */
+    public function clearProfileCompletionCache($userId = null)
+    {
+        if ($userId) {
+            $cacheKey = "profile_completion_user_{$userId}";
+            Cache::forget($cacheKey);
+        } else {
+            // Clear all profile completion caches (admin function)
+            $pattern = "profile_completion_user_*";
+            // Note: This requires Redis or a cache store that supports pattern deletion
+            Cache::flush(); // Alternative: clear all cache (use with caution)
+        }
+    }
+
+    /**
+     * Get profile visitors - last 20 visitors with 24-hour cache
+     */
+    public function profile_visitors(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User not authenticated.'
+            ], 401);
+        }
+
+        // Use 24-hour cache for profile visitors
+        $cacheKey = "profile_visitors_user_{$user->id}";
+        
+        return Cache::remember($cacheKey, 86400, function() use ($user) { // 86400 seconds = 24 hours
+            return $this->generateProfileVisitors($user);
+        });
+    }
+
+    /**
+     * Generate profile visitors list - simple version
+     */
+    private function generateProfileVisitors($user)
+    {
+        try {
+            // Get last 20 visitors using the model scope
+            $visitors = ProfileVisitor::recentVisitors($user->id, 20)->get();
+
+            // Transform visitor data - only basic info
+            $transformedVisitors = $visitors->map(function($visit) {
+                $visitor = $visit->visitor;
+                $visitorInfo = $visitor ? $visitor->user_information : null;
+
+                if (!$visitor) {
+                    return null;
+                }
+
+                return [
+                    'id' => $visitor->id,
+                    'name' => $visitor->name,
+                    'image' => $visitor->image,
+                    'is_verified' => $visitorInfo ? ($visitorInfo->is_verified ?? false) : false,
+                    'visited_at' => $visit->visited_at->diffForHumans()
+                ];
+            })->filter()->values();
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'visitors' => $transformedVisitors,
+                    'total_visitors' => $transformedVisitors->count()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to retrieve profile visitors.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+            ], 500);
         }
     }
 }

@@ -15,15 +15,15 @@ class Payment extends Model
      * @var array
      */
     protected $fillable = [
-        'id', 
+        'id',
         'user_id', 
-        'subscription_id', 
+        'title',
         'date', 
         'amount', 
         'platform',
         'transaction_id',
         'original_transaction_id',
-        'user'
+        'payment_type', // verification, subscription, boost
     ];
 
     /**
@@ -34,16 +34,6 @@ class Payment extends Model
     public function user()
     {
         return $this->hasOne('App\Models\User', 'id', 'user_id')->withDefault(['name' => '']);
-    }
-
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function subscription()
-    {
-        return $this->hasOne('App\Models\Subscription', 'id', 'subscription_id')->withDefault();
     }
 
 }

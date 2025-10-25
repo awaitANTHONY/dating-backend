@@ -11,9 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $table->string('transaction_id')->nullable()->after('platform');
-            $table->string('original_transaction_id')->nullable()->after('transaction_id');
+        Schema::table('user_information', function (Blueprint $table) {
+            $table->boolean('is_verified')->default(false)->after('carrer_field_id');
         });
     }
 
@@ -22,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('payments', function (Blueprint $table) {
-            $table->dropColumn(['transaction_id', 'original_transaction_id']);
+        Schema::table('user_information', function (Blueprint $table) {
+            $table->dropColumn('is_verified');
         });
     }
 };

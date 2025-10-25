@@ -37,6 +37,6 @@ use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
     })->create();
     
     // Register our Firebase provider so the Firebase bindings are available.
-    $app->register(\App\Providers\FirebaseServiceProvider::class);
+    // $app->register(\App\Providers\FirebaseServiceProvider::class);
 
     return $app;

@@ -17,10 +17,14 @@ class CreatePaymentsTable extends Migration
             $table->id();
 
             $table->bigInteger('user_id');
-            $table->bigInteger('subscription_id');
+            $table->string('title');
             $table->string('date', 50);
             $table->string('amount', 50);
             $table->string('platform', 20);
+            $table->string('transaction_id')->nullable();
+            $table->string('original_transaction_id')->nullable();
+            $table->string('payment_type')->default('subscription'); // subscription, verification, boost
+        
 
             $table->timestamps();
         });

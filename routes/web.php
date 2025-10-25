@@ -84,6 +84,10 @@ Route::group(['middleware' => ['install']], function () {
         Route::post('/subscriptions/reorder', [Controllers\SubscriptionController::class, 'reorder']);
         Route::resource('subscriptions', Controllers\SubscriptionController::class);
 
+        // BoostPackageController
+        Route::post('/boost-packages/reorder', [Controllers\BoostPackageController::class, 'reorder']);
+        Route::resource('boost-packages', Controllers\BoostPackageController::class);
+
         // PaymentController
         Route::resource('payments', Controllers\PaymentController::class);
 

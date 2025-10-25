@@ -55,6 +55,7 @@ class AuthController extends Controller
         $user->provider = $request->provider;
         $user->image = asset('public/default/profile.png');
         $user->status = $request->provider == 'email' ? 3 : 1;
+        $user->last_activity = now(); // Set last activity on signup
 
         $isDevelopment = env('APP_DEBUG') == true;
 
@@ -180,7 +181,59 @@ class AuthController extends Controller
         $user->tokens()->delete();
 
         $user->device_token = $request->device_token;
+        $user->last_activity = now(); // Update last activity on signin
 
+        $user->save();
+
+        $user->is_profile_completed = $user->user_information ? true : false;
+
+        if($user->is_profile_completed) {
+            $user->user_information = $user->user_information;
+            $user->user_information->religion = $user->user_information ? $user->user_information->religion : null;
+        }
+
+        $tokenResult = $user->createToken($request->device_token)->plainTextToken;
+        return response()->json([
+            'status' => true,
+            'access_token' => $tokenResult,
+            'data' => $user,
+        ]);
+    }
+
+    public function signinWithPhone(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'phone' => 'required|string',
+            'device_token' => 'required',
+            'provider' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        // Find user by phone in user_information table
+        $userInfo = UserInformation::where('phone', $request->phone)->first();
+        
+        if (!$userInfo) {
+            return response()->json([
+                'status' => false,
+                'message' => 'These credentials do not match our records.',
+            ]);
+        }
+
+        $user = User::find($userInfo->user_id);
+        
+        if (!$user || $user->status != 1) {
+            return response()->json([
+                'status' => false,
+                'message' => 'These credentials do not match our records.',
+            ]);
+        }
+
+        $user->tokens()->delete();
+        $user->device_token = $request->device_token;
+        $user->last_activity = now(); // Update last activity on phone signin
         $user->save();
 
         $user->is_profile_completed = $user->user_information ? true : false;
@@ -228,6 +281,19 @@ class AuthController extends Controller
             'preffered_age' => 'nullable|string|max:100',
             'height' => 'nullable|integer|min:10|max:300',
             'carrer_field_id' => 'nullable|exists:career_fields,id',
+            'address' => 'nullable|string',
+            'activities' => 'nullable|array',
+            'activities.*' => 'nullable|string|max:255',
+            'food_drinks' => 'nullable|array',
+            'food_drinks.*' => 'nullable|string|max:255',
+            'sport' => 'nullable|array',
+            'sport.*' => 'nullable|string|max:255',
+            'games' => 'nullable|array',
+            'games.*' => 'nullable|string|max:255',
+            'music' => 'nullable|array',
+            'music.*' => 'nullable|string|max:255',
+            'films_books' => 'nullable|array',
+            'films_books.*' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -286,9 +352,20 @@ class AuthController extends Controller
         $userInformation->preffered_age = $request->preffered_age;
         $userInformation->height = $request->height;
         $userInformation->carrer_field_id = $request->carrer_field_id;
+        $userInformation->address = $request->address;
+        $userInformation->activities = $request->activities;
+        $userInformation->food_drinks = $request->food_drinks;
+        $userInformation->sport = $request->sport;
+        $userInformation->games = $request->games;
+        $userInformation->music = $request->music;
+        $userInformation->films_books = $request->films_books;
         $userInformation->save();
 
         \DB::commit();
+        
+        // Update user's last activity when profile information is updated
+        $user->last_activity = now();
+        $user->save();
         
         $user = User::find($user->id);
         $user->is_profile_completed = $user->user_information ? true : false;
@@ -299,6 +376,10 @@ class AuthController extends Controller
     public function user(Request $request)
     {
         $data = $request->user();
+        
+        // Update last activity when user info is fetched
+        $data->last_activity = now();
+        $data->save();
         
         $data->is_profile_completed = $data->user_information ? true : false;
         
@@ -333,6 +414,8 @@ class AuthController extends Controller
             $user->$key = $value;
         }
 
+        // Update last activity when user data is updated
+        $user->last_activity = now();
         $user->save();
         
         return response()->json([
@@ -371,6 +454,8 @@ class AuthController extends Controller
             $file->move($path, $fileName);
 
             $user->image = $path . $fileName;
+            $user->last_activity = now(); // Update last activity on profile image upload
+            $user->save();
 
             return response()->json([
                 'status' => true,
@@ -429,6 +514,10 @@ class AuthController extends Controller
                 $userInfo->save();
             }
 
+            // Update user's last activity
+            $user->last_activity = now();
+            $user->save();
+
             \DB::commit();
 
             return response()->json([
@@ -465,6 +554,7 @@ class AuthController extends Controller
             if (!\Hash::check($request->password, $user->password)) {
 
                 $user->password = \Hash::make($request->password);
+                $user->last_activity = now(); // Update last activity on password change
                 $user->save();
 
                 return response()->json([

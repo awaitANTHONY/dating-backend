@@ -68,6 +68,14 @@ class UserInformation extends Model
         'preffered_age',
         'tall',
         'carrer_field_id',
+        'is_verified',
+        'address',
+        'activities',
+        'food_drinks',
+        'sport',
+        'games',
+        'music',
+        'films_books',
     ];
 
     protected $casts = [
@@ -79,7 +87,14 @@ class UserInformation extends Model
         'latitude' => 'string',
         'longitude' => 'string',
         'images' => 'array',
-        'wallet_balance' => 'decimal:2'
+        'wallet_balance' => 'decimal:2',
+        'is_verified' => 'boolean',
+        'activities' => 'array',
+        'food_drinks' => 'array',
+        'sport' => 'array',
+        'games' => 'array',
+        'music' => 'array',
+        'films_books' => 'array',
     ];
 
     protected $hidden = [

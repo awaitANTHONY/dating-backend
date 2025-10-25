@@ -32,6 +32,7 @@ class User extends Authenticatable
         'status',
         'email_otp',
         'email_verified_at',
+        'last_activity',
     ];
 
     /**
@@ -58,6 +59,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'last_activity' => 'datetime',
     ];
 
     public function getImageAttribute($data)
@@ -107,5 +109,21 @@ class User extends Authenticatable
     public function blockedByUsers()
     {
         return $this->hasMany(UserBlock::class, 'blocked_user_id');
+    }
+
+    /**
+     * Interactions performed by this user
+     */
+    public function sentInteractions()
+    {
+        return $this->hasMany(UserInteraction::class, 'user_id');
+    }
+
+    /**
+     * Interactions received by this user
+     */
+    public function receivedInteractions()
+    {
+        return $this->hasMany(UserInteraction::class, 'target_user_id');
     }
 }

@@ -58,20 +58,20 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('reset_password', [Controllers\Api\v1\AuthController::class, 'reset_password']);
 
         Route::get('profiles/recommendations', [Controllers\Api\v1\ProfileController::class, 'recommendations']);
+        Route::get('profiles/completion', [Controllers\Api\v1\ProfileController::class, 'profile_completion']);
         Route::get('profiles/compatibility', [Controllers\Api\v1\ProfileController::class, 'profile_compatibility']);
         Route::get('profiles/details/{id}', [Controllers\Api\v1\ProfileController::class, 'details']);
+        Route::get('profiles/soulmates', [Controllers\Api\v1\ProfileController::class, 'soulmates']);
+        Route::get('profiles/visitors', [Controllers\Api\v1\ProfileController::class, 'profile_visitors']);
         
         // User Interactions
         Route::post('interactions', [Controllers\Api\v1\UserInteractionController::class, 'store']);
         Route::get('interactions', [Controllers\Api\v1\UserInteractionController::class, 'index']);
-        Route::get('interactions/likes', [Controllers\Api\v1\UserInteractionController::class, 'getLikes']);
+        Route::any('interactions/likes', [Controllers\Api\v1\UserInteractionController::class, 'getLikes']);
         
         // Matches
-        Route::get('matches', [Controllers\Api\v1\UserInteractionController::class, 'getMatches']);
-        Route::get('matches/stats', [Controllers\Api\v1\UserInteractionController::class, 'getMatchStats']);
-        Route::get('matches/check/{target_user_id}', [Controllers\Api\v1\UserInteractionController::class, 'checkMatch']);
-        Route::delete('matches/{target_user_id}', [Controllers\Api\v1\UserInteractionController::class, 'unmatch']);
-        
+        Route::any('matches', [Controllers\Api\v1\UserInteractionController::class, 'getMatches']);
+
         // User Blocking System
         Route::post('blocks', [Controllers\Api\v1\UserBlockController::class, 'toggleBlock']);
         Route::get('blocks', [Controllers\Api\v1\UserBlockController::class, 'getBlockedUsers']);
@@ -81,10 +81,19 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('favorites', [Controllers\Api\v1\ApiController::class, 'favorites']);
 
         //SubscriptionController
-        Route::post('subscription/subscribe', [Controllers\Api\v1\SubscriptionController::class, 'subscribe']);
         Route::post('subscription/expired', [Controllers\Api\v1\SubscriptionController::class, 'subscription_expired']);
-        Route::post('subscription/restore', [Controllers\Api\v1\SubscriptionController::class, 'subscription_restore']);
-        Route::get('subscription/history', [Controllers\Api\v1\SubscriptionController::class, 'payments']);
+
+        //PaymentController
+        Route::post('payments/subscribe', [Controllers\Api\v1\PaymentController::class, 'subscribe']);
+        Route::post('payments/verification', [Controllers\Api\v1\PaymentController::class, 'purchase_verification']);
+        Route::post('payments/restore', [Controllers\Api\v1\PaymentController::class, 'subscription_restore']);
+        Route::get('payments/history', [Controllers\Api\v1\PaymentController::class, 'payments']);
+        Route::post('payments/boost', [Controllers\Api\v1\PaymentController::class, 'purchase_boost']);
+        
+        // BoostController - Profile Boost Management
+        Route::get('boosts/packages', [Controllers\Api\v1\BoostController::class, 'boost_packages']);
+        Route::post('boosts/activate', [Controllers\Api\v1\BoostController::class, 'activate_boost']);
+        Route::get('boosts/status', [Controllers\Api\v1\BoostController::class, 'boost_status']);
 
 
         // --- Chat API (Firebase Realtime) ---
