@@ -64,10 +64,10 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         // User Interactions
         Route::post('interactions', [Controllers\Api\v1\UserInteractionController::class, 'store']);
         Route::get('interactions', [Controllers\Api\v1\UserInteractionController::class, 'index']);
-        Route::get('interactions/likes', [Controllers\Api\v1\UserInteractionController::class, 'getLikes']);
+        Route::any('interactions/likes', [Controllers\Api\v1\UserInteractionController::class, 'getLikes']);
         
         // Matches
-        Route::get('matches', [Controllers\Api\v1\UserInteractionController::class, 'getMatches']);
+        Route::any('matches', [Controllers\Api\v1\UserInteractionController::class, 'getMatches']);
         Route::get('matches/stats', [Controllers\Api\v1\UserInteractionController::class, 'getMatchStats']);
         Route::get('matches/check/{target_user_id}', [Controllers\Api\v1\UserInteractionController::class, 'checkMatch']);
         Route::delete('matches/{target_user_id}', [Controllers\Api\v1\UserInteractionController::class, 'unmatch']);
