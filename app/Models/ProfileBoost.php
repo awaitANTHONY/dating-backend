@@ -15,22 +15,14 @@ class ProfileBoost extends Model
     protected $fillable = [
         'user_id',
         'boost_package_id',
-        'boost_count',
-        'amount',
-        'platform',
-        'transaction_id',
-        'original_transaction_id',
-        'purchased_at',
         'activated_at',
         'expires_at',
         'status'
     ];
 
     protected $casts = [
-        'purchased_at' => 'datetime',
         'activated_at' => 'datetime',
-        'expires_at' => 'datetime',
-        'amount' => 'decimal:2'
+        'expires_at' => 'datetime'
     ];
 
     /**

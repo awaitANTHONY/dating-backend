@@ -85,7 +85,7 @@ class BoostController extends Controller
         // Get available boost (oldest purchased first)
         $availableBoost = ProfileBoost::where('user_id', $user->id)
                                     ->where('status', 'purchased')
-                                    ->orderBy('purchased_at', 'asc')
+                                    ->orderBy('created_at', 'asc')
                                     ->first();
 
         if (!$availableBoost) {
@@ -158,7 +158,7 @@ class BoostController extends Controller
     {
         return ProfileBoost::where('user_id', $userId)
                          ->where('status', 'purchased')
-                         ->sum('boost_count');
+                         ->count();
     }
 
     /**

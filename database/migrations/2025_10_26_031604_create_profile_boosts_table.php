@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('boost_package_id');
+            $table->timestamp('activated_at')->nullable();
+            $table->timestamp('expires_at')->nullable(); 
             $table->enum('status', ['purchased', 'active', 'expired', 'used'])->default('purchased');
             $table->timestamps();
             
