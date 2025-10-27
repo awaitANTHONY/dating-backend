@@ -1188,7 +1188,7 @@ class ProfileController extends Controller
                   ->whereNotNull('age')
                   ->whereNotNull('religion_id')
                   ->whereNotNull('education_id')
-                  ->whereNotNull('carrer_field_id')
+                //   ->whereNotNull('carrer_field_id')
                   ->where('bio', '!=', '')
                   ->where('age', '>', 0);
             })
@@ -1220,7 +1220,8 @@ class ProfileController extends Controller
             });
         }
         
-        $results = $query->limit(1000)->get(); // Get more candidates for better filtering
+        $results = $query->limit(1000)->get();
+         // Get more candidates for better filtering
 
         // Transform results and add distance calculation
         $transformedResults = $results->map(function($user) use ($currentLat, $currentLng) {
@@ -1506,10 +1507,12 @@ class ProfileController extends Controller
         $soulmates = $scoredResults
             ->filter(function($profile) {
                 // Only include profiles with soulmate score >= 80 (high threshold)
-                return $profile->soulmate_score >= 80;
+                return $profile->soulmate_score >= 60;
             })
-            ->sortByDesc('soulmate_score')
-            ->take(15) // Limit to top 15 soulmates per day
+            ->shuffle() // Randomize order before sorting to add variety
+            // ->sortByDesc('soulmate_score')
+            ->take(15)
+             // Limit to top 15 soulmates per day
             ->values();
 
         
