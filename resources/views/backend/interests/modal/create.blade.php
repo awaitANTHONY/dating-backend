@@ -1,4 +1,4 @@
-<form method="post" class="ajax-submit" autocomplete="off" action="{{ route('interests.store') }}" enctype="multipart/form-data">
+<form method="post" class="ajax-submit" autocomplete="off" action="{{ route('interestss.store') }}" enctype="multipart/form-data">
 	@csrf
 	<div class="row">
 		

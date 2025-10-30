@@ -1,7 +1,7 @@
 $('#data-table').DataTable({
     processing: true,
     serverSide: true,
-    ajax: _url + "/interests",
+    ajax: _url + "/interestss",
     "columns": [
         { data: "image", name: "image", className: "image" },
         { data: "title", name: "title", className: "title" },

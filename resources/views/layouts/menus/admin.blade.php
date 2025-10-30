@@ -8,7 +8,7 @@
 </li>
 
 <li class="u-sidebar-nav-menu__item">
-	<a class="u-sidebar-nav-menu__link" href="{{ url('interests') }}">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('interestss') }}">
 		<i class="fa fa-heart u-sidebar-nav-menu__item-icon"></i>
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Interests') }}</span>
 	</a>

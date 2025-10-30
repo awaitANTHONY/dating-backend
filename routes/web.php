@@ -73,7 +73,7 @@ Route::group(['middleware' => ['install']], function () {
         Route::resource('ethnicities', Controllers\EthnicityController::class);
         Route::resource('educations', Controllers\EducationController::class);
         Route::resource('career-fields', Controllers\CareerFieldController::class);
-        Route::resource('interests', Controllers\InterestController::class);
+        Route::resource('interestss', Controllers\InterestController::class);
         Route::resource('languages', Controllers\LanguageController::class);
         Route::resource('religions', Controllers\ReligionController::class);
         Route::resource('relation_goals', Controllers\RelationGoalController::class);

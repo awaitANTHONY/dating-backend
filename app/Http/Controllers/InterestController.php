@@ -34,11 +34,11 @@ class InterestController extends Controller
                                             ' . _lang('Action') . '
                                         </button>
                                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">';
-                        $action .= '<a href="' . route('interests.edit', $interest->id) . '" class="dropdown-item ajax-modal" data-title="' . _lang('Edit') . '">
+                        $action .= '<a href="' . route('interestss.edit', $interest->id) . '" class="dropdown-item ajax-modal" data-title="' . _lang('Edit') . '">
                                         <i class="fas fa-edit"></i>
                                         ' . _lang('Edit') . '
                                     </a>';
-                        $action .= '<form action="' . route('interests.destroy', $interest->id) . '" method="post" class="ajax-delete">'
+                        $action .= '<form action="' . route('interestss.destroy', $interest->id) . '" method="post" class="ajax-delete">'
                                     . csrf_field() 
                                     . method_field('DELETE') 
                                     . '<button type="button" class="btn-remove dropdown-item">

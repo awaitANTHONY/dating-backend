@@ -6,7 +6,7 @@
 	<div class="col-md-6 breadcrumb-box"></div>
 	<div class="col-md-6 mb-2 text-right">
 		<h4 class="card-title d-none">{{ _lang('Interests List') }}</h4>
-		<a class="btn btn-primary btn-sm ajax-modal" href="{{ route('interests.create') }}" data-title="{{ _lang('Add New') }}">
+		<a class="btn btn-primary btn-sm ajax-modal" href="{{ route('interestss.create') }}" data-title="{{ _lang('Add New') }}">
 			<i class="fas fa-plus mr-1"></i>
 			{{ _lang('Add New') }}
 		</a>

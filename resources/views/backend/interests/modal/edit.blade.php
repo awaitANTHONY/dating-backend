@@ -1,4 +1,4 @@
-<form method="post" class="ajax-submit" autocomplete="off" action="{{ route('interests.update', $interest->id) }}" enctype="multipart/form-data">
+<form method="post" class="ajax-submit" autocomplete="off" action="{{ route('interestss.update', $interest->id) }}" enctype="multipart/form-data">
 	@csrf
 	{{ method_field('PUT') }}
 	<div class="row">

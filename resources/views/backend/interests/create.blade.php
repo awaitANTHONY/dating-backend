@@ -8,7 +8,7 @@
 				<span class="panel-title">{{ _lang('Add New Interest') }}</span>
 			</div>
 			<div class="card-body">
-				<form method="post" action="{{ route('interests.store') }}" enctype="multipart/form-data">
+				<form method="post" action="{{ route('interestss.store') }}" enctype="multipart/form-data">
 					@csrf
 					<div class="row">
 						

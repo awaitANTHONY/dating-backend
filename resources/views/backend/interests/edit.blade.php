@@ -8,7 +8,7 @@
 				<span class="panel-title">{{ _lang('Edit Interest') }}</span>
 			</div>
 			<div class="card-body">
-				<form method="post" action="{{ route('interests.update', $interest->id) }}" enctype="multipart/form-data">
+				<form method="post" action="{{ route('interestss.update', $interest->id) }}" enctype="multipart/form-data">
 					@csrf
 					{{ method_field('PUT') }}
 					<div class="row">
