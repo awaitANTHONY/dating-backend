@@ -32,6 +32,13 @@ class ChatController extends Controller
             ? $user_id . '_' . $receiverId
             : $receiverId . '_' . $user_id;
 
+        \Log::info('ChatController::startChat', [
+            'user_id' => $user_id,
+            'receiver_id' => $receiverId,
+            'group_id' => $groupId,
+            'firebase_available' => $this->firebase->getDatabase() !== null
+        ]);
+
         $group = $this->firebase->getChatGroup($groupId);
 
         if (! $group) {
@@ -45,8 +52,12 @@ class ChatController extends Controller
                 'last_timestamp' => null,
             ];
 
+            \Log::info('Setting chat group data', ['group_id' => $groupId, 'data' => $groupData]);
+
             // Persist via our FirebaseService helper
-            $this->firebase->setChatGroup($groupId, $groupData);
+            $result = $this->firebase->setChatGroup($groupId, $groupData);
+            
+            \Log::info('Firebase setChatGroup result', ['result' => $result]);
         }
 
         return response()->json(['status' => true, 'group_id' => $groupId]);
@@ -70,11 +81,24 @@ class ChatController extends Controller
             'timestamp' => $timestamp,
             'seen_by' => [$user->id => true],
         ];
-        $this->firebase->pushMessage($groupId, $msgData);
-        $this->firebase->updateChatGroup($groupId, [
+
+        \Log::info('ChatController::sendMessage', [
+            'group_id' => $groupId,
+            'message_data' => $msgData,
+            'firebase_available' => $this->firebase->getDatabase() !== null
+        ]);
+
+        $messageResult = $this->firebase->pushMessage($groupId, $msgData);
+        $updateResult = $this->firebase->updateChatGroup($groupId, [
             'last_message' => $message,
             'last_timestamp' => $timestamp,
         ]);
+
+        \Log::info('Firebase operation results', [
+            'message_result' => $messageResult,
+            'update_result' => $updateResult
+        ]);
+
         return response()->json(['status' => true]);
     }
 

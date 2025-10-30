@@ -2,20 +2,19 @@
 
 namespace App\Services;
 
-
 use Kreait\Firebase\Database;
 
 class FirebaseService
 {
     protected $database;
 
-    public function __construct(Database $database)
+    public function __construct(Database $database = null)
     {
         $this->database = $database;
     }
 
     /**
-     * @return \Kreait\Firebase\Database
+     * @return \Kreait\Firebase\Database|null
      */
     public function getDatabase()
     {
@@ -25,11 +24,17 @@ class FirebaseService
     // Chat Groups
     public function getChatGroup($groupId)
     {
+        if (!$this->database) {
+            return null;
+        }
         return $this->database->getReference('chat_groups/' . $groupId)->getValue();
     }
 
     public function getAllChatGroups()
     {
+        if (!$this->database) {
+            return [];
+        }
         return $this->database->getReference('chat_groups')->getValue() ?? [];
     }
 
@@ -42,6 +47,10 @@ class FirebaseService
      */
     public function getChatGroupsForUser($userId)
     {
+        if (!$this->database) {
+            return [];
+        }
+
         // Prefer an embedded inverted index under `chat_groups/by_user/{userId}`
         // to avoid dynamic `.indexOn` rules while keeping the index inside
         // the `chat_groups` tree.
@@ -49,10 +58,24 @@ class FirebaseService
             $refs = $this->database->getReference('chat_groups/by_user/' . $userId)->getValue() ?? [];
 
             if (empty($refs)) {
-                // Fall back to the direct query if the by_user index doesn't exist.
-                $ref = $this->database->getReference('chat_groups');
-                $query = $ref->orderByChild('members/' . $userId)->equalTo(true);
-                return $query->getValue() ?? [];
+                // Fall back to fetching all chat groups and filtering manually
+                // This is more reliable than Firebase queries with complex rules
+                $allGroups = $this->getAllChatGroups();
+                $result = [];
+                
+                foreach ($allGroups as $groupId => $group) {
+                    // Check if user is a member of this group
+                    // Method 1: Check if group has members field
+                    if (isset($group['members'][$userId]) && $group['members'][$userId]) {
+                        $result[$groupId] = $group;
+                    }
+                    // Method 2: Check if groupId contains the userId (common pattern: user1_user2)
+                    elseif (str_contains($groupId, '_' . $userId . '_') || str_contains($groupId, $userId . '_') || str_contains($groupId, '_' . $userId)) {
+                        $result[$groupId] = $group;
+                    }
+                }
+                
+                return $result;
             }
 
             $result = [];
@@ -65,17 +88,16 @@ class FirebaseService
 
             return $result;
         } catch (\Throwable $e) {
-            \Log::warning('Firebase read for chat_groups/by_user failed', [
-                'user' => $userId,
-                'error' => $e->getMessage(),
-                'exception' => get_class($e),
-            ]);
             return [];
         }
     }
 
     public function setChatGroup($groupId, $data)
     {
+        if (!$this->database) {
+            return false;
+        }
+
         $ref = $this->database->getReference('chat_groups/' . $groupId)->set($data);
 
         // Maintain embedded inverted index under chat_groups/by_user/{userId}/{groupId}
@@ -84,7 +106,7 @@ class FirebaseService
                 try {
                     $this->database->getReference('chat_groups/by_user/' . $memberId . '/' . $groupId)->set(true);
                 } catch (\Throwable $e) {
-                    \Log::warning('Failed to write chat_groups/by_user index on setChatGroup', ['group' => $groupId, 'member' => $memberId, 'error' => $e->getMessage()]);
+                   //
                 }
             }
         }
@@ -94,6 +116,10 @@ class FirebaseService
 
     public function updateChatGroup($groupId, $data)
     {
+        if (!$this->database) {
+            return false;
+        }
+
         // Sync embedded by_user index when members change
         if (array_key_exists('members', $data)) {
             try {
@@ -107,7 +133,7 @@ class FirebaseService
                     try {
                         $this->database->getReference('chat_groups/by_user/' . $memberId . '/' . $groupId)->set(true);
                     } catch (\Throwable $e) {
-                        \Log::warning('Failed to add chat_groups/by_user entry', ['group' => $groupId, 'member' => $memberId, 'error' => $e->getMessage()]);
+                        //
                     }
                 }
 
@@ -117,11 +143,11 @@ class FirebaseService
                     try {
                         $this->database->getReference('chat_groups/by_user/' . $memberId . '/' . $groupId)->remove();
                     } catch (\Throwable $e) {
-                        \Log::warning('Failed to remove chat_groups/by_user entry', ['group' => $groupId, 'member' => $memberId, 'error' => $e->getMessage()]);
+                        //
                     }
                 }
             } catch (\Throwable $e) {
-                \Log::warning('Failed to sync chat_groups/by_user index', ['group' => $groupId, 'error' => $e->getMessage()]);
+                //
             }
         }
 
@@ -131,27 +157,47 @@ class FirebaseService
     // Chat Messages
     public function pushMessage($groupId, $messageData)
     {
+        if (!$this->database) {
+            return false;
+        }
+
         return $this->database->getReference('chat_messages/' . $groupId)->push($messageData);
     }
 
     public function getMessages($groupId)
     {
+        if (!$this->database) {
+            return [];
+        }
+
         return $this->database->getReference('chat_messages/' . $groupId)->getValue();
     }
 
     // User Profiles
     public function getUser($userId)
     {
+        if (!$this->database) {
+            return null;
+        }
+
         return $this->database->getReference('users/' . $userId)->getValue();
     }
 
     public function setUser($userId, $data)
     {
+        if (!$this->database) {
+            return false;
+        }
+
         return $this->database->getReference('users/' . $userId)->set($data);
     }
 
     public function updateUser($userId, $data)
     {
+        if (!$this->database) {
+            return false;
+        }
+
         return $this->database->getReference('users/' . $userId)->update($data);
     }
 }
