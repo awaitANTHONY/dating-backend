@@ -132,7 +132,7 @@ class FirebaseServiceProvider extends ServiceProvider
                 // Prefer decoded credentials set in config (array). Fall back to
                 // FIREBASE_CREDENTIALS env which may be a path or an array.
                 $configCredentials = config('firebase.projects.app.credentials');
-                $envCredentials = 'public/uploads/files/' . get_option('firebase_json');
+                $envCredentials = storage_path(get_option('firebase_json'));
 
                 if (is_array($configCredentials)) {
                     $factory = $factory->withServiceAccount($configCredentials);
@@ -164,17 +164,18 @@ class FirebaseServiceProvider extends ServiceProvider
     public function boot()
     {
         if(env('APP_INSTALLED', false) == true){
-            // If the credentials are stored as a JSON file path, decode it and
-            // override the runtime config value so Kreait receives the array.
-            // This avoids permission issues when the package's provider runs
-            // earlier than our provider.
-           $firebaseCredentials = 'public/uploads/files/' . get_option('firebase_json');
-            if ($firebaseCredentials && file_exists($firebaseCredentials) && is_readable($firebaseCredentials)) {
+            $firebaseCredentials = storage_path(get_option('firebase_json'));
+            if (!file_exists($firebaseCredentials)) {
+                \Log::error('Firebase credentials file not found at: ' . $firebaseCredentials);
+            } elseif (!is_readable($firebaseCredentials)) {
+                \Log::error('Firebase credentials file is not readable: ' . $firebaseCredentials);
+            } else {
                 $content = @file_get_contents($firebaseCredentials);
                 $decoded = @json_decode($content, true);
                 if (is_array($decoded)) {
-                    // Overwrite the runtime config value so Kreait receives the array
                     config(['firebase.projects.app.credentials' => $decoded]);
+                } else {
+                    \Log::error('Firebase credentials file could not be decoded as JSON: ' . $firebaseCredentials);
                 }
             }
         }

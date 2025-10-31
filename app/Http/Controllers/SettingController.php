@@ -64,12 +64,31 @@ class SettingController extends Controller
                 $data['updated_at'] = now();
                 if ($request->hasFile($key)) {
                     $file = $request->file($key);
-                    $name = $key . '.' .$file->getClientOriginalExtension();
-                    $path = public_path('uploads/files/');
-                    $file->move($path, $name);
-                    $data['value'] = $name; 
-                    $data['updated_at'] = now();
+                    
+                    if(str_contains($key, '_hidden')){
+                        $key = str_replace('_hidden', '', $key);
+                        $name = $key . '.' .$file->getClientOriginalExtension();
+                        //save in storage
+                        $path = storage_path('app/private/files/');
+                        
+                        // Create directory if it doesn't exist
+                        if (!file_exists($path)) {
+                            mkdir($path, 0755, true);
+                        }
+                        
+                        $file->move($path, $name);
+                        $data['value'] = 'app/private/files/' . $name; 
+                        $data['updated_at'] = now();
+                    }else{
+                        $name = $key . '.' .$file->getClientOriginalExtension();
+                        $path = public_path('uploads/files/');
+                        $file->move($path, $name);
+                        $data['value'] = 'public/uploads/files/' . $name; 
+                        $data['updated_at'] = now();
+                    }
                 }
+
+                
                 if(Setting::where('name', $key)->exists()){                
                     Setting::where('name','=', $key)->update($data);         
                 }else{

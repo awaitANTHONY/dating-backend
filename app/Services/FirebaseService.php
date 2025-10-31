@@ -21,6 +21,26 @@ class FirebaseService
         return $this->database;
     }
 
+        /**
+         * Update a JSON file in Laravel storage (e.g., Firebase credentials).
+         * @param string $relativePath Path relative to storage/app (e.g., 'private/files/filename.json')
+         * @param array $data Data to encode as JSON
+         * @return bool True on success, false on failure
+         */
+        public function updateJsonFile($relativePath, array $data)
+        {
+            $fullPath = storage_path('app/' . ltrim($relativePath, '/'));
+            try {
+                $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                if ($json === false) {
+                    return false;
+                }
+                file_put_contents($fullPath, $json);
+                return true;
+            } catch (\Throwable $e) {
+                return false;
+            }
+        }
     // Chat Groups
     public function getChatGroup($groupId)
     {

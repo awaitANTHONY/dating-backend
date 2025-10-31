@@ -536,7 +536,7 @@ if (!function_exists('get_logo')) {
         if ($logo == '') {
             return asset("public/default/default-logo.png");
         }
-        return asset("public/uploads/images/$logo");
+        return asset($logo);
     }
 }
 
@@ -548,7 +548,7 @@ if (!function_exists('get_icon')) {
         if ($icon == '') {
             return asset("public/default/default-icon.png");
         }
-        return asset("public/uploads/images/$icon");
+        return asset($icon);
     }
 }
 

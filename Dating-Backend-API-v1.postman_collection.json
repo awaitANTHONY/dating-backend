@@ -1,0 +1,1379 @@
+{
+    "info": {
+        "_postman_id": "dating-backend-api-v1-2025",
+        "name": "Dating Backend API v1 - Complete Collection",
+        "description": "Complete API collection for Dating Backend application with X-API-KEY authentication, boost system with dynamic durations, and all endpoints properly configured.\n\nImportant Authentication Fields:\n- device_token: Required for all auth endpoints - unique device identifier\n- provider: Required field - values: 'email' for email auth, 'phone' for phone auth, 'google', 'facebook', 'apple' for social auth",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "dating-backend-v1"
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Sign Up",
+                    "description": "Register a new user account. Required fields: device_token (unique device identifier), provider (email/phone/google/facebook/apple).",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"platform\": \"ios\",\n    \"device_token\": \"test_device_token_12345\",\n    \"provider\": \"email\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signup",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signup"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Sign In",
+                    "description": "Login with email and password. Required fields: device_token (unique device identifier), provider (email/phone/google/facebook/apple).",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"device_token\": \"test_device_token_12345\",\n    \"provider\": \"email\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signin",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signin"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Sign In With Phone",
+                    "description": "Login with phone number and OTP. Required fields: device_token (unique device identifier), provider (should be 'phone').",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phone\": \"+1234567890\",\n    \"otp\": \"123456\",\n    \"device_token\": \"test_device_token_12345\",\n    \"provider\": \"phone\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signinWithPhone",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signinWithPhone"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Forget Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"john@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/forget_password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "forget_password"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Verify Forget Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"john@example.com\",\n    \"otp\": \"123456\",\n    \"password\": \"newpassword123\",\n    \"password_confirmation\": \"newpassword123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/verify_forget_password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "verify_forget_password"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "User Management",
+            "item": [
+                {
+                    "name": "Email Verification",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"otp\": \"123456\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/verification",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "verification"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get User Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "user"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update User Information",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"John Doe\",\n    \"bio\": \"Adventure seeker, coffee enthusiast, and dog lover. Looking for someone to explore the city with and share meaningful conversations.\",\n    \"gender\": \"male\",\n    \"date_of_birth\": \"1995-08-15\",\n    \"age\": 28,\n    \"height\": 180,\n    \"religion_id\": 1,\n    \"relationship_status_id\": 1,\n    \"ethnicity_id\": 1,\n    \"education_id\": 3,\n    \"carrer_field_id\": 2,\n    \"latitude\": \"40.7128\",\n    \"longitude\": \"-74.0060\",\n    \"address\": \"New York, NY, USA\",\n    \"country_code\": \"+1\",\n    \"phone\": \"1234567890\",\n    \"search_radius\": 50,\n    \"search_preference\": \"female\",\n    \"preffered_age\": \"22-35\",\n    \"relation_goals\": [1, 2],\n    \"interests\": [1, 5, 8, 12, 15],\n    \"languages\": [1, 2],\n    \"alkohol\": \"drink_socially\",\n    \"smoke\": \"dont_smoke\",\n    \"is_zodiac_sign_matter\": false,\n    \"is_food_preference_matter\": true,\n    \"activities\": [\"hiking\", \"photography\", \"traveling\"],\n    \"food_drinks\": [\"coffee\", \"wine\", \"italian_food\"],\n    \"sport\": [\"football\", \"basketball\", \"swimming\"],\n    \"games\": [\"chess\", \"video_games\"],\n    \"music\": [\"rock\", \"jazz\", \"pop\"],\n    \"films_books\": [\"action_movies\", \"sci_fi\", \"biography\"]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/user_information",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "user_information"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Profile Discovery",
+            "item": [
+                {
+                    "name": "Get Recommendations",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            },
+                            {
+                                "key": "Platform",
+                                "value": "ios",
+                                "description": "ios or android"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/profiles/recommendations",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "profiles",
+                                "recommendations"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Profile Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/profiles/details/{{user_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "profiles",
+                                "details",
+                                "{{user_id}}"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Profile Completion",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/profiles/completion",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "profiles",
+                                "completion"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Soulmates",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/profiles/soulmates",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "profiles",
+                                "soulmates"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Profile Visitors",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/profiles/visitors",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "profiles",
+                                "visitors"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "User Interactions",
+            "item": [
+                {
+                    "name": "Create Interaction (Like/Pass)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"target_user_id\": {{target_user_id}},\n    \"action\": \"like\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/interactions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "interactions"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Likes",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/interactions/likes",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "interactions",
+                                "likes"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Matches",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/matches",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "matches"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Subscriptions",
+            "item": [
+                {
+                    "name": "Get Available Subscriptions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/subscriptions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "subscriptions"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Payments",
+            "item": [
+                {
+                    "name": "Subscribe (Purchase Subscription)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"product_id\": \"premium_monthly\",\n    \"transaction_id\": \"1000000123456789\",\n    \"original_transaction_id\": \"1000000123456789\",\n    \"amount\": \"9.99\",\n    \"platform\": \"ios\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/payments/subscribe",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "payments",
+                                "subscribe"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Purchase Verification",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"transaction_id\": \"1000000123456790\",\n    \"original_transaction_id\": \"1000000123456790\",\n    \"amount\": 4.99,\n    \"platform\": \"ios\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/payments/verification",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "payments",
+                                "verification"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Restore Subscription",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"product_id\": \"premium_monthly\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/payments/restore",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "payments",
+                                "restore"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Payment History",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/payments/history",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "payments",
+                                "history"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Purchase Boost",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"product_id\": \"boost_small\",\n    \"transaction_id\": \"1000000123456791\",\n    \"original_transaction_id\": \"1000000123456791\",\n    \"amount\": 2.99,\n    \"platform\": \"ios\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/payments/boost",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "payments",
+                                "boost"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Profile Boosts",
+            "item": [
+                {
+                    "name": "Get Boost Packages",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/boosts/packages?platform=ios",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "boosts",
+                                "packages"
+                            ],
+                            "query": [
+                                {
+                                    "key": "platform",
+                                    "value": "ios",
+                                    "description": "ios or android - Shows boost packages with dynamic durations (30, 60, 120 minutes)"
+                                }
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Activate Boost",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"note\": \"Activates the oldest purchased boost with duration based on package (30, 60, or 120 minutes)\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/boosts/activate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "boosts",
+                                "activate"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Boost Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/boosts/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "boosts",
+                                "status"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Chat & Messaging",
+            "item": [
+                {
+                    "name": "Start Chat",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"recipient_id\": {{user_id}}\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/start-chat",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "start-chat"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Send Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"recipient_id\": {{user_id}},\n    \"message\": \"Hello! How are you?\",\n    \"type\": \"text\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/send-message",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "send-message"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Chat List",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/chat-list",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "chat-list"
+                            ]
+                        },
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{access_token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "App Configuration",
+            "item": [
+                {
+                    "name": "Get App Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/settings",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "settings"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Interests",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/interests",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "interests"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Languages",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "X-API-KEY",
+                                "value": "{{x_api_key}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/languages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "languages"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Auto-set X-API-KEY for all requests",
+                    "if (!pm.request.headers.has('X-API-KEY')) {",
+                    "    pm.request.headers.add({",
+                    "        key: 'X-API-KEY',",
+                    "        value: pm.variables.get('x_api_key')",
+                    "    });",
+                    "}"
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Enhanced auto-extract access token from various response structures",
+                    "try {",
+                    "    const responseJson = pm.response.json();",
+                    "    ",
+                    "    // Extract access_token from different possible locations",
+                    "    let accessToken = null;",
+                    "    ",
+                    "    if (responseJson.access_token) {",
+                    "        accessToken = responseJson.access_token;",
+                    "    } else if (responseJson.data && responseJson.data.access_token) {",
+                    "        accessToken = responseJson.data.access_token;",
+                    "    } else if (responseJson.token) {",
+                    "        accessToken = responseJson.token;",
+                    "    } else if (responseJson.data && responseJson.data.token) {",
+                    "        accessToken = responseJson.data.token;",
+                    "    }",
+                    "    ",
+                    "    if (accessToken) {",
+                    "        pm.globals.set('access_token', accessToken);",
+                    "        pm.collectionVariables.set('access_token', accessToken);",
+                    "        console.log('\u2705 Access token automatically saved: ' + accessToken.substring(0, 20) + '...');",
+                    "    }",
+                    "    ",
+                    "    // Auto-extract user_id from various response structures",
+                    "    let userId = null;",
+                    "    ",
+                    "    if (responseJson.data && responseJson.data.id) {",
+                    "        userId = responseJson.data.id;",
+                    "    } else if (responseJson.user && responseJson.user.id) {",
+                    "        userId = responseJson.user.id;",
+                    "    } else if (responseJson.id) {",
+                    "        userId = responseJson.id;",
+                    "    }",
+                    "    ",
+                    "    if (userId) {",
+                    "        pm.globals.set('user_id', userId);",
+                    "        pm.collectionVariables.set('user_id', userId);",
+                    "        console.log('\u2705 User ID automatically saved: ' + userId);",
+                    "    }",
+                    "    ",
+                    "    // Auto-extract other useful data",
+                    "    if (responseJson.data) {",
+                    "        // Extract name if available",
+                    "        if (responseJson.data.name) {",
+                    "            pm.globals.set('user_name', responseJson.data.name);",
+                    "            console.log('\u2705 User name saved: ' + responseJson.data.name);",
+                    "        }",
+                    "        ",
+                    "        // Extract email if available",
+                    "        if (responseJson.data.email) {",
+                    "            pm.globals.set('user_email', responseJson.data.email);",
+                    "            console.log('\u2705 User email saved: ' + responseJson.data.email);",
+                    "        }",
+                    "    }",
+                    "    ",
+                    "} catch (e) {",
+                    "    // Silently handle non-JSON responses",
+                    "}"
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://dating-backend.test",
+            "type": "string",
+            "description": "Base URL for the Dating Backend API"
+        },
+        {
+            "key": "x_api_key",
+            "value": "c2zwQxp5wBM2Fidsjijo9MnilYv",
+            "type": "string",
+            "description": "X-API-KEY for request authentication - required for all endpoints"
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "type": "string",
+            "description": "JWT Access Token from login/signup - automatically populated"
+        },
+        {
+            "key": "user_id",
+            "value": "1",
+            "type": "string",
+            "description": "Current user ID - automatically populated from user profile"
+        },
+        {
+            "key": "target_user_id",
+            "value": "2",
+            "type": "string",
+            "description": "Target user ID for interactions and testing"
+        }
+    ]
+}

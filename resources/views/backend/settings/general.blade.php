@@ -177,7 +177,7 @@
                                 <div class="col-md-12">
                                     <div class="form-group">
                                         <label class="control-label">{{ _lang('Firebase Json') }} <span class="text-danger">(Service Account)</span></label>
-                                        <input type="file" class="form-control dropify" name="firebase_json" data-allowed-file-extensions="json" data-default-file="{{ public_path('uploads/files/' . get_option('firebase_json')) }}">
+                                        <input type="file" class="form-control dropify" name="firebase_json_hidden" data-allowed-file-extensions="json" data-default-file="{{ storage_path(get_option('firebase_json')) }}">
                                     </div>
                                 </div>
                                 <div class="col-md-12">
