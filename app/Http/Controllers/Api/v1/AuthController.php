@@ -253,14 +253,15 @@ class AuthController extends Controller
 
     public function user_information(Request $request)
     {
-        $validator = \Validator::make($request->all(), [
+        // Define all possible validation rules
+        $rules = [
             'name' => 'nullable|string|max:191',
             'bio' => 'nullable|string|max:1000',
-            'gender' => 'required|in:male,female,other',
+            'gender' => 'nullable|in:male,female,other',
             'religion_id' => 'nullable|exists:religions,id',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'search_preference' => 'required',
+            'search_preference' => 'nullable|string',
             'relation_goals' => 'nullable|array',
             'interests' => 'nullable|array',
             'languages' => 'nullable|array',
@@ -270,8 +271,8 @@ class AuthController extends Controller
             'images.*' => 'nullable|image',
             'country_code' => 'nullable|string|max:10',
             'phone' => 'nullable|string|max:20',
-            'is_zodiac_sign_matter' => 'nullable',
-            'is_food_preference_matter' => 'nullable',
+            'is_zodiac_sign_matter' => 'nullable|boolean',
+            'is_food_preference_matter' => 'nullable|boolean',
             'age' => 'nullable|integer|min:18|max:100',
             'relationship_status_id' => 'nullable|exists:relationship_statuses,id',
             'ethnicity_id' => 'nullable|exists:ethnicities,id',
@@ -294,7 +295,12 @@ class AuthController extends Controller
             'music.*' => 'nullable|string|max:255',
             'films_books' => 'nullable|array',
             'films_books.*' => 'nullable|string|max:255',
-        ]);
+        ];
+
+        // Only validate fields that are present in the request
+        $fieldsToValidate = array_intersect_key($rules, $request->all());
+        
+        $validator = \Validator::make($request->all(), $fieldsToValidate);
 
         if ($validator->fails()) {
             return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
@@ -304,11 +310,13 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        if($request->name){
+        // Update user name if provided
+        if($request->has('name')){
             $user->name = $request->name;
             $user->save();
         }
 
+        // Handle image uploads if provided
         $otherImages = [];
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $imgFile) {
@@ -324,41 +332,37 @@ class AuthController extends Controller
             $userInformation = $user->user_information;
         } else {
             $userInformation = new UserInformation();
+            $userInformation->user_id = $user->id;
         }
         
-        $userInformation->user_id = $user->id; 
-        $userInformation->bio = $request->bio;
-        $userInformation->gender = $request->gender;
-        $userInformation->date_of_birth = $request->date_of_birth;
-        $userInformation->religion_id = $request->religion_id;
-        $userInformation->latitude = $request->latitude;
-        $userInformation->longitude = $request->longitude;
-        $userInformation->search_radius = $request->search_radius ?? 1000;
-        $userInformation->country_code = $request->country_code;
-        $userInformation->phone = $request->phone;
-        $userInformation->search_preference = $request->search_preference;
-        $userInformation->relation_goals = $request->relation_goals;
-        $userInformation->interests = $request->interests;
-        $userInformation->languages = $request->languages;
-        $userInformation->images = json_encode($otherImages);
-        $userInformation->is_zodiac_sign_matter = $request->is_zodiac_sign_matter ?? false;
-        $userInformation->is_food_preference_matter = $request->is_food_preference_matter ?? false;
-        $userInformation->age = $request->age;
-        $userInformation->relationship_status_id = $request->relationship_status_id;
-        $userInformation->ethnicity_id = $request->ethnicity_id;
-        $userInformation->alkohol = $request->alkohol;
-        $userInformation->smoke = $request->smoke;
-        $userInformation->education_id = $request->education_id;
-        $userInformation->preffered_age = $request->preffered_age;
-        $userInformation->height = $request->height;
-        $userInformation->carrer_field_id = $request->carrer_field_id;
-        $userInformation->address = $request->address;
-        $userInformation->activities = $request->activities;
-        $userInformation->food_drinks = $request->food_drinks;
-        $userInformation->sport = $request->sport;
-        $userInformation->games = $request->games;
-        $userInformation->music = $request->music;
-        $userInformation->films_books = $request->films_books;
+        // Only update fields that are provided in the request
+        $fillableFields = [
+            'bio', 'gender', 'date_of_birth', 'religion_id', 'latitude', 'longitude', 
+            'search_radius', 'country_code', 'phone', 'search_preference', 'relation_goals', 
+            'interests', 'languages', 'is_zodiac_sign_matter', 'is_food_preference_matter', 
+            'age', 'relationship_status_id', 'ethnicity_id', 'alkohol', 'smoke', 
+            'education_id', 'preffered_age', 'height', 'carrer_field_id', 'address', 
+            'activities', 'food_drinks', 'sport', 'games', 'music', 'films_books'
+        ];
+
+        foreach ($fillableFields as $field) {
+            if ($request->has($field)) {
+                $userInformation->$field = $request->$field;
+            }
+        }
+
+        // Handle search_radius default value
+        if ($request->has('search_radius')) {
+            $userInformation->search_radius = $request->search_radius;
+        } elseif ($userInformation->search_radius === null) {
+            $userInformation->search_radius = 1000;
+        }
+
+        // Handle images if uploaded
+        if (!empty($otherImages)) {
+            $userInformation->images = json_encode($otherImages);
+        }
+
         $userInformation->save();
 
         \DB::commit();
