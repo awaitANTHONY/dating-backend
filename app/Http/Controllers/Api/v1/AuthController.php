@@ -269,7 +269,7 @@ class AuthController extends Controller
             'religion_id' => 'nullable|exists:religions,id',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
-            'search_preference' => 'nullable|string',
+            'search_preference' => 'nullable|in:male,female',
             'relation_goals' => 'nullable|array',
             'interests' => 'nullable|array',
             'languages' => 'nullable|array',
