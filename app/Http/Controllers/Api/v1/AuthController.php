@@ -554,7 +554,7 @@ class AuthController extends Controller
                 // Update user information with new gallery images
                 $userInfo = $user->user_information;
                 if ($userInfo) {
-                    $existingImages = json_decode($userInfo->images, true) ?? [];
+                    $existingImages =  $userInfo->images != null ? json_decode($userInfo->images, true) : [];
                     $allImages = array_merge($existingImages, array_column($uploadedImages, 'path'));
                     $userInfo->images = json_encode($allImages);
                     $userInfo->save();
