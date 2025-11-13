@@ -515,7 +515,7 @@ class AuthController extends Controller
             // Update user's last activity
             $user->last_activity = now();
             $user->save();
-            
+
             \DB::commit();
 
             $user = User::find($user->id);
@@ -525,7 +525,6 @@ class AuthController extends Controller
                 'message' => 'Images uploaded successfully',
                 'user' => $user
             ];
-
             return response()->json($response);
 
         } catch (\Exception $e) {
