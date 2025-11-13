@@ -510,6 +510,8 @@ class AuthController extends Controller
                 }
             }
 
+            return response()->json($uploadedImages);
+
             // Update user's last activity
             $user->last_activity = now();
             $user->save();
