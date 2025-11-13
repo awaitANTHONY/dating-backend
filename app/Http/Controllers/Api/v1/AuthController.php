@@ -519,6 +519,7 @@ class AuthController extends Controller
             \DB::commit();
 
             $user = User::find($user->id);
+            $user_information = $user->user_information;
 
             $response = [
                 'status' => true,
