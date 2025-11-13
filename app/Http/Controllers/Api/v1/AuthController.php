@@ -22,8 +22,8 @@ class AuthController extends Controller
 
         if($request->provider != 'email'){
             $request->merge([
-                'password' => $request->device_token,
-                'password_confirmation' => $request->device_token,
+                'password' => $request->device_token ?? rand(100000, 999999),
+                'password_confirmation' => $request->device_token ?? rand(100000, 999999),
             ]);
         }
 

@@ -592,44 +592,9 @@
                         }
                     }
                 },
+                
                 {
-                    "name": "Upload Profile Image",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{access_token}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "image",
-                                    "type": "file"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/api/v1/upload_profile",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "api",
-                                "v1",
-                                "upload_profile"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Upload Multiple Images",
+                    "name": "Upload Images",
                     "request": {
                         "method": "POST",
                         "header": [
