@@ -19,6 +19,14 @@ class AuthController extends Controller
     
     public function signup(Request $request)
     {
+
+        if($request->provider == 'email'){
+            $request->merge([
+                'password' => $request->device_token,
+                'password_confirmation' => $request->device_token,
+            ]);
+        }
+        
         $user = User::where('email', $request->email)->where('user_type', 'user')->first();
         if($request->provider != 'email' ){
             if($user){
