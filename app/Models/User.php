@@ -64,6 +64,9 @@ class User extends Authenticatable
 
     public function getImageAttribute($data)
     {
+        if (!$data) {
+            return asset('public/default/profile.png');
+        }
         return asset($data);
     }
 

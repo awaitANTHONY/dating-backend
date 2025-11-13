@@ -52,6 +52,7 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         
         // Image Upload Routes
         Route::post('upload_images', [Controllers\Api\v1\AuthController::class, 'upload_images']);
+        Route::delete('delete_gallery_images', [Controllers\Api\v1\AuthController::class, 'delete_gallery_images']);
         
         
         Route::post('change_password', [Controllers\Api\v1\AuthController::class, 'change_password']);

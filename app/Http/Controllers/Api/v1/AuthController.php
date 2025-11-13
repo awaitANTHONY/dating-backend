@@ -208,57 +208,6 @@ class AuthController extends Controller
         ]);
     }
 
-    public function signinWithPhone(Request $request)
-    {
-        $validator = \Validator::make($request->all(), [
-            'phone' => 'required|string',
-            'device_token' => 'required',
-            'provider' => 'required',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
-        }
-
-        // Find user by phone in user_information table
-        $userInfo = UserInformation::where('phone', $request->phone)->first();
-        
-        if (!$userInfo) {
-            return response()->json([
-                'status' => false,
-                'message' => 'These credentials do not match our records.',
-            ]);
-        }
-
-        $user = User::find($userInfo->user_id);
-        
-        if (!$user || $user->status != 1) {
-            return response()->json([
-                'status' => false,
-                'message' => 'These credentials do not match our records.',
-            ]);
-        }
-
-        $user->tokens()->delete();
-        $user->device_token = $request->device_token;
-        $user->last_activity = now(); // Update last activity on phone signin
-        $user->save();
-
-        $user->is_profile_completed = $user->user_information ? true : false;
-
-        if($user->is_profile_completed) {
-            $user->user_information = $user->user_information;
-            $user->user_information->religion = $user->user_information ? $user->user_information->religion : null;
-        }
-
-        $tokenResult = $user->createToken($request->device_token)->plainTextToken;
-        return response()->json([
-            'status' => true,
-            'access_token' => $tokenResult,
-            'data' => $user,
-        ]);
-    }
-
     public function user_information(Request $request)
     {
         // Define all possible validation rules
@@ -339,8 +288,8 @@ class AuthController extends Controller
             // Move profile image to user directory
             $profileImage->move(base_path($userPath), $profileFileName);
             
-            // Update user's profile image
-            $user->image = asset($userPath . $profileFileName);
+            // Update user's profile image (store relative path)
+            $user->image = $userPath . $profileFileName;
             $user->save();
         }
 
@@ -351,7 +300,7 @@ class AuthController extends Controller
                 $extension = $imgFile->getClientOriginalExtension();
                 $imgName = 'gallery_' . time() . '_' . uniqid() . '_' . $index . '.' . $extension;
                 $imgFile->move(base_path($userPath), $imgName);
-                $otherImages[] = asset($userPath . $imgName);
+                $otherImages[] = $userPath . $imgName;
             }
         }
         
@@ -390,7 +339,7 @@ class AuthController extends Controller
         if (!empty($otherImages)) {
             $existingImages =  $userInformation->images != null ? $userInformation->images : [];
             $allImages = array_merge($existingImages, $otherImages);
-            $userInformation->images = json_encode($allImages);
+            $userInformation->images = $allImages;
         }
 
         $userInformation->save();
@@ -533,8 +482,8 @@ class AuthController extends Controller
                 // Move profile image to user directory
                 $profileImage->move(base_path($userPath), $profileFileName);
                 
-                // Update user's profile image
-                $user->image = asset($userPath . $profileFileName);
+                // Update user's profile image (store relative path)
+                $user->image = $userPath . $profileFileName;
                 $user->save();
                 $profileImageUpdated = true;
             }
@@ -548,15 +497,15 @@ class AuthController extends Controller
                     // Move file to user directory
                     $imageFile->move(base_path($userPath), $fileName);
                     
-                    $uploadedImages[] = asset($userPath . $fileName);
+                    $uploadedImages[] = $userPath . $fileName;
                 }
 
                 // Update user information with new gallery images
                 $userInfo = $user->user_information;
                 if ($userInfo) {
                     $existingImages =  $userInfo->images != null ? $userInfo->images : [];
-                    $allImages = array_merge($existingImages, array_column($uploadedImages, 'path'));
-                    $userInfo->images = json_encode($allImages);
+                    $allImages = array_merge($existingImages, $uploadedImages);
+                    $userInfo->images = $allImages;
                     $userInfo->save();
                 }
             }
@@ -723,6 +672,109 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Password has been reset successfully.'
         ]);
+    }
+
+    /**
+     * Delete gallery images for authenticated user
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function delete_gallery_images(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'filename' => 'required', // Can be string or array
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found.'], 401);
+        }
+
+        $user_information = $user->user_information;
+
+        try {
+            \DB::beginTransaction();
+
+            // Get current images array
+            $currentImages = $user_information->images ?? [];
+            if (empty($currentImages)) {
+                return response()->json(['status' => false, 'message' => 'No gallery images found.'], 404);
+            }
+
+            // Handle both single filename and array of filenames
+            $filenamesToDelete = $request->filename;
+            if (!is_array($filenamesToDelete)) {
+                $filenamesToDelete = [$filenamesToDelete];
+            }
+
+            // Process each filename for deletion
+            foreach ($filenamesToDelete as $filename) {
+                $filename = trim($filename);
+                if (empty($filename)) {
+                    continue;
+                }
+
+                // Find the image path that contains this filename
+                $imageToDelete = null;
+                $imageIndex = null;
+                
+                foreach ($currentImages as $index => $imagePath) {
+                    if (strpos($imagePath, $filename) !== false) {
+                        $imageToDelete = $imagePath;
+                        $imageIndex = $index;
+                        break;
+                    }
+                }
+
+                
+
+                // Delete physical file if it exists
+                $fullPath = base_path($imageToDelete);
+                if (file_exists($fullPath)) {
+                    if (unlink($fullPath)) {
+                        // Remove from array
+                        unset($currentImages[$imageIndex]);
+                    } else {
+                        // Could not delete file, log error
+                    }
+                } else {
+                    // File doesn't exist physically, but remove from database anyway
+                    unset($currentImages[$imageIndex]);
+                }
+            }
+
+            // Re-index array after unsetting elements
+            $currentImages = count($currentImages) ? array_values($currentImages) : null;
+
+            // Update user information with remaining images
+            $user_information->images = $currentImages;
+            $user_information->save();
+
+            // Update user's last activity
+            $user->last_activity = now();
+            $user->save();
+
+            \DB::commit();
+
+            // Prepare response
+            $response = [
+                'status' => true,
+                'message' => 'Gallery images deletion completed.',
+            ];
+
+            return response()->json($response);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to delete gallery images: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     //

@@ -592,7 +592,6 @@
                         }
                     }
                 },
-                
                 {
                     "name": "Upload Images",
                     "request": {
@@ -636,6 +635,83 @@
                                 "api",
                                 "v1",
                                 "upload_images"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Gallery Images",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "filename": "gallery_1699123456_abc123_0.jpg"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/delete_gallery_images",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "delete_gallery_images"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Multiple Gallery Images",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "filename": [
+                                    "gallery_1699123456_abc123_0.jpg",
+                                    "gallery_1699123456_abc123_1.jpg"
+                                ]
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/delete_gallery_images",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "delete_gallery_images"
                             ]
                         }
                     }

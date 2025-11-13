@@ -21,9 +21,21 @@ class UserInformation extends Model
     {
         if (is_string($value)) {
             $decoded = json_decode($value, true);
-            return is_array($decoded) ? $decoded : null;
+            if (is_array($decoded)) {
+                // Convert relative paths to full URLs using asset()
+                return array_map(function($path) {
+                    return $path ? asset($path) : null;
+                }, $decoded);
+            }
+            return null;
         }
-        return is_array($value) ? $value : null;
+        if (is_array($value)) {
+            // Convert relative paths to full URLs using asset()
+            return array_map(function($path) {
+                return $path ? asset($path) : null;
+            }, $value);
+        }
+        return null;
     }
 
     public function setImagesAttribute($value)
