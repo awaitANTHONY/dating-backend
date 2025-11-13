@@ -1,0 +1,1873 @@
+{
+    "info": {
+        "_postman_id": "dating-app-exact-api-collection",
+        "name": "Dating App - Exact Routes API",
+        "description": "Exact API collection matching routes/api.php for Dating App with Laravel backend",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "dating-app-exact"
+    },
+    "item": [
+        {
+            "name": "🔐 Authentication (Public Routes)",
+            "item": [
+                {
+                    "name": "Signup",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "name": "John Doe",
+                                "email": "john@example.com",
+                                "password": "password123",
+                                "password_confirmation": "password123",
+                                "device_token": "device_token_123",
+                                "provider": "email"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signup",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signup"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Signin",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "email": "john@example.com",
+                                "password": "password123",
+                                "device_token": "device_token_123",
+                                "provider": "email"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signin",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signin"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Signin with Phone",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "phone": "+1234567890",
+                                "device_token": "device_token_123",
+                                "provider": "phone"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signinWithPhone",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signinWithPhone"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Forget Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "email": "john@example.com"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/forget_password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "forget_password"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Verify Forget Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "email": "john@example.com",
+                                "otp": "123456"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/verify_forget_password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "verify_forget_password"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⚙️ App Settings & Data (Public Routes)",
+            "item": [
+                {
+                    "name": "Get Settings",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/settings",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "settings"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Sliders",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/sliders",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "sliders"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Interests",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/interests",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "interests"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Relation Goals",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/relation_goals",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "relation_goals"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Religions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/religions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "religions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Languages",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/languages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "languages"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Relationship Statuses",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/relationship_statuses",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "relationship_statuses"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Ethnicities",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/ethnicities",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "ethnicities"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Educations",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/educations",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "educations"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Career Fields",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/career_fields",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "career_fields"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Onboarding",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/onboarding",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "onboarding"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Subscriptions (Public)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/subscriptions",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "subscriptions"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔒 Protected Routes (Requires Authentication)",
+            "description": "All routes that require Bearer token authentication",
+            "item": [
+                {
+                    "name": "👤 User Profile Management",
+                    "item": [
+                        {
+                            "name": "Email Verification",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "otp": "111111"
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/verification",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "verification"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Resend OTP",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/resend_otp",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "resend_otp"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Update User Information",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "formdata",
+                                    "formdata": [
+                                        {
+                                            "key": "name",
+                                            "value": "John Updated",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "bio",
+                                            "value": "Updated bio description",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "gender",
+                                            "value": "male",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "age",
+                                            "value": "25",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "latitude",
+                                            "value": "40.7128",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "longitude",
+                                            "value": "-74.0060",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "search_preference",
+                                            "value": "female",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "relation_goals[]",
+                                            "value": "serious_relationship",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "interests[]",
+                                            "value": "music",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "languages[]",
+                                            "value": "english",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "phone",
+                                            "value": "+1234567890",
+                                            "type": "text"
+                                        },
+                                        {
+                                            "key": "image",
+                                            "type": "file",
+                                            "description": "Profile image"
+                                        },
+                                        {
+                                            "key": "images[]",
+                                            "type": "file",
+                                            "description": "Gallery images"
+                                        }
+                                    ]
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/user_information",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "user_information"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get User",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/user",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "user"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "User Update (JSON Fields)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "fields": "{\"name\":\"Updated Name\",\"status\":1}"
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/user_update",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "user_update"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Upload Profile (Chunk Upload)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "formdata",
+                                    "formdata": [
+                                        {
+                                            "key": "image",
+                                            "type": "file",
+                                            "description": "Profile image file"
+                                        }
+                                    ]
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/upload_profile",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "upload_profile"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Upload Images (Profile + Gallery)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "formdata",
+                                    "formdata": [
+                                        {
+                                            "key": "image",
+                                            "type": "file",
+                                            "description": "Profile image (updates user.image)"
+                                        },
+                                        {
+                                            "key": "images[]",
+                                            "type": "file",
+                                            "description": "Gallery image 1"
+                                        },
+                                        {
+                                            "key": "images[]",
+                                            "type": "file",
+                                            "description": "Gallery image 2"
+                                        }
+                                    ]
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/upload_images",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "upload_images"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Change Password",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "old_password": "password123",
+                                        "password": "newpassword123",
+                                        "password_confirmation": "newpassword123"
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/change_password",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "change_password"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Reset Password (After OTP)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "password": "newpassword123",
+                                        "password_confirmation": "newpassword123"
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/reset_password",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "reset_password"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "🔍 Profile Discovery",
+                    "item": [
+                        {
+                            "name": "Get Recommendations",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/profiles/recommendations",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "profiles",
+                                        "recommendations"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Search Profiles (Recommendations with Filters)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/profiles/recommendations?q=john&gender=male&interests[]=music&languages[]=english&relation_goals[]=serious_relationship&religion_id=1&latitude=40.7128&longitude=-74.0060&radius=50",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "profiles",
+                                        "recommendations"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "q",
+                                            "value": "john",
+                                            "description": "Search by name/email"
+                                        },
+                                        {
+                                            "key": "gender",
+                                            "value": "male"
+                                        },
+                                        {
+                                            "key": "interests[]",
+                                            "value": "music"
+                                        },
+                                        {
+                                            "key": "languages[]",
+                                            "value": "english"
+                                        },
+                                        {
+                                            "key": "relation_goals[]",
+                                            "value": "serious_relationship"
+                                        },
+                                        {
+                                            "key": "religion_id",
+                                            "value": "1"
+                                        },
+                                        {
+                                            "key": "latitude",
+                                            "value": "40.7128"
+                                        },
+                                        {
+                                            "key": "longitude",
+                                            "value": "-74.0060"
+                                        },
+                                        {
+                                            "key": "radius",
+                                            "value": "50"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Profile Completion Status",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/profiles/completion",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "profiles",
+                                        "completion"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Profile Compatibility",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/profiles/compatibility",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "profiles",
+                                        "compatibility"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Profile Details by ID",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/profiles/details/{{user_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "profiles",
+                                        "details",
+                                        "{{user_id}}"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Soulmates",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/profiles/soulmates",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "profiles",
+                                        "soulmates"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Profile Visitors",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/profiles/visitors",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "profiles",
+                                        "visitors"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "❤️ User Interactions",
+                    "item": [
+                        {
+                            "name": "Create Interaction (Like/Pass)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "target_user_id": 2,
+                                        "interaction_type": "like"
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/interactions",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "interactions"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Interactions",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/interactions",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "interactions"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Likes (ANY method)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/interactions/likes",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "interactions",
+                                        "likes"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Matches (ANY method)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/matches",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "matches"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "🚫 User Blocking",
+                    "item": [
+                        {
+                            "name": "Toggle Block User",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "blocked_user_id": 2
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/blocks",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "blocks"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Blocked Users",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/blocks",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "blocks"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "⭐ Favorites",
+                    "item": [
+                        {
+                            "name": "Toggle Favorite",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "user_id": 2
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/favorite",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "favorite"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Favorites",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/favorites",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "favorites"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "💳 Subscriptions & Payments",
+                    "item": [
+                        {
+                            "name": "Check Subscription Expired",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/subscription/expired",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "subscription",
+                                        "expired"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Subscribe to Plan",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "subscription_id": 1,
+                                        "payment_method": "stripe"
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/payments/subscribe",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "payments",
+                                        "subscribe"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Payment Verification",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "receipt_data": "receipt_data_string",
+                                        "transaction_id": "transaction_123"
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/payments/verification",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "payments",
+                                        "verification"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Restore Subscription",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/payments/restore",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "payments",
+                                        "restore"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Payment History",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/payments/history",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "payments",
+                                        "history"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Purchase Boost",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "boost_package_id": 1
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/payments/boost",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "payments",
+                                        "boost"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "🚀 Profile Boost Management",
+                    "item": [
+                        {
+                            "name": "Get Boost Packages",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/boosts/packages",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "boosts",
+                                        "packages"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Activate Boost",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "boost_package_id": 1
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/boosts/activate",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "boosts",
+                                        "activate"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Boost Status",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/boosts/status",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "boosts",
+                                        "status"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "💬 Chat & Messaging (Firebase)",
+                    "item": [
+                        {
+                            "name": "Start Chat (ANY method)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "target_user_id": 2
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/start-chat",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "start-chat"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Send Message",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "json",
+                                    "json": {
+                                        "target_user_id": 2,
+                                        "message": "Hello! How are you?",
+                                        "message_type": "text"
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/send-message",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "send-message"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Chat List",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/chat-list",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "chat-list"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Messages by Group ID",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{access_token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/messages/{{group_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "messages",
+                                        "{{group_id}}"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Auto-set content type for form data requests",
+                    "if (pm.request.body && pm.request.body.mode === 'formdata') {",
+                    "    pm.request.headers.remove('Content-Type');",
+                    "}"
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Auto-save access token from authentication responses",
+                    "if (pm.response.json() && pm.response.json().access_token) {",
+                    "    pm.environment.set('access_token', pm.response.json().access_token);",
+                    "    console.log('Access token saved to environment');",
+                    "}",
+                    "",
+                    "// Auto-save user_id from user responses",
+                    "if (pm.response.json() && pm.response.json().data && pm.response.json().data.id) {",
+                    "    pm.environment.set('user_id', pm.response.json().data.id);",
+                    "    console.log('User ID saved to environment');",
+                    "}",
+                    "",
+                    "// Log response for debugging",
+                    "console.log('Response Status:', pm.response.code);",
+                    "console.log('Response Body:', pm.response.text());"
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000",
+            "description": "Base URL for the API"
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "description": "JWT access token for authentication"
+        },
+        {
+            "key": "user_id",
+            "value": "",
+            "description": "User ID for profile operations"
+        },
+        {
+            "key": "group_id",
+            "value": "",
+            "description": "Chat group ID for messaging"
+        }
+    ]
+}

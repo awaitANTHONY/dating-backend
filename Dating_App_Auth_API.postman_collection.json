@@ -1,0 +1,801 @@
+{
+    "info": {
+        "_postman_id": "dating-app-complete-api-collection",
+        "name": "Dating App - Complete API",
+        "description": "Complete API collection for Dating App with Laravel backend including all endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "dating-app-complete"
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Signup",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "name": "John Doe",
+                                "email": "john@example.com",
+                                "password": "password123",
+                                "password_confirmation": "password123",
+                                "device_token": "device_token_123",
+                                "provider": "email"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signup",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signup"
+                            ]
+                        },
+                        "description": "Register a new user with email provider"
+                    }
+                },
+                {
+                    "name": "Signup - Social Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "name": "Jane Doe",
+                                "email": "jane@example.com",
+                                "device_token": "device_token_456",
+                                "provider": "google"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signup",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signup"
+                            ]
+                        },
+                        "description": "Register with social login (Google/Facebook) - password not required"
+                    }
+                },
+                {
+                    "name": "Email Verification",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "otp": "111111"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/verification",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "verification"
+                            ]
+                        },
+                        "description": "Verify email with OTP code"
+                    }
+                },
+                {
+                    "name": "Resend OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {}
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/resend-otp",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "resend-otp"
+                            ]
+                        },
+                        "description": "Resend OTP for email verification"
+                    }
+                },
+                {
+                    "name": "Signin",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "email": "john@example.com",
+                                "password": "password123",
+                                "device_token": "device_token_123",
+                                "provider": "email"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signin",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signin"
+                            ]
+                        },
+                        "description": "Sign in with email and password"
+                    }
+                },
+                {
+                    "name": "Signin with Phone",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "phone": "+1234567890",
+                                "device_token": "device_token_123",
+                                "provider": "phone"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/signin-phone",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "signin-phone"
+                            ]
+                        },
+                        "description": "Sign in with phone number"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "User Profile",
+            "item": [
+                {
+                    "name": "Get User Info",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/user",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "user"
+                            ]
+                        },
+                        "description": "Get authenticated user information"
+                    }
+                },
+                {
+                    "name": "Update User Information",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "name",
+                                    "value": "John Updated",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "bio",
+                                    "value": "This is my updated bio",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "gender",
+                                    "value": "male",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "age",
+                                    "value": "25",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "latitude",
+                                    "value": "40.7128",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "longitude",
+                                    "value": "-74.0060",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "search_preference",
+                                    "value": "female",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "relation_goals[]",
+                                    "value": "serious_relationship",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "relation_goals[]",
+                                    "value": "friendship",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "interests[]",
+                                    "value": "music",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "interests[]",
+                                    "value": "sports",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "languages[]",
+                                    "value": "english",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "phone",
+                                    "value": "+1234567890",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "country_code",
+                                    "value": "+1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "description": "Profile image file"
+                                },
+                                {
+                                    "key": "images[]",
+                                    "type": "file",
+                                    "description": "Gallery image 1"
+                                },
+                                {
+                                    "key": "images[]",
+                                    "type": "file",
+                                    "description": "Gallery image 2"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/user-information",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "user-information"
+                            ]
+                        },
+                        "description": "Update user profile information with images"
+                    }
+                },
+                {
+                    "name": "Update User Fields",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "fields": "{\"name\":\"Updated Name\",\"status\":1}"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/user-update",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "user-update"
+                            ]
+                        },
+                        "description": "Update specific user fields using JSON"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Image Upload",
+            "item": [
+                {
+                    "name": "Upload Profile Image",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "description": "Profile image file to upload"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/upload-profile",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "upload-profile"
+                            ]
+                        },
+                        "description": "Upload single profile image using chunk upload"
+                    }
+                },
+                {
+                    "name": "Upload Images - Profile Only",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "description": "Single profile image"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/upload-images",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "upload-images"
+                            ]
+                        },
+                        "description": "Upload single profile image to user model"
+                    }
+                },
+                {
+                    "name": "Upload Images - Gallery Only",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "images[]",
+                                    "type": "file",
+                                    "description": "Gallery image 1"
+                                },
+                                {
+                                    "key": "images[]",
+                                    "type": "file",
+                                    "description": "Gallery image 2"
+                                },
+                                {
+                                    "key": "images[]",
+                                    "type": "file",
+                                    "description": "Gallery image 3"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/upload-images",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "upload-images"
+                            ]
+                        },
+                        "description": "Upload multiple gallery images to user_information model"
+                    }
+                },
+                {
+                    "name": "Upload Images - Profile + Gallery",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "description": "Profile image"
+                                },
+                                {
+                                    "key": "images[]",
+                                    "type": "file",
+                                    "description": "Gallery image 1"
+                                },
+                                {
+                                    "key": "images[]",
+                                    "type": "file",
+                                    "description": "Gallery image 2"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/upload-images",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "upload-images"
+                            ]
+                        },
+                        "description": "Upload both profile image and gallery images simultaneously"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Password Management",
+            "item": [
+                {
+                    "name": "Change Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "old_password": "password123",
+                                "password": "newpassword123",
+                                "password_confirmation": "newpassword123"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/change-password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "change-password"
+                            ]
+                        },
+                        "description": "Change user password (requires current password)"
+                    }
+                },
+                {
+                    "name": "Forget Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "email": "john@example.com"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/forget-password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "forget-password"
+                            ]
+                        },
+                        "description": "Request password reset OTP via email"
+                    }
+                },
+                {
+                    "name": "Verify Forget Password OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "email": "john@example.com",
+                                "otp": "123456"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/verify-forget-password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "verify-forget-password"
+                            ]
+                        },
+                        "description": "Verify OTP for password reset and get access token"
+                    }
+                },
+                {
+                    "name": "Reset Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "json",
+                            "json": {
+                                "password": "newpassword123",
+                                "password_confirmation": "newpassword123"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/reset-password",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "reset-password"
+                            ]
+                        },
+                        "description": "Reset password using token from OTP verification"
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Auto-set content type for form data requests",
+                    "if (pm.request.body && pm.request.body.mode === 'formdata') {",
+                    "    pm.request.headers.remove('Content-Type');",
+                    "}"
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Auto-save access token from authentication responses",
+                    "if (pm.response.json() && pm.response.json().access_token) {",
+                    "    pm.environment.set('access_token', pm.response.json().access_token);",
+                    "    console.log('Access token saved to environment');",
+                    "}",
+                    "",
+                    "// Log response for debugging",
+                    "console.log('Response Status:', pm.response.code);",
+                    "console.log('Response Body:', pm.response.text());"
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000",
+            "description": "Base URL for the API"
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "description": "JWT access token for authentication"
+        }
+    ]
+}

@@ -324,14 +324,34 @@ class AuthController extends Controller
             $user->save();
         }
 
-        // Handle image uploads if provided
+        // Create user-specific directory for images
+        $userPath = "public/uploads/images/users/{$user->id}/";
+        if (!file_exists(base_path($userPath))) {
+            mkdir(base_path($userPath), 0755, true);
+        }
+
+        // Handle single profile image upload
+        if ($request->hasFile('image')) {
+            $profileImage = $request->file('image');
+            $extension = $profileImage->getClientOriginalExtension();
+            $profileFileName = 'profile_' . time() . '_' . uniqid() . '.' . $extension;
+            
+            // Move profile image to user directory
+            $profileImage->move(base_path($userPath), $profileFileName);
+            
+            // Update user's profile image
+            $user->image = asset($userPath . $profileFileName);
+            $user->save();
+        }
+
+        // Handle multiple gallery images upload
         $otherImages = [];
         if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $imgFile) {
-                $imgName = time() . '_' . uniqid() . '.' . $imgFile->getClientOriginalExtension();
-                $imgPath = "public/uploads/images/users/{$user->id}/";
-                $imgFile->move(base_path($imgPath), $imgName);
-                $otherImages[] = $imgPath . $imgName;
+            foreach ($request->file('images') as $index => $imgFile) {
+                $extension = $imgFile->getClientOriginalExtension();
+                $imgName = 'gallery_' . time() . '_' . uniqid() . '_' . $index . '.' . $extension;
+                $imgFile->move(base_path($userPath), $imgName);
+                $otherImages[] = asset($userPath . $imgName);
             }
         }
         
@@ -366,9 +386,11 @@ class AuthController extends Controller
             $userInformation->search_radius = 1000;
         }
 
-        // Handle images if uploaded
+        // Handle gallery images if uploaded
         if (!empty($otherImages)) {
-            $userInformation->images = json_encode($otherImages);
+            $existingImages = json_decode($userInformation->images, true) ?? [];
+            $allImages = array_merge($existingImages, $otherImages);
+            $userInformation->images = json_encode($allImages);
         }
 
         $userInformation->save();
@@ -480,8 +502,9 @@ class AuthController extends Controller
     public function upload_images(Request $request)
     {   
         $validator = \Validator::make($request->all(), [
-            'images' => 'required|array|max:10',
-            'images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:10240', // 10MB max per image
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10240', // Single profile image
+            'images' => 'nullable|array|max:10', // Multiple additional images
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10240', // 10MB max per image
         ]);
 
         if ($validator->fails()) {
@@ -490,6 +513,7 @@ class AuthController extends Controller
 
         $user = $request->user();
         $uploadedImages = [];
+        $profileImageUpdated = false;
 
         try {
             \DB::beginTransaction();
@@ -500,30 +524,41 @@ class AuthController extends Controller
                 mkdir(base_path($userPath), 0755, true);
             }
 
-            // Process each uploaded image
-            foreach ($request->file('images') as $index => $imageFile) {
-                $extension = $imageFile->getClientOriginalExtension();
-                $fileName = time() . '_' . uniqid() . '_' . $index . '.' . $extension;
+            // Handle single profile image upload
+            if ($request->hasFile('image')) {
+                $profileImage = $request->file('image');
+                $extension = $profileImage->getClientOriginalExtension();
+                $profileFileName = 'profile_' . time() . '_' . uniqid() . '.' . $extension;
                 
-                // Move file to user directory
-                $imageFile->move(base_path($userPath), $fileName);
+                // Move profile image to user directory
+                $profileImage->move(base_path($userPath), $profileFileName);
                 
-                $uploadedImages[] = [
-                    'path' => $userPath . $fileName,
-                    'url' => asset($userPath . $fileName),
-                    'filename' => $fileName,
-                    'size' => $imageFile->getSize(),
-                    'original_name' => $imageFile->getClientOriginalName()
-                ];
+                // Update user's profile image
+                $user->image = asset($userPath . $profileFileName);
+                $user->save();
+                $profileImageUpdated = true;
             }
 
-            // Update user information with new images
-            $userInfo = $user->user_information;
-            if ($userInfo) {
-                $existingImages = json_decode($userInfo->images, true) ?? [];
-                $allImages = array_merge($existingImages, array_column($uploadedImages, 'path'));
-                $userInfo->images = json_encode($allImages);
-                $userInfo->save();
+            // Handle multiple images upload
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $imageFile) {
+                    $extension = $imageFile->getClientOriginalExtension();
+                    $fileName = 'gallery_' . time() . '_' . uniqid() . '_' . $index . '.' . $extension;
+                    
+                    // Move file to user directory
+                    $imageFile->move(base_path($userPath), $fileName);
+                    
+                    $uploadedImages[] = asset($userPath . $fileName);
+                }
+
+                // Update user information with new gallery images
+                $userInfo = $user->user_information;
+                if ($userInfo) {
+                    $existingImages = json_decode($userInfo->images, true) ?? [];
+                    $allImages = array_merge($existingImages, array_column($uploadedImages, 'path'));
+                    $userInfo->images = json_encode($allImages);
+                    $userInfo->save();
+                }
             }
 
             // Update user's last activity
@@ -532,11 +567,21 @@ class AuthController extends Controller
 
             \DB::commit();
 
-            return response()->json([
+            $response = [
                 'status' => true,
                 'message' => 'Images uploaded successfully',
-            
-            ]);
+                'user' => $user
+            ];
+
+            if ($profileImageUpdated) {
+                $response['profile_image_updated'] = true;
+            }
+
+            if (!empty($uploadedImages)) {
+                $response['gallery_images_uploaded'] = count($uploadedImages);
+            }
+
+            return response()->json($response);
 
         } catch (\Exception $e) {
             \DB::rollBack();
@@ -642,7 +687,6 @@ class AuthController extends Controller
         }
 
         if (\Hash::check($request->otp, $user->email_otp)) {
-            // Mark OTP as used (optional: null it out)
             $user->email_otp = null;
             $user->save();
 
