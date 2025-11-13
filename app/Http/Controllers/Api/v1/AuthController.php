@@ -516,6 +516,8 @@ class AuthController extends Controller
             $user->last_activity = now();
             $user->save();
 
+            $user = User::find($user->id);
+
             \DB::commit();
 
             $response = [
