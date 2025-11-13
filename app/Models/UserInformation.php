@@ -124,16 +124,16 @@ class UserInformation extends Model
         $ids = $this->relation_goals;
 
        
-        if (empty($ids)) return collect();
+        if (empty($ids)) return null;
         if (is_string($ids)) {
             $decoded = json_decode($ids, true);
             if (is_array($decoded)) {
                 $ids = $decoded;
             } else {
-                return collect();
+                return null;
             }
         }
-        if (!is_array($ids) || empty($ids)) return collect();
+        if (!is_array($ids) || empty($ids)) return null;
         
         $ids = array_map('intval', $ids);
         return RelationGoal::whereIn('id', $ids)->get();
@@ -143,16 +143,16 @@ class UserInformation extends Model
     public function getInterestsDetailsAttribute()
     {
         $ids = $this->interests;
-        if (empty($ids)) return collect();
+        if (empty($ids)) return null;
         if (is_string($ids)) {
             $decoded = json_decode($ids, true);
             if (is_array($decoded)) {
                 $ids = $decoded;
             } else {
-                return collect();
+                return null;
             }
         }
-        if (!is_array($ids) || empty($ids)) return collect();
+        if (!is_array($ids) || empty($ids)) return null;
         $ids = array_map('intval', $ids);
         return Interest::whereIn('id', $ids)->get();
     }
@@ -161,16 +161,16 @@ class UserInformation extends Model
     public function getLanguagesDetailsAttribute()
     {
         $ids = $this->languages;
-        if (empty($ids)) return collect();
+        if (empty($ids)) return null;
         if (is_string($ids)) {
             $decoded = json_decode($ids, true);
             if (is_array($decoded)) {
                 $ids = $decoded;
             } else {
-                return collect();
+                return null;
             }
         }
-        if (!is_array($ids) || empty($ids)) return collect();
+        if (!is_array($ids) || empty($ids)) return null;
         $ids = array_map('intval', $ids);
         return Language::whereIn('id', $ids)->get();
     }
