@@ -21,9 +21,9 @@ class UserInformation extends Model
     {
         if (is_string($value)) {
             $decoded = json_decode($value, true);
-            return is_array($decoded) ? $decoded : [];
+            return is_array($decoded) ? $decoded : null;
         }
-        return is_array($value) ? $value : [];
+        return is_array($value) ? $value : null;
     }
 
     public function setImagesAttribute($value)

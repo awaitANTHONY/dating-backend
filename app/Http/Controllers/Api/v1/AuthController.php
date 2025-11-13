@@ -388,7 +388,7 @@ class AuthController extends Controller
 
         // Handle gallery images if uploaded
         if (!empty($otherImages)) {
-            $existingImages = json_decode($userInformation->images, true) ?? [];
+            $existingImages =  $userInformation->images != null ? json_decode($userInformation->images, true) : [];
             $allImages = array_merge($existingImages, $otherImages);
             $userInformation->images = json_encode($allImages);
         }
