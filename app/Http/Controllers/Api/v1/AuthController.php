@@ -388,7 +388,7 @@ class AuthController extends Controller
 
         // Handle gallery images if uploaded
         if (!empty($otherImages)) {
-            $existingImages =  $userInformation->images != null ? json_decode($userInformation->images, true) : [];
+            $existingImages =  $userInformation->images != null ? $userInformation->images : [];
             $allImages = array_merge($existingImages, $otherImages);
             $userInformation->images = json_encode($allImages);
         }
@@ -554,7 +554,7 @@ class AuthController extends Controller
                 // Update user information with new gallery images
                 $userInfo = $user->user_information;
                 if ($userInfo) {
-                    $existingImages =  $userInfo->images != null ? json_decode($userInfo->images, true) : [];
+                    $existingImages =  $userInfo->images != null ? $userInfo->images : [];
                     $allImages = array_merge($existingImages, array_column($uploadedImages, 'path'));
                     $userInfo->images = json_encode($allImages);
                     $userInfo->save();
