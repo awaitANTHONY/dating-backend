@@ -515,24 +515,16 @@ class AuthController extends Controller
             // Update user's last activity
             $user->last_activity = now();
             $user->save();
+            
+            \DB::commit();
 
             $user = User::find($user->id);
-
-            \DB::commit();
 
             $response = [
                 'status' => true,
                 'message' => 'Images uploaded successfully',
                 'user' => $user
             ];
-
-            if ($profileImageUpdated) {
-                $response['profile_image_updated'] = true;
-            }
-
-            if (!empty($uploadedImages)) {
-                $response['gallery_images_uploaded'] = count($uploadedImages);
-            }
 
             return response()->json($response);
 
