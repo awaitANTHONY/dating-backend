@@ -33,9 +33,9 @@ class UserInformation extends Model
         } elseif (is_string($value)) {
             // If it's already a JSON string, validate it
             $decoded = json_decode($value, true);
-            $this->attributes['images'] = is_array($decoded) ? $value : json_encode([]);
+            $this->attributes['images'] = is_array($decoded) ? $value : null;
         } else {
-            $this->attributes['images'] = json_encode([]);
+            $this->attributes['images'] = null;
         }
     }
     
