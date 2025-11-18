@@ -577,9 +577,7 @@ class ProfileController extends Controller
         // Use cache for profile completion - refreshes every 30 minutes
         $cacheKey = "profile_completion_user_{$user->id}";
         
-        return Cache::remember($cacheKey, 1800, function() use ($user, $userInformation) {
-            return $this->calculateProfileCompletion($user, $userInformation);
-        });
+        return $this->calculateProfileCompletion($user, $userInformation);
     }
 
     /**
@@ -1136,6 +1134,7 @@ class ProfileController extends Controller
     /**
      * Get daily soulmates - most compatible people (premium feature)
      * This list is updated daily and shows only the highest compatibility matches
+     * If empty results, will clear cache and retry up to 3 times
      */
     public function soulmates(Request $request)
     {
@@ -1159,13 +1158,52 @@ class ProfileController extends Controller
         //     ], 403);
         // }
 
-        // Use daily cache for soulmates - refreshes every 24 hours
         $today = now()->format('Y-m-d');
         $cacheKey = "soulmates_user_{$user->id}_date_{$today}";
+        $maxRetries = 3;
+        $currentTry = 0;
         
-        return Cache::remember($cacheKey, now()->addDay(), function() use ($request, $user, $userInformation) {
-            return $this->generateSoulmates($request, $user, $userInformation);
-        });
+        while ($currentTry < $maxRetries) {
+            // Try to get cached result first (except on retries)
+            $result = null;
+            if ($currentTry === 0) {
+                $result = Cache::get($cacheKey);
+            }
+            
+            // If no cached result or we're retrying, generate new data
+            if (!$result) {
+                $result = Cache::remember($cacheKey, now()->addDay(), function() use ($request, $user, $userInformation) {
+                    return $this->generateSoulmates($request, $user, $userInformation);
+                });
+            }
+            
+            // Check if result has data
+            if ($this->hasSoulmateData($result)) {
+                if ($currentTry > 0) {
+                    \Log::info("Soulmates found for user {$user->id} after {$currentTry} retries");
+                }
+                return $result;
+            }
+            
+            // If empty and we haven't exceeded retries, clear cache and try again
+            $currentTry++;
+            if ($currentTry < $maxRetries) {
+                Cache::forget($cacheKey);
+                \Log::info("Soulmates empty for user {$user->id}, clearing cache and retrying {$currentTry}/{$maxRetries}");
+                
+                // Optional: Add small delay between retries to allow for data changes
+                usleep(200000); // 0.2 second delay
+            } else {
+                \Log::warning("Soulmates failed after {$maxRetries} attempts for user {$user->id}");
+            }
+        }
+        
+        // If all retries failed, return empty result with message
+        return response()->json([
+            'status' => true, 
+            'data' => [], 
+            'message' => 'No soulmates found at this time. Please try again later or expand your search preferences.'
+        ]);
     }
 
     /**
@@ -1506,18 +1544,73 @@ class ProfileController extends Controller
         // Filter for TRUE SOULMATES - only the highest compatibility scores
         $soulmates = $scoredResults
             ->filter(function($profile) {
-                // Only include profiles with soulmate score >= 80 (high threshold)
+                // Only include profiles with soulmate score >= 60 (high threshold)
                 return $profile->soulmate_score >= 60;
             })
             ->shuffle() // Randomize order before sorting to add variety
             // ->sortByDesc('soulmate_score')
-            ->take(15)
-             // Limit to top 15 soulmates per day
+            ->take(15) // Limit to top 15 soulmates per day
             ->values();
 
-        
+        // If no high-scoring soulmates found, try with lower threshold
+        if ($soulmates->isEmpty()) {
+            $soulmates = $scoredResults
+                ->filter(function($profile) {
+                    // Lower threshold fallback
+                    return $profile->soulmate_score >= 40;
+                })
+                ->shuffle()
+                ->take(10) // Fewer results for lower threshold
+                ->values();
+        }
+
+        // If still empty, try even lower threshold
+        if ($soulmates->isEmpty()) {
+            $soulmates = $scoredResults
+                ->filter(function($profile) {
+                    // Very low threshold fallback
+                    return $profile->soulmate_score >= 20;
+                })
+                ->shuffle()
+                ->take(5) // Even fewer results for very low threshold
+                ->values();
+        }
 
         return response()->json(['status' => true, 'data' => $soulmates]);
+    }
+
+    /**
+     * Check if soulmate data is valid and non-empty
+     * @param mixed $result
+     * @return bool
+     */
+    private function hasSoulmateData($result)
+    {
+        // If result is null or false, no data
+        if (!$result) {
+            return false;
+        }
+        
+        // If it's a JsonResponse, decode it to check the data
+        if ($result instanceof \Illuminate\Http\JsonResponse) {
+            $data = $result->getData(true);
+            if (isset($data['status']) && $data['status'] === true && isset($data['data'])) {
+                return is_array($data['data']) && count($data['data']) > 0;
+            }
+            return false;
+        }
+        
+        // If it's an array, check if it has data
+        if (is_array($result)) {
+            return count($result) > 0;
+        }
+        
+        // If it's an object, try to access data property
+        if (is_object($result) && isset($result->data)) {
+            return is_array($result->data) && count($result->data) > 0;
+        }
+        
+        return false;
     }
 
     /**
