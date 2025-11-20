@@ -58,6 +58,9 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('change_password', [Controllers\Api\v1\AuthController::class, 'change_password']);
         Route::post('reset_password', [Controllers\Api\v1\AuthController::class, 'reset_password']);
 
+        // Mood Route
+        Route::post('update_mood', [Controllers\Api\v1\AuthController::class, 'update_mood']);
+
         Route::get('profiles/recommendations', [Controllers\Api\v1\ProfileController::class, 'recommendations']);
         Route::get('profiles/completion', [Controllers\Api\v1\ProfileController::class, 'profile_completion']);
         Route::get('profiles/compatibility', [Controllers\Api\v1\ProfileController::class, 'profile_compatibility']);

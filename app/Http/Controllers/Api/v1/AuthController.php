@@ -773,5 +773,42 @@ class AuthController extends Controller
         }
     }
 
-    //
+    /**
+     * Update user's mood (set or remove based on mood_text parameter)
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function update_mood(Request $request)
+    {
+        $user = $request->user();
+        $userInfo = $user->user_information;
+            
+        // Validate mood text
+        $validator = \Validator::make($request->all(), [
+            'mood' => 'required|string|max:110',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $moodText = $request->mood;
+
+        // Set mood with 24 hour expiry - handle "none" as null
+        $userInfo->mood_text = $moodText == 'none' ? null : $moodText;
+        $userInfo->mood_expires_at = $moodText == 'none' ? null : now()->addHours(24);
+        $userInfo->save();
+
+        // Update user's last activity
+        $user->last_activity = now();
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Mood updated successfully.',
+            'data' => [
+                'mood' => $userInfo->mood
+            ]
+        ]);
+    }
 }

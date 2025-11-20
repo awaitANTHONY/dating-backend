@@ -141,6 +141,7 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
+                'mood' => $userInfo->mood,
                 
                 // Add detailed attributes from UserInformation model accessors
                 'relation_goals_details' => $userInfo->relation_goals_details,
@@ -499,6 +500,7 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
+                'mood' => $userInfo->mood,
                 
                 // Add detailed attributes from UserInformation model accessors
                 'relation_goals_details' => $userInfo->relation_goals_details,
@@ -1302,6 +1304,7 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
+                'mood' => $userInfo->mood,
                 
                 // Add detailed attributes
                 'relation_goals_details' => $userInfo->relation_goals_details,

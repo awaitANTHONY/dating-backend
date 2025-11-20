@@ -88,6 +88,8 @@ class UserInformation extends Model
         'games',
         'music',
         'films_books',
+        'mood_text',
+        'mood_expires_at',
     ];
 
     protected $casts = [
@@ -107,11 +109,14 @@ class UserInformation extends Model
         'games' => 'array',
         'music' => 'array',
         'films_books' => 'array',
+        'mood_expires_at' => 'datetime',
     ];
 
     protected $hidden = [
         'created_at',
-        'updated_at'
+        'updated_at',
+        'mood_expires_at',
+        'mood_text',
     ];
 
     protected $appends = [
@@ -122,6 +127,7 @@ class UserInformation extends Model
         'ethnicity_details',
         'education_details',
         'career_field_details',
+        'mood',
     ];
 
     // Relationships
@@ -209,6 +215,22 @@ class UserInformation extends Model
     public function getCareerFieldDetailsAttribute()
     {
         return $this->careerField;
+    }
+
+    // Get current mood (returns null if expired)
+    public function getMoodAttribute()
+    {
+        // Check if mood exists and hasn't expired
+        if (empty($this->mood_text) || !$this->mood_expires_at) {
+            return null;
+        }
+        
+        // Check if mood has expired
+        if (now()->isAfter($this->mood_expires_at)) {
+            return null;
+        }
+        
+        return $this->mood_text;
     }
 
     /**

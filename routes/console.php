@@ -19,3 +19,15 @@ Schedule::command('soulmates:refresh --all')
     ->onFailure(function () {
         \Log::error('Daily soulmates refresh failed');
     });
+
+// Schedule mood cleanup every hour to remove expired moods
+Schedule::command('moods:cleanup')
+    ->hourly()
+    ->name('cleanup-expired-moods')
+    ->description('Remove expired user moods (older than 24 hours)')
+    ->onSuccess(function () {
+        \Log::info('Mood cleanup completed successfully');
+    })
+    ->onFailure(function () {
+        \Log::error('Mood cleanup failed');
+    });
