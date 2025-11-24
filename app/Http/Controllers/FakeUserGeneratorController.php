@@ -100,6 +100,8 @@ class FakeUserGeneratorController extends Controller
                 $userInformation->latitude = $faker->latitude(20.6, 26.6);
                 $userInformation->longitude = $faker->longitude(88.0, 92.7);
             }
+
+            $userInformation->address = $faker->address;
             
             $userInformation->search_radius = $request->radius ?? 10.0;
             $userInformation->country_code = $request->country_code;
@@ -113,6 +115,7 @@ class FakeUserGeneratorController extends Controller
             $userInformation->age = \Illuminate\Support\Carbon::parse($userInformation->date_of_birth)->diffInYears(now());
             $userInformation->relationship_status_id = $relationship_status ? $relationship_status[array_rand($relationship_status)] : null;
             $userInformation->ethnicity_id = $ethnicities ? $ethnicities[array_rand($ethnicities)] : null;
+            $userInformation->career_field_id = $career_fields ? $career_fields[array_rand($career_fields)] : null;
             $userInformation->alkohol = $faker->randomElement(['dont_drink', 'drink_frequently', 'drink_socially', 'prefer_not_to_say']);
             $userInformation->smoke = $faker->randomElement(['dont_smoke', 'smoke_regularly', 'smoke_occasionally', 'prefer_not_to_say']);
             $userInformation->education_id = $educations ? $educations[array_rand($educations)] : null; 
