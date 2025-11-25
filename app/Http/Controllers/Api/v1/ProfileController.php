@@ -143,6 +143,7 @@ class ProfileController extends Controller
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
+                'device_token' => $userInfo->device_token,
                 
                 // Add detailed attributes from UserInformation model accessors
                 'relation_goals_details' => $userInfo->relation_goals_details,
@@ -503,6 +504,7 @@ class ProfileController extends Controller
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
+                'device_token' => $userInfo->device_token,
                 
                 // Add detailed attributes from UserInformation model accessors
                 'relation_goals_details' => $userInfo->relation_goals_details,
@@ -1308,6 +1310,7 @@ class ProfileController extends Controller
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
+                'device_token' => $userInfo->device_token,
                 
                 // Add detailed attributes
                 'relation_goals_details' => $userInfo->relation_goals_details,

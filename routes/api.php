@@ -29,6 +29,7 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
     Route::any('educations', [Controllers\Api\v1\ApiController::class, 'educations']);
     Route::any('career_fields', [Controllers\Api\v1\ApiController::class, 'career_fields']);
     Route::any('onboarding', [Controllers\Api\v1\ApiController::class, 'onboarding']);
+    
     //Auth Controller
     Route::post('signup', [Controllers\Api\v1\AuthController::class, 'signup']);
     Route::post('signin', [Controllers\Api\v1\AuthController::class, 'signin']);
@@ -108,6 +109,8 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::get('/chat-list', [\App\Http\Controllers\Api\v1\ChatController::class, 'chatList']);
         // Get all messages for a grou
         Route::get('/messages/{group_id}', [\App\Http\Controllers\Api\v1\ChatController::class, 'messages']);
+
+        Route::post('notification', [Controllers\Api\v1\ApiController::class, 'notification']);
     });
 });
 

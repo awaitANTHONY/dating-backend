@@ -90,297 +90,77 @@ if ( ! function_exists('cleanOthers')){
     }
 }
 
+
+
 if (!function_exists('send_notification')) {
-    function send_notification($notification, $data = [])
+    function send_notification($type, $title, $message, $image = null, $additional_data = [])
     {
+        $projectId = get_option('firebase_project_id');
+
+        $credentialsFilePath = storage_path(get_option('firebase_json'));
+        $client = new \Google_Client();
+        $client->setAuthConfig($credentialsFilePath);
+        $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+        $apiurl = "https://fcm.googleapis.com/v1/projects/$projectId/messages:send";
+        $client->refreshTokenWithAssertion();
+        $token = $client->getAccessToken();
+        $access_token = $token['access_token'];
         
-        send_notification_core('android', $notification, $data);
-        //send_notification_core('ios', $notification, $data);
+        $headers = [
+                "Authorization: Bearer $access_token",
+                'Content-Type: application/json'
+        ];
 
-        return true;
-    }
-}
-
-if (!function_exists('send_notification_core')) {
-    function send_notification_core($platform, $notification, $additional_data = [])
-    {
-        $notification_type = "{$platform}_notification_type";
-        $onesignal_app_id = "{$platform}_onesignal_app_id";
-        $onesignal_api_key = "{$platform}_onesignal_api_key";
-        $firebase_server_key = "{$platform}_firebase_server_key";
-        $firebase_topics = "{$platform}_firebase_topics";
-
-        $title = $notification->title;
-        $body = $notification->message;
-        $image = $notification->image;
-
-        if(get_option($notification_type) == 'onesignal'){
-            $headings = array("en" => $title);
-            $content = array("en" => $body);
-
-            $additional_data['image'] = $image;
-            $ios_img = array(
-                "id1" => $image,
-            );
-
-            $fields = array(
-                'app_id' => get_option($onesignal_app_id),
-                'headings' => $headings,
-                'included_segments' => array('All'),
-                'data' => $additional_data,
-                'big_picture' => $image,
-                'large_icon' => get_logo(),
-                'content_available' => true,
-                'contents' => $content,
-                'ios_attachments' => $ios_img,
-            );
-
-            $fields = json_encode($fields);
-
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8', 
-                'Authorization: Basic ' . get_option($onesignal_api_key)));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-            curl_setopt($ch, CURLOPT_HEADER, FALSE);
-            curl_setopt($ch, CURLOPT_POST, TRUE);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);    
-
-            $response = curl_exec($ch);
-            curl_close($ch);
-            
-        }else{
-            
-            $credentialsFilePath = app_path() . '/Helpers/fcm.json';
-            $client = new \Google_Client();
-            $client->setAuthConfig($credentialsFilePath);
-            $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
-            $apiurl = 'https://fcm.googleapis.com/v1/projects/wise-bet/messages:send';
-            $client->refreshTokenWithAssertion();
-            $token = $client->getAccessToken();
-            $access_token = $token['access_token'];
-            
-            $headers = [
-                 "Authorization: Bearer $access_token",
-                 'Content-Type: application/json'
-            ];
-  
-            $payload = [
-                "message" => [
-                    "topic" => 'high_importance_channel', 
+        $payload = [
+            "message" => [
+                
+                "notification" => [
+                    "title" => $title, 
+                    "body"=> $message,
+                ],
+                "apns" => [
+                    "payload" => [
+                        "aps" => [
+                            "mutable-content" => 1
+                        ]
+                    ],
+                    "fcm_options" => [
+                        "image" => $image
+                    ]
+                ],
+                "android" => [
+                    "priority" => "HIGH",
                     "notification" => [
-                        "title" => $title, 
-                        "body"=> $body,
-                    ],
-                    "apns" => [
-                        "payload" => [
-                            "aps" => [
-                                "mutable-content" => 1
-                            ]
-                        ],
-                        "fcm_options" => [
-                            "image" => $image
-                        ]
-                    ],
-                    "android" => [
-                        "priority" => "HIGH",
-                        "notification" => [
-                            "default_sound" => true,
-                            "image" => $image
-                        ]
+                        "default_sound" => true,
+                        "image" => $image
                     ]
                 ]
-            ];
-            
-            
-            $payload = json_encode($payload);
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $apiurl);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-            curl_exec($ch);
-            $res = curl_close($ch);
-            
-        }
+            ]
+        ];
 
-        return true;
-    }
-}
-
-if (!function_exists('prediction_app_send_notification')) {
-    function prediction_app_send_notification($notification, $data = [])
-    {
-        
-        prediction_app_send_notification_core('android', $notification, $data);
-        //prediction_app_send_notification_core('ios', $notification, $data);
-
-        return true;
-    }
-}
-
-if (!function_exists('prediction_app_send_notification_core')) {
-    function prediction_app_send_notification_core($platform, $notification, $additional_data = [])
-    {
-        $notification_type = "{$platform}_prediction_app_notification_type";
-        $onesignal_app_id = "{$platform}_prediction_app_onesignal_app_id";
-        $onesignal_api_key = "{$platform}_prediction_app_onesignal_api_key";
-        $firebase_server_key = "{$platform}_prediction_app_firebase_server_key";
-        $firebase_topics = "{$platform}_prediction_app_firebase_topics";
-
-        $title = $notification->title;
-        $body = $notification->message;
-        $image = $notification->image;
-
-        if(get_option($notification_type) == 'onesignal'){
-            //
+        if($type == 'single'){
+            $payload["message"]["token"] = $additional_data['device_token'];
         }else{
-            
-            $credentialsFilePath = app_path() . '/Helpers/fcm.json';
-            $client = new \Google_Client();
-            $client->setAuthConfig($credentialsFilePath);
-            $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
-            $apiurl = 'https://fcm.googleapis.com/v1/projects/wise-bet/messages:send';
-            $client->refreshTokenWithAssertion();
-            $token = $client->getAccessToken();
-            $access_token = $token['access_token'];
-            
-            $headers = [
-                 "Authorization: Bearer $access_token",
-                 'Content-Type: application/json'
-            ];
-  
-            $payload = [
-                "message" => [
-                    "topic" => 'high_importance_channel', 
-                    "notification" => [
-                        "title" => $title, 
-                        "body"=> $body,
-                    ],
-                    "apns" => [
-                        "payload" => [
-                            "aps" => [
-                                "mutable-content" => 1
-                            ]
-                        ],
-                        "fcm_options" => [
-                            "image" => $image
-                        ]
-                    ],
-                    "android" => [
-                        "priority" => "HIGH",
-                        "notification" => [
-                            "default_sound" => true,
-                            "image" => $image
-                        ]
-                    ]
-                ]
-            ];
-            
-            $payload = json_encode($payload);
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $apiurl);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-            curl_exec($ch);
-            
-            $res = curl_close($ch);
+            $payload["message"]["topic"] = $additional_data['firebase_topic'];
         }
-
-        return true;
-    }
-}
-
-if (!function_exists('real_app_send_notification')) {
-    function real_app_send_notification($notification, $data = [])
-    {
         
-        real_app_send_notification_core('ios', $notification, $data);
-        //prediction_app_send_notification_core('ios', $notification, $data);
+        $payload = json_encode($payload);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $apiurl);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_exec($ch);
+        
+        $res = curl_close($ch);
 
         return true;
     }
 }
 
-if (!function_exists('real_app_send_notification_core')) {
-    function real_app_send_notification_core($platform, $notification, $additional_data = [])
-    {
-        $notification_type = "firebase";
-        $firebase_topics = "high_importance_channel";
-        $projectId = "real-betting-tips-293b1";
 
-        $title = $notification->title;
-        $body = $notification->message;
-        $image = $notification->image;
-
-        if(get_option($notification_type) == 'onesignal'){
-            //
-        }else{
-            
-            $credentialsFilePath = app_path() . '/Helpers/real_app.json';
-            $client = new \Google_Client();
-            $client->setAuthConfig($credentialsFilePath);
-            $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
-            $apiurl = "https://fcm.googleapis.com/v1/projects/$projectId/messages:send";
-            $client->refreshTokenWithAssertion();
-            $token = $client->getAccessToken();
-            $access_token = $token['access_token'];
-            
-            $headers = [
-                 "Authorization: Bearer $access_token",
-                 'Content-Type: application/json'
-            ];
-  
-            $payload = [
-                "message" => [
-                    "topic" => $firebase_topics, 
-                    "notification" => [
-                        "title" => $title, 
-                        "body"=> $body,
-                    ],
-                    "apns" => [
-                        "payload" => [
-                            "aps" => [
-                                "mutable-content" => 1
-                            ]
-                        ],
-                        "fcm_options" => [
-                            "image" => $image
-                        ]
-                    ],
-                    "android" => [
-                        "priority" => "HIGH",
-                        "notification" => [
-                            "default_sound" => true,
-                            "image" => $image
-                        ]
-                    ]
-                ]
-            ];
-            
-            $payload = json_encode($payload);
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $apiurl);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-            curl_exec($ch);
-            
-            $res = curl_close($ch);
-            
-        }
-
-        return true;
-    }
-}
 
 if (!function_exists('buildTree')) {
 

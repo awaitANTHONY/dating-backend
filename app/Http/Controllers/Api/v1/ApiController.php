@@ -207,4 +207,61 @@ class ApiController extends Controller
         ];
         return response()->json(['status' => true, 'data' => $data]);
     }
+
+    /**
+     * Send push notification to a device
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function notification(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'device_token' => 'required|string',
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:1000',
+            'image' => 'nullable|url',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(
+                [
+                    'status' => false, 
+                    'message' => $validator->errors()->first(),
+                ], 500
+            );
+        }
+
+        try {
+            $deviceToken = $request->device_token;
+            $title = $request->title;
+            $message = $request->message;
+            $image = $request->image ?? null;
+
+            $result = send_notification(
+                'single',
+                $title,
+                $message,
+                $image,
+                ['device_token' => $deviceToken]
+            );
+
+            if ($result) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Notification sent successfully.'
+                ]);
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Failed to send notification.'
+                ], 500);
+            }
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to send notification: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
