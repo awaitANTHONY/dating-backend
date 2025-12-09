@@ -27,6 +27,8 @@ class ProfileController extends Controller
      * Unified method for both recommendations and search
      * When no filters are provided, it works as recommendations with smart matching
      * When filters are provided, it works as filtered search
+     * 
+     * Accepts 'exclude_ids' parameter to prevent showing already-seen profiles
      */
     public function recommendations(Request $request)
     {
@@ -50,18 +52,29 @@ class ProfileController extends Controller
             return $this->handleSearchWithFilters($request, $user, $userInformation);
         }
 
-        // For recommendations, use cache with user-specific key
+        // For recommendations, if client sends exclude_ids, don't use cache (fresh results)
+        // Otherwise use cache for performance
+        $excludeIds = $request->input('exclude_ids', []);
+        
+        if (!empty($excludeIds)) {
+            // Client is tracking shown profiles - generate fresh results excluding those IDs
+            return $this->generateRecommendations($request, $user, $userInformation, $excludeIds);
+        }
+        
+        // For initial load without exclusions, use cache
         $cacheKey = "recommendations_user_{$user->id}";
         
-        return Cache::remember($cacheKey, 3600, function() use ($request, $user, $userInformation) {
+        return Cache::remember($cacheKey, 300, function() use ($request, $user, $userInformation) {
             return $this->generateRecommendations($request, $user, $userInformation);
         });
     }
 
     /**
      * Generate recommendations without caching (used by cache callback)
+     * 
+     * @param array $excludeIds Array of user IDs to exclude from results (already shown to user)
      */
-    private function generateRecommendations(Request $request, $user, $userInformation)
+    private function generateRecommendations(Request $request, $user, $userInformation, $excludeIds = [])
     {
         // Get current user's preferences and location
         $currentLat = $userInformation->latitude ?? 0;
@@ -81,7 +94,16 @@ class ProfileController extends Controller
             })
             ->whereDoesntHave('blockedUsers', function($q) use ($user) {
                 $q->where('blocked_user_id', $user->id);
+            })
+            // Exclude users the current user has already interacted with
+            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
+                $q->where('user_id', $user->id);
             });
+
+        // Exclude already-shown profiles (from client's current session)
+        if (!empty($excludeIds) && is_array($excludeIds)) {
+            $query->whereNotIn('id', $excludeIds);
+        }
 
         // Apply distance filter if coordinates are available
         if ($currentLat != 0 && $currentLng != 0) {
@@ -410,6 +432,7 @@ class ProfileController extends Controller
 
     /**
      * Handle search with filters - optimized for filtering
+     * Also supports exclude_ids to prevent showing already-seen profiles
      */
     private function handleSearchWithFilters(Request $request, $user, $userInformation)
     {
@@ -421,6 +444,7 @@ class ProfileController extends Controller
         $latitude = $userInformation->latitude;
         $longitude = $userInformation->longitude;
         $radius = $request->input('radius', $userInformation->search_radius ?? 50);
+        $excludeIds = $request->input('exclude_ids', []);
 
         // Build Eloquent query for better performance and readability
         $query = User::with(['user_information'])
@@ -434,7 +458,16 @@ class ProfileController extends Controller
             })
             ->whereDoesntHave('blockedUsers', function($q) use ($user) {
                 $q->where('blocked_user_id', $user->id);
+            })
+            // Exclude users the current user has already interacted with
+            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
+                $q->where('user_id', $user->id);
             });
+
+        // Exclude already-shown profiles (from client's current session)
+        if (!empty($excludeIds) && is_array($excludeIds)) {
+            $query->whereNotIn('id', $excludeIds);
+        }
 
         // Apply text search filter
         if ($q) {
