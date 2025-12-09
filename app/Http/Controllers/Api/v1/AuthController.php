@@ -237,7 +237,7 @@ class AuthController extends Controller
             'smoke' => 'nullable|in:dont_smoke,smoke_regularly,smoke_occasionally,prefer_not_to_say',
             'education_id' => 'nullable|exists:educations,id',
             'preffered_age' => 'nullable|string|max:100',
-            'height' => 'nullable|integer|min:10|max:300',
+            'height' => 'nullable|integer|min:10|max:500',
             'carrer_field_id' => 'nullable|exists:career_fields,id',
             'address' => 'nullable|string',
             'activities' => 'nullable|array',

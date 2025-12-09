@@ -120,7 +120,7 @@ class ProfileController extends Controller
             });
         }
         
-        $results = $query->limit(100)->get();
+        $results = $query->limit(300)->get();
 
         // Transform results and add distance calculation
         $transformedResults = $results->map(function($user) use ($currentLat, $currentLng) {
@@ -404,7 +404,7 @@ class ProfileController extends Controller
         })->sortByDesc('match_score')->values();
 
         // Combine: boosted profiles first, then regular profiles
-        $finalResults = $boostedProfiles->concat($regularProfiles)->values();
+        $finalResults = $boostedProfiles->concat($regularProfiles)->take(get_option('recommendation_limit', 50))->values();
 
         return response()->json(['status' => true, 'data' => $finalResults]);
     }
@@ -495,7 +495,7 @@ class ProfileController extends Controller
             });
         }
 
-        $results = $query->limit(50)->get();
+        $results = $query->limit(get_option('recommendation_limit', 50))->get();
 
         // Transform results with distance calculation
         $transformedResults = $results->map(function($user) use ($latitude, $longitude) {

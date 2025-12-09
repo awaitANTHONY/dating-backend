@@ -5,7 +5,7 @@
     <div class="col-md-3">
         <div class="nav flex-column nav-pills nav-primary nav-pills-no-bd" id="v-pills-tab-without-border" role="tablist" aria-orientation="vertical">
             <a class="nav-link active show" id="v-pills-general-settings-tab" data-toggle="pill" href="#v-pills-general-settings" role="tab" aria-controls="v-pills-general-settings" aria-selected="true">{{ _lang('General Settings') }}</a>
-            <a class="nav-link" id="v-pills-api-tab" data-toggle="pill" href="#v-pills-api" role="tab" aria-controls="v-pills-api" aria-selected="false">{{ _lang('Api Settings') }}</a>
+            
             <a class="nav-link" id="v-pills-Email-tab" data-toggle="pill" href="#v-pills-Email" role="tab" aria-controls="v-pills-Email" aria-selected="false">{{ _lang('Email Configuration') }}</a>
             <a class="nav-link" id="v-pills-Firebase-tab" data-toggle="pill" href="#v-pills-Firebase" role="tab" aria-controls="v-pills-Firebase" aria-selected="false">{{ _lang('Firebase Configuration') }}</a>
             <a class="nav-link" id="v-pills-logo-tab" data-toggle="pill" href="#v-pills-logo" role="tab" aria-controls="v-pills-logo" aria-selected="false">{{ _lang('Logo & Icon') }}</a>
@@ -49,6 +49,17 @@
                                         </select>
                                     </div>
                                 </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label">{{ _lang('Recommendation Limit') }}</label>
+                                        <select class="form-control select2" name="recommendation_limit" data-selected="{{ get_option('recommendation_limit', 50) }}" required>
+                                            <option value="">{{ _lang('Select One') }}</option>
+                                            @for($i=10; $i<=200; $i+=10)
+                                                <option value="{{ $i }}" >{{ $i }}</option>
+                                            @endfor
+                                        </select>
+                                    </div>
+                                </div>
 
                                 <div class="col-md-12">
                                     <div class="form-group text-right">
@@ -62,37 +73,7 @@
                     </div>
                 </div>
             </div>
-            <div class="tab-pane fade" id="v-pills-api" role="tabpanel" aria-labelledby="v-pills-api-tab">
-                <div class="card">
-                    <div class="card-body">
-                        <h3 class="mb-3 header-title card-title">{{ _lang('Api Settings') }}</h3>
-                        <form method="post" class="ajax-submit2 params-card" autocomplete="off" action="{{ route('store_settings') }}" enctype="multipart/form-data">
-                            @csrf
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label">{{ _lang('X-RapidAPI-Key') }}</label>
-                                        <input type="text" class="form-control" name="x_rapidapi_key" value="{{ get_option('x_rapidapi_key') }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label class="control-label">{{ _lang('X-RapidAPI-Host') }}</label>
-                                        <input type="text" class="form-control" name="x_rapidapi_host" value="{{ get_option('x_rapidapi_host') }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-12">
-                                    <div class="form-group text-right">
-                                        <button type="submit" class="btn btn-primary btn-sm">
-                                            {{ _lang('Update') }}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
+            
             <div class="tab-pane fade" id="v-pills-Email" role="tabpanel" aria-labelledby="v-pills-Email-tab">
                     <div class="card">
                         <div class="card-body">
