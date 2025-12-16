@@ -120,7 +120,7 @@ class ProfileController extends Controller
             });
         }
         
-        $results = $query->limit(300)->get();
+        $results = $query->limit(500)->get();
 
         // Transform results and add distance calculation
         $transformedResults = $results->map(function($user) use ($currentLat, $currentLng) {
@@ -403,8 +403,27 @@ class ProfileController extends Controller
             return !in_array($profile->id, $boostedUserIds);
         })->sortByDesc('match_score')->values();
 
-        // Combine: boosted profiles first, then regular profiles
-        $finalResults = $boostedProfiles->concat($regularProfiles)->take(get_option('recommendation_limit', 50))->values();
+        // Separate profiles with and without relationship goals match
+        $profilesWithGoalMatch = $regularProfiles->filter(function($profile) {
+            return isset($profile->compatibility_details['relation_goals_match']) && 
+                   $profile->compatibility_details['relation_goals_match'] === true;
+        });
+        
+        $profilesWithoutGoalMatch = $regularProfiles->filter(function($profile) {
+            return !isset($profile->compatibility_details['relation_goals_match']) || 
+                   $profile->compatibility_details['relation_goals_match'] === false;
+        });
+
+        // Combine: boosted first, then profiles with goal match, then others
+        // Take more profiles when they have relationship goals match
+        $limit = get_option('recommendation_limit', 50);
+        $goalMatchLimit = (int)($limit * 1.5); // 50% more profiles with goal match
+        
+        $finalResults = $boostedProfiles
+            ->concat($profilesWithGoalMatch->take($goalMatchLimit))
+            ->concat($profilesWithoutGoalMatch->take($limit - $boostedProfiles->count()))
+            ->take($limit * 2) // Double the final limit to show more matches
+            ->values();
 
         return response()->json(['status' => true, 'data' => $finalResults]);
     }
@@ -1297,7 +1316,7 @@ class ProfileController extends Controller
             });
         }
         
-        $results = $query->limit(1000)->get();
+        $results = $query->limit(2000)->get();
          // Get more candidates for better filtering
 
         // Transform results and add distance calculation
@@ -1724,10 +1743,10 @@ class ProfileController extends Controller
             ], 401);
         }
 
-        // Use 24-hour cache for profile visitors
+        // Use 5-minute cache for profile visitors
         $cacheKey = "profile_visitors_user_{$user->id}";
         
-        return Cache::remember($cacheKey, 86400, function() use ($user) { // 86400 seconds = 24 hours
+        return Cache::remember($cacheKey, 300, function() use ($user) { // 300 seconds = 5 minutes
             return $this->generateProfileVisitors($user);
         });
     }
