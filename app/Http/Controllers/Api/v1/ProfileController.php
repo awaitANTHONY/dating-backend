@@ -1820,8 +1820,15 @@ class ProfileController extends Controller
     private function generateProfileVisitors($user)
     {
         try {
-            // Get last 20 visitors using the model scope
-            $visitors = ProfileVisitor::recentVisitors($user->id, 20)->get();
+            // Get unique visitors (only most recent visit per visitor)
+            $visitors = ProfileVisitor::where('visited_user_id', $user->id)
+                ->with(['visitor.user_information'])
+                ->select('visitor_user_id', \DB::raw('MAX(visited_at) as visited_at'), \DB::raw('MAX(id) as id'))
+                ->groupBy('visitor_user_id')
+                ->orderBy('visited_at', 'desc')
+                ->limit(20)
+                ->get()
+                ->filter();
 
             // Transform visitor data - only basic info
             $transformedVisitors = $visitors->map(function($visit) {
