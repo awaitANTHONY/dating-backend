@@ -120,7 +120,7 @@ class ProfileController extends Controller
             });
         }
         
-        $results = $query->limit(500)->get();
+        $results = $query->limit(2000)->get();
 
         // Transform results and add distance calculation
         $transformedResults = $results->map(function($user) use ($currentLat, $currentLng) {
@@ -1235,6 +1235,11 @@ class ProfileController extends Controller
                 });
             }
             
+            // Filter cached data to remove profiles with interactions
+            if ($result) {
+                $result = $this->filterInteractedProfiles($result, $user->id);
+            }
+            
             // Check if result has data
             if ($this->hasSoulmateData($result)) {
                 if ($currentTry > 0) {
@@ -1299,6 +1304,10 @@ class ProfileController extends Controller
             // Exclude users already swiped on (for fresh soulmates)
             ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
                 $q->where('user_id', $user->id);
+            })
+            // Exclude users who have already swiped on the current user
+            ->whereDoesntHave('sentInteractions', function($q) use ($user) {
+                $q->where('target_user_id', $user->id);
             });
 
         // Apply expanded distance filter for soulmates
@@ -1672,6 +1681,60 @@ class ProfileController extends Controller
         }
         
         return false;
+    }
+
+    /**
+     * Filter out profiles that the user has already interacted with
+     * @param mixed $result The response result (JsonResponse or array)
+     * @param int $userId The current user's ID
+     * @return mixed Filtered result
+     */
+    private function filterInteractedProfiles($result, $userId)
+    {
+        // If it's a JsonResponse, decode it
+        if ($result instanceof \Illuminate\Http\JsonResponse) {
+            $data = $result->getData(true);
+            if (isset($data['status']) && $data['status'] === true && isset($data['data'])) {
+                $profiles = $data['data'];
+                
+                if (is_array($profiles) && count($profiles) > 0) {
+                    // Get all user IDs from profiles
+                    $profileIds = array_column($profiles, 'id');
+                    
+                    // Get interacted user IDs (both directions)
+                    $interactedIds = \DB::table('user_interactions')
+                        ->where(function($query) use ($userId, $profileIds) {
+                            $query->where('user_id', $userId)
+                                  ->whereIn('target_user_id', $profileIds);
+                        })
+                        ->orWhere(function($query) use ($userId, $profileIds) {
+                            $query->whereIn('user_id', $profileIds)
+                                  ->where('target_user_id', $userId);
+                        })
+                        ->pluck('target_user_id')
+                        ->merge(
+                            \DB::table('user_interactions')
+                                ->whereIn('user_id', $profileIds)
+                                ->where('target_user_id', $userId)
+                                ->pluck('user_id')
+                        )
+                        ->unique()
+                        ->toArray();
+                    
+                    // Filter out interacted profiles
+                    $filteredProfiles = array_filter($profiles, function($profile) use ($interactedIds) {
+                        return !in_array($profile['id'] ?? $profile->id ?? null, $interactedIds);
+                    });
+                    
+                    // Reindex array
+                    $data['data'] = array_values($filteredProfiles);
+                    
+                    return response()->json($data);
+                }
+            }
+        }
+        
+        return $result;
     }
 
     /**
