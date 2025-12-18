@@ -1833,18 +1833,12 @@ class ProfileController extends Controller
             // Transform visitor data - only basic info
             $transformedVisitors = $visitors->map(function($visit) {
                 $visitor = $visit->visitor;
-                $visitorInfo = $visitor ? $visitor->user_information : null;
-
-                if (!$visitor) {
-                    return null;
-                }
+                
 
                 return [
                     'id' => $visitor->id,
                     'name' => $visitor->name,
                     'image' => $visitor->image,
-                    'is_verified' => $visitorInfo ? ($visitorInfo->is_verified ?? false) : false,
-                    'visited_at' => $visit->visited_at->diffForHumans()
                 ];
             })->filter()->values();
 
