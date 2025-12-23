@@ -67,6 +67,10 @@ Route::group(['middleware' => ['install']], function () {
         Route::get('users/{id}/wallet-manage', [App\Http\Controllers\UserController::class, 'wallet_manage'])->name('users.wallet_manage');
         Route::post('users/{id}/update-wallet', [App\Http\Controllers\UserController::class, 'update_wallet'])->name('users.update_wallet');
 
+        // Ban/Unban routes
+        Route::get('users/{id}/ban', [App\Http\Controllers\UserController::class, 'ban_user'])->name('users.ban');
+        Route::get('users/{id}/unban', [App\Http\Controllers\UserController::class, 'unban_user'])->name('users.unban');
+
         //Channel Controller
         Route::resource('sliders', Controllers\SliderController::class);
         Route::resource('relationship-statuses', Controllers\RelationshipStatusController::class);

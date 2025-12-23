@@ -177,6 +177,13 @@ class AuthController extends Controller
             ]);
         }
 
+        if($user && $user->status == 4){
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account has been suspended. Please contact support.',
+            ]);
+        }
+
         if($user->provider == 'email'){
             if (!\Hash::check($request->password, $user->password) ) {
                 return response()->json([

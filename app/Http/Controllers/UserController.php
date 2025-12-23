@@ -37,7 +37,13 @@ class UserController extends Controller
                     return $user->name;
                 })
                 ->editColumn('status', function ($user) {
-                    return $user->status == 1 ? status(_lang('Active'), 'success') : status(_lang('In-Active'), 'danger');
+                    if ($user->status == 1) {
+                        return status(_lang('Active'), 'success');
+                    } elseif ($user->status == 4) {
+                        return status(_lang('Banned'), 'warning');
+                    } else {
+                        return status(_lang('In-Active'), 'danger');
+                    }
                 })
                 ->addColumn('action', function($user){
 
@@ -55,14 +61,27 @@ class UserController extends Controller
                                         <i class="fas fa-edit"></i>
                                         ' . _lang('Edit') . '
                                     </a>';
-                    // $action .= '<form action="' . route('users.destroy', $user->id) . '" method="post" class="ajax-delete">'
-                    //             . csrf_field() 
-                    //             . method_field('DELETE') 
-                    //             . '<button type="button" class="btn-remove dropdown-item">
-                    //                     <i class="fas fa-trash-alt"></i>
-                    //                     ' . _lang('Delete') . '
-                    //                 </button>
-                    //             </form>';
+                    
+                    if ($user->status == 4) {
+                        $action .= '<a href="' . route('users.unban', $user->id) . '" class="dropdown-item ajax-unban" data-title="' . _lang('Unban User') . '">
+                                            <i class="fas fa-unlock"></i>
+                                            ' . _lang('Unban User') . '
+                                        </a>';
+                    } else {
+                        $action .= '<a href="' . route('users.ban', $user->id) . '" class="dropdown-item ajax-ban" data-title="' . _lang('Ban User') . '">
+                                            <i class="fas fa-ban"></i>
+                                            ' . _lang('Ban User') . '
+                                        </a>';
+                    }
+                    
+                    $action .= '<form action="' . route('users.destroy', $user->id) . '" method="post" class="ajax-delete">'
+                                . csrf_field() 
+                                . method_field('DELETE') 
+                                . '<button type="button" class="btn-remove dropdown-item">
+                                        <i class="fas fa-trash-alt"></i>
+                                        ' . _lang('Delete') . '
+                                    </button>
+                                </form>';
                     $action .= '</div>
                             </div>';
                     return $action;
@@ -381,6 +400,10 @@ class UserController extends Controller
     public function destroy(Request $request, $id)
     {
         $user = User::find($id);
+        $userInformation = UserInformation::where('user_id', $user->id)->first();
+        if ($userInformation) {
+            $userInformation->delete();
+        }
         $user->delete();
 
         if (!$request->ajax()) {
@@ -485,6 +508,42 @@ class UserController extends Controller
  
         $user->coin_balance = $type === 'Credit' ? $currentBalance + $amount : $currentBalance - $amount;
         $user->save();
+
+        if (!$request->ajax()) {
+            return back()->with('success', $message);
+        } else {
+            return response()->json(['result' => 'success', 'message' => $message]);
+        }
+    }
+
+    /**
+     * Ban a user by setting status to 4.
+     */
+    public function ban_user(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $user->status = 4; // Banned status
+        $user->save();
+
+        $message = 'User has been banned successfully!';
+
+        if (!$request->ajax()) {
+            return back()->with('success', $message);
+        } else {
+            return response()->json(['result' => 'success', 'message' => $message]);
+        }
+    }
+
+    /**
+     * Unban a user by setting status to 1.
+     */
+    public function unban_user(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $user->status = 1; // Active status
+        $user->save();
+
+        $message = 'User has been unbanned successfully!';
 
         if (!$request->ajax()) {
             return back()->with('success', $message);
