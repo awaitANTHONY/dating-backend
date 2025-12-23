@@ -1243,7 +1243,7 @@ class ProfileController extends Controller
             // Check if result has data
             if ($this->hasSoulmateData($result)) {
                 if ($currentTry > 0) {
-                    \Log::info("Soulmates found for user {$user->id} after {$currentTry} retries");
+                    //\Log::info("Soulmates found for user {$user->id} after {$currentTry} retries");
                 }
                 return $result;
             }
@@ -1252,12 +1252,12 @@ class ProfileController extends Controller
             $currentTry++;
             if ($currentTry < $maxRetries) {
                 Cache::forget($cacheKey);
-                \Log::info("Soulmates empty for user {$user->id}, clearing cache and retrying {$currentTry}/{$maxRetries}");
+                // \Log::info("Soulmates empty for user {$user->id}, clearing cache and retrying {$currentTry}/{$maxRetries}");
                 
                 // Optional: Add small delay between retries to allow for data changes
                 usleep(200000); // 0.2 second delay
             } else {
-                \Log::warning("Soulmates failed after {$maxRetries} attempts for user {$user->id}");
+                // \Log::warning("Soulmates failed after {$maxRetries} attempts for user {$user->id}");
             }
         }
         
