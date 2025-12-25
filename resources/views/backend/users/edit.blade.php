@@ -228,7 +228,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Relation Goals') }}</label>
-                                <select class="form-control select2-multi" name="relation_goals[]" data-selected="{{ optional($user->user_information)->relation_goals }}" multiple>
+                                <select class="form-control select2-multi" name="relation_goals[]" data-selected="{{ json_encode(optional($user->user_information)->relation_goals ?? []) }}" multiple>
                                     {!! create_option('relation_goals', 'id', 'title', '', null) !!}
                                 </select>
                             </div>
@@ -236,7 +236,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Interests') }}</label>
-                                <select class="form-control select2-multi" name="interests[]" data-selected="{{ optional($user->user_information)->interests }}" multiple>
+                                <select class="form-control select2-multi" name="interests[]" data-selected="{{ json_encode(optional($user->user_information)->interests ?? []) }}" multiple>
                                     {!! create_option('interests', 'id', 'title', '', null) !!}
                                 </select>
                             </div>
@@ -244,7 +244,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="control-label">{{ _lang('Languages') }}</label>
-                                <select class="form-control select2-multi" name="languages[]" data-selected="{{ optional($user->user_information)->languages }}" multiple>
+                                <select class="form-control select2-multi" name="languages[]" data-selected="{{ json_encode(optional($user->user_information)->languages ?? []) }}" multiple>
                                     {!! create_option('languages', 'id', 'title', '', null) !!}
                                 </select>
                             </div>
