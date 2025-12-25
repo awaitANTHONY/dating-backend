@@ -222,13 +222,16 @@ class ImageModerationService
 This photo may be taken with a rear camera and may not be a selfie.
 Analyze the image and respond ONLY in JSON:
 {
+  "has_human_face": true/false,
   "personal_photo": true/false,
   "likely_public_figure_or_model": true/false,
   "nsfw": true/false,
   "ai_generated": true/false,
   "watermark_or_text": true/false,
   "confidence": 0.0-1.0
-}';
+}
+
+CRITICAL: "has_human_face" must be TRUE only if you can clearly see at least one human face in the image. Images of objects, animals, landscapes, text, logos, cards, or anything without a visible human face should be FALSE.';
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
@@ -313,8 +316,14 @@ Analyze the image and respond ONLY in JSON:
         $reason = 'passed_moderation';
         $confidence = $analysis['confidence'] ?? 0.5;
 
+        // Reject if no human face detected
+        if (isset($analysis['has_human_face']) && $analysis['has_human_face'] === false) {
+            $decision = 'rejected';
+            $reason = 'no_human_face';
+            $this->storeRejectedHash($hash);
+        }
         // Reject if NSFW
-        if ($analysis['nsfw'] === true) {
+        elseif ($analysis['nsfw'] === true) {
             $decision = 'rejected';
             $reason = 'nsfw_content';
             $this->storeRejectedHash($hash);

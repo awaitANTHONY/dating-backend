@@ -862,6 +862,7 @@ class AuthController extends Controller
     private function getModerationMessage(string $reason): string
     {
         $messages = [
+            'no_human_face' => 'Please upload a photo that clearly shows your face. Images without a visible human face are not allowed.',
             'nsfw_content' => 'The image contains inappropriate content and cannot be uploaded.',
             'public_figure_or_model' => 'The image appears to be of a celebrity, model, or public figure. Please upload your own photo.',
             'ai_generated_image' => 'The image appears to be AI-generated. Please upload a real photo of yourself.',
