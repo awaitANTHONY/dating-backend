@@ -906,11 +906,13 @@ class AuthController extends Controller
     {
         $messages = [
             'no_human_face' => 'Please upload a photo that clearly shows your face. Images without a visible human face are not allowed.',
+            'not_real_person' => 'Please upload a real photograph of yourself. Drawings, cartoons, or non-human images are not allowed.',
+            'document_or_screenshot' => 'Documents, receipts, screenshots, and text images are not allowed. Please upload a photo of yourself.',
             'nsfw_content' => 'The image contains inappropriate content and cannot be uploaded.',
             'public_figure_or_model' => 'The image appears to be of a celebrity, model, or public figure. Please upload your own photo.',
             'ai_generated_image' => 'The image appears to be AI-generated. Please upload a real photo of yourself.',
             'not_personal_photo' => 'The image does not appear to be a personal photo. Please upload a photo of yourself.',
-            'watermark_or_text_detected' => 'The image contains watermarks or text overlays. Please upload a clean photo.',
+            'watermark_or_text_detected' => 'The image contains watermarks or text overlays. Please upload a clean photo without any text or watermarks.',
             'duplicate_rejected_image' => 'This image was previously rejected and cannot be uploaded again.',
             'file_not_found' => 'The uploaded file could not be found.',
             'invalid_image_file' => 'The uploaded file is not a valid image.',

@@ -218,20 +218,30 @@ class ImageModerationService
             // Generate public URL for the image
             $imageUrl = asset($filePath);
 
-            $prompt = 'You are moderating profile photos for a dating app.
-This photo may be taken with a rear camera and may not be a selfie.
-Analyze the image and respond ONLY in JSON:
+            $prompt = 'You are a STRICT moderator for a dating app profile photo system.
+Your job is to ensure ONLY real, personal photos of actual people are uploaded.
+
+Analyze the image and respond ONLY in valid JSON format:
 {
   "has_human_face": true/false,
+  "is_real_person": true/false,
   "personal_photo": true/false,
   "likely_public_figure_or_model": true/false,
   "nsfw": true/false,
   "ai_generated": true/false,
   "watermark_or_text": true/false,
+  "is_document_or_screenshot": true/false,
   "confidence": 0.0-1.0
 }
 
-CRITICAL: "has_human_face" must be TRUE only if you can clearly see at least one human face in the image. Images of objects, animals, landscapes, text, logos, cards, or anything without a visible human face should be FALSE.';
+STRICT RULES:
+1. "has_human_face" = TRUE only if you see a CLEAR, VISIBLE human face (eyes, nose, mouth visible)
+2. "is_real_person" = TRUE only if this is clearly a photograph of a real human being
+3. "personal_photo" = TRUE only if this appears to be a personal photo (not professional, stock, or celebrity)
+4. "is_document_or_screenshot" = TRUE if the image contains receipts, cards, documents, screenshots, or text overlays
+5. Set FALSE for: animals, objects, landscapes, memes, cartoons, drawings, logos, text, receipts, cards, food, screenshots
+6. Be VERY strict - when in doubt, mark as FALSE';
+
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
@@ -316,39 +326,55 @@ CRITICAL: "has_human_face" must be TRUE only if you can clearly see at least one
         $reason = 'passed_moderation';
         $confidence = $analysis['confidence'] ?? 0.5;
 
-        // Reject if no human face detected
+        // STRICT REJECTION RULES (in priority order)
+        
+        // 1. Reject if no human face detected
         if (isset($analysis['has_human_face']) && $analysis['has_human_face'] === false) {
             $decision = 'rejected';
             $reason = 'no_human_face';
             $this->storeRejectedHash($hash);
         }
-        // Reject if NSFW
-        elseif ($analysis['nsfw'] === true) {
+        // 2. Reject if not a real person
+        elseif (isset($analysis['is_real_person']) && $analysis['is_real_person'] === false) {
+            $decision = 'rejected';
+            $reason = 'not_real_person';
+            $this->storeRejectedHash($hash);
+        }
+        // 3. Reject if document/screenshot/receipt
+        elseif (isset($analysis['is_document_or_screenshot']) && $analysis['is_document_or_screenshot'] === true) {
+            $decision = 'rejected';
+            $reason = 'document_or_screenshot';
+            $this->storeRejectedHash($hash);
+        }
+        // 4. Reject if NSFW
+        elseif (isset($analysis['nsfw']) && $analysis['nsfw'] === true) {
             $decision = 'rejected';
             $reason = 'nsfw_content';
             $this->storeRejectedHash($hash);
         }
-        // Reject if likely public figure or model
-        elseif ($analysis['likely_public_figure_or_model'] === true) {
+        // 5. Reject if likely public figure or model
+        elseif (isset($analysis['likely_public_figure_or_model']) && $analysis['likely_public_figure_or_model'] === true) {
             $decision = 'rejected';
             $reason = 'public_figure_or_model';
             $this->storeRejectedHash($hash);
         }
-        // Reject if AI generated
-        elseif ($analysis['ai_generated'] === true) {
+        // 6. Reject if AI generated
+        elseif (isset($analysis['ai_generated']) && $analysis['ai_generated'] === true) {
             $decision = 'rejected';
             $reason = 'ai_generated_image';
             $this->storeRejectedHash($hash);
         }
-        // Review if not a personal photo with high confidence
-        elseif ($analysis['personal_photo'] === false && $confidence > 0.7) {
-            $decision = 'review';
+        // 7. STRICT: Reject if not a personal photo (lowered threshold from 0.7 to 0.5)
+        elseif (isset($analysis['personal_photo']) && $analysis['personal_photo'] === false && $confidence > 0.5) {
+            $decision = 'rejected';
             $reason = 'not_personal_photo';
+            $this->storeRejectedHash($hash);
         }
-        // Review if has watermark or text
-        elseif ($analysis['watermark_or_text'] === true) {
-            $decision = 'review';
+        // 8. STRICT: Reject if has watermark or text (changed from review to reject)
+        elseif (isset($analysis['watermark_or_text']) && $analysis['watermark_or_text'] === true) {
+            $decision = 'rejected';
             $reason = 'watermark_or_text_detected';
+            $this->storeRejectedHash($hash);
         }
 
         return [
