@@ -224,7 +224,7 @@ class AuthController extends Controller
             'languages' => 'nullable|array',
             'wallet_balance' => 'nullable|numeric|min:0',
             'image' => 'nullable|image',
-            'images' => 'nullable|array',
+            'images' => 'nullable|array|max:3',
             'images.*' => 'nullable|image',
             'country_code' => 'nullable|string|max:10',
             'phone' => 'nullable|string|max:20',
@@ -288,8 +288,29 @@ class AuthController extends Controller
             // Move profile image to user directory
             $profileImage->move(base_path($userPath), $profileFileName);
             
+            $profileImagePath = $userPath . $profileFileName;
+            
+            // Moderate image synchronously
+            $moderationResult = moderate_image($profileImagePath, $user->id, 'profile');
+            
+            if ($moderationResult['decision'] === 'rejected') {
+                // Delete rejected image
+                @unlink(base_path($profileImagePath));
+                
+                \DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Profile image rejected: ' . $this->getModerationMessage($moderationResult['reason']),
+                    'moderation' => [
+                        'decision' => 'rejected',
+                        'reason' => $moderationResult['reason'],
+                        'confidence' => $moderationResult['confidence']
+                    ]
+                ], 400);
+            }
+            
             // Update user's profile image (store relative path)
-            $user->image = $userPath . $profileFileName;
+            $user->image = $profileImagePath;
             $user->save();
         }
 
@@ -300,7 +321,29 @@ class AuthController extends Controller
                 $extension = $imgFile->getClientOriginalExtension();
                 $imgName = 'gallery_' . time() . '_' . uniqid() . '_' . $index . '.' . $extension;
                 $imgFile->move(base_path($userPath), $imgName);
-                $otherImages[] = $userPath . $imgName;
+                
+                $galleryImagePath = $userPath . $imgName;
+                
+                // Moderate image synchronously
+                $moderationResult = moderate_image($galleryImagePath, $user->id, 'gallery');
+                
+                if ($moderationResult['decision'] === 'rejected') {
+                    // Delete rejected image
+                    @unlink(base_path($galleryImagePath));
+                    
+                    \DB::rollBack();
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Gallery image rejected: ' . $this->getModerationMessage($moderationResult['reason']),
+                        'moderation' => [
+                            'decision' => 'rejected',
+                            'reason' => $moderationResult['reason'],
+                            'confidence' => $moderationResult['confidence']
+                        ]
+                    ], 400);
+                }
+                
+                $otherImages[] = $galleryImagePath;
             }
         }
         
