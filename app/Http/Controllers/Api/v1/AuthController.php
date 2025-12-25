@@ -177,13 +177,6 @@ class AuthController extends Controller
             ]);
         }
 
-        if($user && $user->status == 4){
-            return response()->json([
-                'status' => false,
-                'message' => 'Your account has been suspended. Please contact support.',
-            ]);
-        }
-
         if($user->provider == 'email'){
             if (!\Hash::check($request->password, $user->password) ) {
                 return response()->json([
@@ -489,8 +482,29 @@ class AuthController extends Controller
                 // Move profile image to user directory
                 $profileImage->move(base_path($userPath), $profileFileName);
                 
+                $profileImagePath = $userPath . $profileFileName;
+                
+                // Moderate image synchronously
+                $moderationResult = moderate_image($profileImagePath, $user->id, 'profile');
+                
+                if ($moderationResult['decision'] === 'rejected') {
+                    // Delete rejected image
+                    @unlink(base_path($profileImagePath));
+                    
+                    \DB::rollBack();
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Profile image rejected: ' . $this->getModerationMessage($moderationResult['reason']),
+                        'moderation' => [
+                            'decision' => 'rejected',
+                            'reason' => $moderationResult['reason'],
+                            'confidence' => $moderationResult['confidence']
+                        ]
+                    ], 400);
+                }
+                
                 // Update user's profile image (store relative path)
-                $user->image = $userPath . $profileFileName;
+                $user->image = $profileImagePath;
                 $user->save();
                 $profileImageUpdated = true;
             }
@@ -504,7 +518,28 @@ class AuthController extends Controller
                     // Move file to user directory
                     $imageFile->move(base_path($userPath), $fileName);
                     
-                    $uploadedImages[] = $userPath . $fileName;
+                    $galleryImagePath = $userPath . $fileName;
+                    
+                    // Moderate image synchronously
+                    $moderationResult = moderate_image($galleryImagePath, $user->id, 'gallery');
+                    
+                    if ($moderationResult['decision'] === 'rejected') {
+                        // Delete rejected image
+                        @unlink(base_path($galleryImagePath));
+                        
+                        \DB::rollBack();
+                        return response()->json([
+                            'status' => false,
+                            'message' => 'Gallery image rejected: ' . $this->getModerationMessage($moderationResult['reason']),
+                            'moderation' => [
+                                'decision' => 'rejected',
+                                'reason' => $moderationResult['reason'],
+                                'confidence' => $moderationResult['confidence']
+                            ]
+                        ], 400);
+                    }
+                    
+                    $uploadedImages[] = $galleryImagePath;
                 }
 
                 // Update user information with new gallery images
@@ -817,5 +852,30 @@ class AuthController extends Controller
                 'mood' => $userInfo->mood
             ]
         ]);
+    }
+
+    /**
+     * Get user-friendly moderation message
+     * @param string $reason
+     * @return string
+     */
+    private function getModerationMessage(string $reason): string
+    {
+        $messages = [
+            'nsfw_content' => 'The image contains inappropriate content and cannot be uploaded.',
+            'public_figure_or_model' => 'The image appears to be of a celebrity, model, or public figure. Please upload your own photo.',
+            'ai_generated_image' => 'The image appears to be AI-generated. Please upload a real photo of yourself.',
+            'not_personal_photo' => 'The image does not appear to be a personal photo. Please upload a photo of yourself.',
+            'watermark_or_text_detected' => 'The image contains watermarks or text overlays. Please upload a clean photo.',
+            'duplicate_rejected_image' => 'This image was previously rejected and cannot be uploaded again.',
+            'file_not_found' => 'The uploaded file could not be found.',
+            'invalid_image_file' => 'The uploaded file is not a valid image.',
+            'unsupported_image_type' => 'The image format is not supported. Please use JPEG, PNG, or WEBP.',
+            'resolution_too_low' => 'The image resolution is too low. Please upload an image at least 300x300 pixels.',
+            'openai_failure' => 'Image moderation temporarily unavailable. Please try again later.',
+            'moderation_error' => 'An error occurred during image moderation. Please try again.'
+        ];
+
+        return $messages[$reason] ?? 'The image could not be approved. Please try a different photo.';
     }
 }

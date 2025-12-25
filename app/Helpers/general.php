@@ -540,6 +540,50 @@ if (!function_exists('xss_clean')) {
     }
 }
 
+if (!function_exists('moderate_image')) {
+    /**
+     * Moderate an image using AI
+     *
+     * @param string $localFilePath Local file path (e.g., public/uploads/images/users/1/profile.jpg)
+     * @param int|null $userId User ID for logging purposes
+     * @param string $imageType Type of image: 'profile' or 'gallery'
+     * @return array ['decision' => 'approved|rejected|review', 'reason' => string, 'confidence' => float]
+     */
+    function moderate_image(string $localFilePath, ?int $userId = null, string $imageType = 'gallery'): array
+    {
+        try {
+            $moderationService = new \App\Services\ImageModerationService();
+            $result = $moderationService->moderateImage($localFilePath);
+            
+            // Log the moderation result
+            \Log::info('Image moderation completed', [
+                'user_id' => $userId,
+                'image_type' => $imageType,
+                'image_path' => basename($localFilePath),
+                'decision' => $result['decision'],
+                'reason' => $result['reason'],
+                'confidence' => $result['confidence']
+            ]);
+            
+            return $result;
+        } catch (\Exception $e) {
+            \Log::error('Image moderation helper failed', [
+                'user_id' => $userId,
+                'image_type' => $imageType,
+                'file' => $localFilePath,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'decision' => 'review',
+                'reason' => 'moderation_error',
+                'confidence' => 0.0,
+                'details' => ['error' => $e->getMessage()]
+            ];
+        }
+    }
+}
+
 if (!function_exists('news_details')) {
     function news_details($url)
     {
@@ -589,6 +633,7 @@ if (!function_exists('news_details')) {
         return $str;
     }
 }
+
 
 
 
