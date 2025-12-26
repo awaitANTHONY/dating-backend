@@ -306,7 +306,7 @@ class AuthController extends Controller
                         'reason' => $moderationResult['reason'],
                         'confidence' => $moderationResult['confidence']
                     ]
-                ], 400);
+                ], 200);
             }
             
             // Update user's profile image (store relative path)
@@ -340,7 +340,7 @@ class AuthController extends Controller
                             'reason' => $moderationResult['reason'],
                             'confidence' => $moderationResult['confidence']
                         ]
-                    ], 400);
+                    ], 200);
                 }
                 
                 $otherImages[] = $galleryImagePath;
@@ -543,7 +543,7 @@ class AuthController extends Controller
                             'reason' => $moderationResult['reason'],
                             'confidence' => $moderationResult['confidence']
                         ]
-                    ], 400);
+                    ], 200);
                 }
                 
                 // Update user's profile image (store relative path)
