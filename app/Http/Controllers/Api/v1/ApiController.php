@@ -46,6 +46,16 @@ class ApiController extends Controller
             'ios_onesignal_api_key',
             'ios_firebase_server_key',
             'ios_firebase_topics',
+            'from_mail',
+            "from_name",
+            "smtp_host",
+            "smtp_port",
+            "smtp_username",
+            "smtp_password",
+            "smtp_encryption",
+            "firebase_project_id",
+            "firebase_database_url",
+            "firebase_topics",
 
         ];
 
