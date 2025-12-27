@@ -230,12 +230,29 @@ class PaymentController extends Controller
             return response()->json(['status' => false, 'message' => 'Package not available for this platform.']);
         }
 
-        // Create boost record
+        // Check for duplicate transaction
+        $exists = ProfileBoost::where('transaction_id', $request->transaction_id)->exists();
+        if ($exists) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Transaction already recorded'
+            ]);
+        }
+
+        // Create boost record and auto-activate
         $boost = new ProfileBoost();
         $boost->user_id = $user->id;
         $boost->boost_package_id = $boostPackage->id;
         $boost->status = 'purchased';
+        $boost->transaction_id = $request->transaction_id;
+        $boost->platform = $request->platform;
         $boost->save();
+
+        // Auto-activate the boost immediately
+        $boost->activate();
+        
+        // Clear recommendations cache to prioritize boosted profile
+        Cache::flush();
 
         // Create payment record for boost
         $payment = new Payment();
@@ -252,13 +269,20 @@ class PaymentController extends Controller
         // Clear cache
         Cache::forget("payments_" . $user->id);
 
+        // Get boost duration
+        $boostDuration = $boostPackage->boost_duration ?? 30;
+
         return response()->json([
             'status' => true,
-            'message' => 'Boost purchased successfully!',
+            'message' => "Boost purchased and activated! You are top profile for {$boostDuration} minutes.",
             'data' => [
-                'boost_id' => $boost->id,
                 'package_name' => $boostPackage->name,
                 'boost_count' => $boostPackage->boost_count,
+                'boost_duration' => $boostPackage->boost_duration,
+                'boost_active' => true,
+                'activated_at' => $boost->activated_at->toISOString(),
+                'expires_at' => $boost->expires_at->toISOString(),
+                'remaining_minutes' => $boostDuration,
                 'available_boosts' => $this->getAvailableBoosts($user->id)
             ]
         ]);
