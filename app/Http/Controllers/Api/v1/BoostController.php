@@ -56,72 +56,7 @@ class BoostController extends Controller
 
         return response()->json([
             'status' => $status, 
-            'data' => [
-                'packages' => $packages
-            ]
-        ]);
-    }
-
-    /**
-     * Activate Profile Boost
-     */
-    public function activate_boost(Request $request)
-    {
-        $user = $request->user();
-
-        // Check if user already has an active boost
-        $activeBoost = ProfileBoost::getActiveBoost($user->id);
-        if ($activeBoost) {
-            return response()->json([
-                'status' => false,
-                'message' => 'You already have an active boost.',
-                'data' => [
-                    'expires_at' => $activeBoost->expires_at->toISOString(),
-                    'remaining_minutes' => $activeBoost->expires_at->diffInMinutes(now())
-                ]
-            ]);
-        }
-
-        // Get available boost (oldest purchased first)
-        $availableBoost = ProfileBoost::where('user_id', $user->id)
-                                    ->where('status', 'purchased')
-                                    ->orderBy('created_at', 'asc')
-                                    ->first();
-
-        if (!$availableBoost) {
-            return response()->json([
-                'status' => false,
-                'message' => 'No boosts available. Purchase boosts first.',
-                'data' => [
-                    'boost_packages' => BoostPackage::getPackagesForApi($request->header('Platform'))
-                ]
-            ]);
-        }
-
-        // Activate the boost
-        if ($availableBoost->activate()) {
-            // Clear recommendations cache to include boosted profile
-            $this->clearRecommendationsCache();
-            
-            // Get boost duration from package
-            $boostDuration = $availableBoost->boostPackage ? $availableBoost->boostPackage->boost_duration : 30;
-            
-            return response()->json([
-                'status' => true,
-                'message' => "Boost activated! You are now the top profile for {$boostDuration} minutes.",
-                'data' => [
-                    'boost_id' => $availableBoost->id,
-                    'activated_at' => $availableBoost->activated_at->toISOString(),
-                    'expires_at' => $availableBoost->expires_at->toISOString(),
-                    'remaining_minutes' => $boostDuration,
-                    'available_boosts' => $this->getAvailableBoosts($user->id)
-                ]
-            ]);
-        }
-
-        return response()->json([
-            'status' => false,
-            'message' => 'Failed to activate boost. Please try again.'
+            'data' => $packages
         ]);
     }
 
@@ -159,14 +94,5 @@ class BoostController extends Controller
         return ProfileBoost::where('user_id', $userId)
                          ->where('status', 'purchased')
                          ->count();
-    }
-
-    /**
-     * Clear recommendations cache
-     */
-    private function clearRecommendationsCache()
-    {
-        // Clear all recommendation caches when boost is activated
-        Cache::flush(); // You might want to be more specific here
     }
 }
