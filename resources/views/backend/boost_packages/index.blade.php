@@ -20,7 +20,7 @@
 						<tr>
 							
         					<th>{{ _lang('Name') }}</th>
-        					<th>{{ _lang('Boost Count') }}</th>
+        					<th>{{ _lang('Duration (Minutes)') }}</th>
         					<th>{{ _lang('Platform') }}</th>
         					<th>{{ _lang('Status') }}</th>
 
@@ -45,7 +45,7 @@
 		"columns" : [
 			
         	{ data : "name", name : "name", className : "name" },
-        	{ data : "boost_count", name : "boost_count", className : "boost_count" },
+        	{ data : "boost_duration", name : "boost_duration", className : "boost_duration" },
         	{ data : "platform", name : "platform", className : "platform" },
         	{ data : "status", name : "status", className : "status text-center" },
 					{ data : "action", name : "action", orderable : false, searchable : false, className : "text-center" }

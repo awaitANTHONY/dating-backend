@@ -89,7 +89,6 @@ class BoostPackageController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:191',
             'description' => 'nullable|string',
-            'boost_count' => 'required|integer|min:1',
             'boost_duration' => 'required|integer|min:15|max:240',
             'platform' => 'required|in:ios,android,both',
             'product_id' => 'required|string|unique:boost_packages,product_id',
@@ -107,9 +106,8 @@ class BoostPackageController extends Controller
         $boostPackage = new BoostPackage();
         $boostPackage->name = $request->name;
         $boostPackage->description = $request->description;
-        $boostPackage->boost_count = $request->boost_count;
-        $boostPackage->price = 0; // Set default price to 0
-        $boostPackage->currency = 'GBP'; // Set default currency
+        $boostPackage->boost_count = 1;
+        $boostPackage->boost_duration = $request->boost_duration;
         $boostPackage->platform = $request->platform;
         $boostPackage->product_id = $request->product_id;
         $boostPackage->status = $request->status;
@@ -171,7 +169,6 @@ class BoostPackageController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:191',
             'description' => 'nullable|string',
-            'boost_count' => 'required|integer|min:1',
             'boost_duration' => 'required|integer|min:15|max:240',
             'platform' => 'required|in:ios,android,both',
             'product_id' => 'required|string|unique:boost_packages,product_id,' . $id,
@@ -189,8 +186,8 @@ class BoostPackageController extends Controller
         $boostPackage = BoostPackage::find($id);
         $boostPackage->name = $request->name;
         $boostPackage->description = $request->description;
-        $boostPackage->boost_count = $request->boost_count;
-        // Keep existing price and currency values
+        $boostPackage->boost_count = 1;
+        $boostPackage->boost_duration = $request->boost_duration;
         $boostPackage->platform = $request->platform;
         $boostPackage->product_id = $request->product_id;
         $boostPackage->status = $request->status;

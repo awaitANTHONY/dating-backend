@@ -27,14 +27,7 @@
                                         placeholder="Brief description of the boost package">{{ old('description') }}</textarea>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="control-label">{{ _lang('Boost Count') }}</label>
-                                    <input type="number" class="form-control" name="boost_count"
-                                        value="{{ old('boost_count', 1) }}" min="1" required>
-                                    <small class="form-text text-muted">Number of boosts in this package</small>
-                                </div>
-                            </div>
+                           
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="control-label">{{ _lang('Boost Duration (Minutes)') }}</label>
@@ -47,10 +40,10 @@
                                 <div class="form-group">
                                     <label class="control-label">{{ _lang('Platform') }}</label>
                                     <select class="form-control select2" name="platform"
-                                        data-selected="{{ old('platform', 'both') }}" required>
-                                        <option value="both">{{ _lang('Both (iOS & Android)') }}</option>
-                                        <option value="ios">{{ _lang('iOS Only') }}</option>
-                                        <option value="android">{{ _lang('Android Only') }}</option>
+                                        data-selected="{{ old('platform', '') }}" required>
+                                        <option value="">{{ _lang('Select One') }}</option>
+                                        <option value="ios">{{ _lang('iOS') }}</option>
+                                        <option value="android">{{ _lang('Android') }}</option>
                                     </select>
                                 </div>
                             </div>

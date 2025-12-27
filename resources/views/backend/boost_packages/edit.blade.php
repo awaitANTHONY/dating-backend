@@ -27,14 +27,7 @@
                                     <textarea class="form-control" name="description" rows="3">{{ $boostPackage->description }}</textarea>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="control-label">{{ _lang('Boost Count') }}</label>
-                                    <input type="number" class="form-control" name="boost_count"
-                                        value="{{ $boostPackage->boost_count }}" min="1" required>
-                                    <small class="form-text text-muted">Number of boosts in this package</small>
-                                </div>
-                            </div>
+                            
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="control-label">{{ _lang('Boost Duration (Minutes)') }}</label>
@@ -48,9 +41,8 @@
                                     <label class="control-label">{{ _lang('Platform') }}</label>
                                     <select class="form-control select2" name="platform"
                                         data-selected="{{ $boostPackage->platform }}" required>
-                                        <option value="both">{{ _lang('Both (iOS & Android)') }}</option>
-                                        <option value="ios">{{ _lang('iOS Only') }}</option>
-                                        <option value="android">{{ _lang('Android Only') }}</option>
+                                        <option value="ios">{{ _lang('iOS') }}</option>
+                                        <option value="android">{{ _lang('Android') }}</option>
                                     </select>
                                 </div>
                             </div>
