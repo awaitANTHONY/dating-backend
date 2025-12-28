@@ -161,7 +161,7 @@ class ProfileController extends Controller
                 'is_food_preference_matter' => $userInfo->is_food_preference_matter,
                 'country_code' => $userInfo->country_code,
                 'is_verified' => $userInfo->is_verified ?? false,
-                'is_vip' => $user->isVipActive(),
+                'is_vip' => (bool) $user->isVipActive(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -561,7 +561,7 @@ class ProfileController extends Controller
                 'smoke' => $userInfo->smoke,
                 'preffered_age' => $userInfo->preffered_age,
                 'is_verified' => $userInfo->is_verified ?? false,
-                'is_vip' => $user->isVipActive(),
+                'is_vip' => (bool) $user->isVipActive(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -1111,7 +1111,7 @@ class ProfileController extends Controller
                 'status' => true,
                 'data' => [
                     'profile' => $profileData,
-                    'is_vip' => $targetUser->isVipActive(),
+                    'is_vip' => (bool) $targetUser->isVipActive(),
                     'compatibility' => $compatibility,
                     'interaction_status' => $interactionStatus,
                     'distance' => $distance ? round($distance, 1) . ' km' : 'Unknown'
@@ -1276,7 +1276,7 @@ class ProfileController extends Controller
             
             // If empty and we haven't exceeded retries, clear cache and try again
             $currentTry++;
-            if ($currentTry < $maxRetries) {
+            if ($currentTry <= $maxRetries) {
                 Cache::forget($cacheKey);
                 // \Log::info("Soulmates empty for user {$user->id}, clearing cache and retrying {$currentTry}/{$maxRetries}");
                 
@@ -1393,7 +1393,7 @@ class ProfileController extends Controller
                 'is_food_preference_matter' => $userInfo->is_food_preference_matter,
                 'country_code' => $userInfo->country_code,
                 'is_verified' => $userInfo->is_verified ?? false,
-                'is_vip' => $user->isVipActive(),
+                'is_vip' => (bool) $user->isVipActive(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -1903,6 +1903,7 @@ class ProfileController extends Controller
                     'id' => $visitor->id,
                     'name' => $visitor->name,
                     'image' => $visitor->image,
+                    'is_vip' => (bool) $visitor->isVipActive(),
                 ];
             })->filter()->values();
 
