@@ -879,6 +879,18 @@ class AuthController extends Controller
 
         $moodText = $request->mood;
 
+        // Skip validation if removing mood
+        if ($moodText != 'none') {
+            // Validate mood doesn't contain contact information
+            $validationResult = $this->validateMoodContent($moodText);
+            if (!$validationResult['valid']) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $validationResult['message']
+                ], 200);
+            }
+        }
+
         // Set mood with 24 hour expiry - handle "none" as null
         $userInfo->mood_text = $moodText == 'none' ? null : $moodText;
         $userInfo->mood_expires_at = $moodText == 'none' ? null : now()->addHours(24);
@@ -895,6 +907,76 @@ class AuthController extends Controller
                 'mood' => $userInfo->mood
             ]
         ]);
+    }
+
+    /**
+     * Validate mood content doesn't contain contact information
+     * @param string $mood
+     * @return array
+     */
+    private function validateMoodContent(string $mood): array
+    {
+        $lowerMood = strtolower($mood);
+        
+        // Check for phone number patterns
+        $phonePatterns = [
+            '/\d{10,}/',                           // 10+ consecutive digits
+            '/\d{3}[-.\s]\d{3}[-.\s]\d{4}/',      // xxx-xxx-xxxx format
+            '/\(\d{3}\)\s*\d{3}[-.\s]\d{4}/',     // (xxx) xxx-xxxx format
+            '/\+\d{1,3}\s*\d{9,}/',               // International format
+            '/\d{3}\s\d{3}\s\d{4}/',              // xxx xxx xxxx format
+        ];
+
+        foreach ($phonePatterns as $pattern) {
+            if (preg_match($pattern, $mood)) {
+                return [
+                    'valid' => false,
+                    'message' => 'Phone numbers are not allowed in mood status.'
+                ];
+            }
+        }
+
+        // Check for contact-related keywords
+        $contactKeywords = [
+            'whatsapp', 'whats app', 'whatsap', 'watsapp', 'watsap', 'wa number', 'wa me',
+            'telegram', 'telegrm', 'tg number', 't.me',
+            'snapchat', 'snap chat', 'snapchat me', 'snap me', 'snap:',
+            'instagram', 'insta', 'ig:', 'dm me', 'dm on',
+            'facebook', 'fb', 'messenger',
+            'wechat', 'we chat', 'line app', 'line:',
+            'viber', 'skype', 'kik',
+            'call me', 'text me', 'phone me', 'ring me',
+            'my number', 'my phone', 'reach me at',
+            '@gmail', '@yahoo', '@hotmail', '@outlook', 'email me', 'e-mail',
+            'contact me', 'add me',
+        ];
+
+        foreach ($contactKeywords as $keyword) {
+            if (strpos($lowerMood, $keyword) !== false) {
+                return [
+                    'valid' => false,
+                    'message' => 'Contact information and social media handles are not allowed in mood status.'
+                ];
+            }
+        }
+
+        // Check for @ mentions (social media handles)
+        if (preg_match('/@[a-zA-Z0-9_]{3,}/', $mood)) {
+            return [
+                'valid' => false,
+                'message' => 'Social media handles are not allowed in mood status.'
+            ];
+        }
+
+        // Check for URLs
+        if (preg_match('/https?:\/\/|www\.|\.com|\.net|\.org|\.io/i', $mood)) {
+            return [
+                'valid' => false,
+                'message' => 'URLs and website links are not allowed in mood status.'
+            ];
+        }
+
+        return ['valid' => true, 'message' => ''];
     }
 
     /**
