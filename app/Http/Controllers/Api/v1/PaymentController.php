@@ -244,7 +244,6 @@ class PaymentController extends Controller
         $boost->user_id = $user->id;
         $boost->boost_package_id = $boostPackage->id;
         $boost->status = 'purchased';
-        $boost->transaction_id = $request->transaction_id;
         $boost->platform = $request->platform;
         $boost->save();
 
