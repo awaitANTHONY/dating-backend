@@ -78,7 +78,7 @@ class BoostController extends Controller
                     'boost_id' => $activeBoost->id,
                     'activated_at' => $activeBoost->activated_at->toISOString(),
                     'expires_at' => $activeBoost->expires_at->toISOString(),
-                    'remaining_minutes' => max(0, $activeBoost->expires_at->diffInMinutes(now()))
+                    'remaining_minutes' => max(0, now()->diffInMinutes($activeBoost->expires_at, false))
                 ] : null,
                 'available_boosts' => $availableBoosts,
             ]
