@@ -43,7 +43,7 @@
 	<header class="u-header">
 		<div class="u-header-left">
 			<a class="u-header-logo" href="{{ url('dashboard') }}">
-				<img class="u-logo-desktop" src="{{ get_logo() }}" width="160" alt="{{ get_option('company_name') }}">
+				<img class="u-logo-desktop" src="{{ get_logo() }}" width="50" alt="{{ get_option('company_name') }}">
 				<img class="img-fluid u-logo-mobile" src="{{ get_icon() }}" width="50" alt="{{ get_option('company_name') }}">
 			</a>
 		</div>
