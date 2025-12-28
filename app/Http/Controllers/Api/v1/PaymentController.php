@@ -283,7 +283,7 @@ class PaymentController extends Controller
         $validator = Validator::make($request->all(), [
             'amount' => 'required|string',
             'platform' => 'required|string|in:ios,android',
-            'transaction_id' => 'required|string',
+            'transaction_id' => 'nullable|string',
             'original_transaction_id' => 'nullable|string',
             'duration' => 'required|integer|min:1',
         ]);
