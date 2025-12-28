@@ -208,7 +208,7 @@ class PaymentController extends Controller
             'product_id' => 'required|string',
             'transaction_id' => 'required|string',
             'original_transaction_id' => 'nullable|string',
-            'amount' => 'required|numeric',
+            'amount' => 'required|string',
             'platform' => 'required|string|in:ios,android',
         ]);
 

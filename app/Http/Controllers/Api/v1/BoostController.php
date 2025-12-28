@@ -81,7 +81,6 @@ class BoostController extends Controller
                     'remaining_minutes' => max(0, $activeBoost->expires_at->diffInMinutes(now()))
                 ] : null,
                 'available_boosts' => $availableBoosts,
-                'boost_packages' => BoostPackage::getPackagesForApi($request->header('Platform'))
             ]
         ]);
     }
