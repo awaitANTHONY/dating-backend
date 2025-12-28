@@ -250,7 +250,6 @@ class PaymentController extends Controller
         $payment->title = $boostPackage->name . ' - Profile Boost';
         $payment->date = now();
         $payment->amount = $request->amount;
-        $payment->platform = $request->platform;
         $payment->transaction_id = $request->transaction_id;
         $payment->original_transaction_id = $request->original_transaction_id;
         $payment->payment_type = 'boost';
