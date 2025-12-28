@@ -73,11 +73,6 @@ class User extends Authenticatable
         return asset($data);
     }
 
-    public function getIsVipAttribute($data)
-    {
-        return $this->isVipActive();
-    }
-
     /**
      * Display a listing of the resource.
      *
@@ -145,6 +140,6 @@ class User extends Authenticatable
      */
     public function isVipActive()
     {
-        return $this->is_vip && $this->vip_expire && $this->vip_expire->isFuture();
+        return $this->attributes['is_vip'] ?? false && $this->vip_expire && $this->vip_expire->isFuture();
     }
 }
