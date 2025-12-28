@@ -161,6 +161,7 @@ class ProfileController extends Controller
                 'is_food_preference_matter' => $userInfo->is_food_preference_matter,
                 'country_code' => $userInfo->country_code,
                 'is_verified' => $userInfo->is_verified ?? false,
+                'is_vip' => $user->isVipActive(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -394,16 +395,23 @@ class ProfileController extends Controller
         // Get boosted users and prioritize them
         $boostedUserIds = ProfileBoost::getActiveBoostedUsers();
         
-        // Separate boosted and regular profiles
+        // Separate boosted, VIP, and regular profiles
         $boostedProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
             return in_array($profile->id, $boostedUserIds);
         })->sortByDesc('match_score')->values();
 
-        $regularProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
-            return !in_array($profile->id, $boostedUserIds);
+        $vipProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
+            // Get the full user model to check VIP status
+            $user = User::find($profile->id);
+            return !in_array($profile->id, $boostedUserIds) && $user && $user->isVipActive();
         })->sortByDesc('match_score')->values();
 
-        // Separate profiles with and without relationship goals match
+        $regularProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
+            $user = User::find($profile->id);
+            return !in_array($profile->id, $boostedUserIds) && (!$user || !$user->isVipActive());
+        })->sortByDesc('match_score')->values();
+
+        // Separate profiles with and without relationship goals match for regular profiles
         $profilesWithGoalMatch = $regularProfiles->filter(function($profile) {
             return isset($profile->compatibility_details['relation_goals_match']) && 
                    $profile->compatibility_details['relation_goals_match'] === true;
@@ -414,14 +422,15 @@ class ProfileController extends Controller
                    $profile->compatibility_details['relation_goals_match'] === false;
         });
 
-        // Combine: boosted first, then profiles with goal match, then others
+        // Combine: boosted first, then VIP, then profiles with goal match, then others
         // Take more profiles when they have relationship goals match
         $limit = get_option('recommendation_limit', 50);
         $goalMatchLimit = (int)($limit * 1.5); // 50% more profiles with goal match
         
         $finalResults = $boostedProfiles
+            ->concat($vipProfiles->take($limit))
             ->concat($profilesWithGoalMatch->take($goalMatchLimit))
-            ->concat($profilesWithoutGoalMatch->take($limit - $boostedProfiles->count()))
+            ->concat($profilesWithoutGoalMatch->take($limit - $boostedProfiles->count() - $vipProfiles->count()))
             ->take($limit * 2) // Double the final limit to show more matches
             ->values();
 
@@ -552,6 +561,7 @@ class ProfileController extends Controller
                 'smoke' => $userInfo->smoke,
                 'preffered_age' => $userInfo->preffered_age,
                 'is_verified' => $userInfo->is_verified ?? false,
+                'is_vip' => $user->isVipActive(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -567,12 +577,27 @@ class ProfileController extends Controller
             ];
         })->filter()->values();
 
-        // For search results, sort by distance instead of compatibility score
+        // Separate VIP and regular profiles for search results
+        $vipProfiles = $transformedResults->filter(function($profile) {
+            $user = User::find($profile->id);
+            return $user && $user->isVipActive();
+        });
+
+        $regularProfiles = $transformedResults->filter(function($profile) {
+            $user = User::find($profile->id);
+            return !$user || !$user->isVipActive();
+        });
+
+        // For search results, sort by distance within each group
         if ($latitude !== null && $longitude !== null) {
-            $transformedResults = $transformedResults->sortBy('distance')->values();
+            $vipProfiles = $vipProfiles->sortBy('distance')->values();
+            $regularProfiles = $regularProfiles->sortBy('distance')->values();
         }
 
-        return response()->json(['status' => true, 'data' => $transformedResults]);
+        // Combine VIP first, then regular profiles
+        $finalResults = $vipProfiles->concat($regularProfiles)->values();
+
+        return response()->json(['status' => true, 'data' => $finalResults]);
     }
 
     /**
@@ -1086,6 +1111,7 @@ class ProfileController extends Controller
                 'status' => true,
                 'data' => [
                     'profile' => $profileData,
+                    'is_vip' => $targetUser->isVipActive(),
                     'compatibility' => $compatibility,
                     'interaction_status' => $interactionStatus,
                     'distance' => $distance ? round($distance, 1) . ' km' : 'Unknown'
@@ -1367,6 +1393,7 @@ class ProfileController extends Controller
                 'is_food_preference_matter' => $userInfo->is_food_preference_matter,
                 'country_code' => $userInfo->country_code,
                 'is_verified' => $userInfo->is_verified ?? false,
+                'is_vip' => $user->isVipActive(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -1612,36 +1639,73 @@ class ProfileController extends Controller
         });
 
         // Filter for TRUE SOULMATES - only the highest compatibility scores
-        $soulmates = $scoredResults
+        $highScoreSoulmates = $scoredResults
             ->filter(function($profile) {
                 // Only include profiles with soulmate score >= 60 (high threshold)
                 return $profile->soulmate_score >= 60;
-            })
-            ->shuffle() // Randomize order before sorting to add variety
-            // ->sortByDesc('soulmate_score')
+            });
+
+        // Separate VIP and regular soulmates
+        $vipSoulmates = $highScoreSoulmates->filter(function($profile) {
+            $user = User::find($profile->id);
+            return $user && $user->isVipActive();
+        })->shuffle()->values();
+
+        $regularSoulmates = $highScoreSoulmates->filter(function($profile) {
+            $user = User::find($profile->id);
+            return !$user || !$user->isVipActive();
+        })->shuffle()->values();
+
+        // Combine VIP first, then regular
+        $soulmates = $vipSoulmates
+            ->concat($regularSoulmates)
             ->take(15) // Limit to top 15 soulmates per day
             ->values();
 
         // If no high-scoring soulmates found, try with lower threshold
         if ($soulmates->isEmpty()) {
-            $soulmates = $scoredResults
+            $mediumScoreSoulmates = $scoredResults
                 ->filter(function($profile) {
                     // Lower threshold fallback
                     return $profile->soulmate_score >= 40;
-                })
-                ->shuffle()
+                });
+
+            $vipSoulmates = $mediumScoreSoulmates->filter(function($profile) {
+                $user = User::find($profile->id);
+                return $user && $user->isVipActive();
+            })->shuffle()->values();
+
+            $regularSoulmates = $mediumScoreSoulmates->filter(function($profile) {
+                $user = User::find($profile->id);
+                return !$user || !$user->isVipActive();
+            })->shuffle()->values();
+
+            $soulmates = $vipSoulmates
+                ->concat($regularSoulmates)
                 ->take(10) // Fewer results for lower threshold
                 ->values();
         }
 
         // If still empty, try even lower threshold
         if ($soulmates->isEmpty()) {
-            $soulmates = $scoredResults
+            $lowScoreSoulmates = $scoredResults
                 ->filter(function($profile) {
                     // Very low threshold fallback
                     return $profile->soulmate_score >= 20;
-                })
-                ->shuffle()
+                });
+
+            $vipSoulmates = $lowScoreSoulmates->filter(function($profile) {
+                $user = User::find($profile->id);
+                return $user && $user->isVipActive();
+            })->shuffle()->values();
+
+            $regularSoulmates = $lowScoreSoulmates->filter(function($profile) {
+                $user = User::find($profile->id);
+                return !$user || !$user->isVipActive();
+            })->shuffle()->values();
+
+            $soulmates = $vipSoulmates
+                ->concat($regularSoulmates)
                 ->take(5) // Even fewer results for very low threshold
                 ->values();
         }

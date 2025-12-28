@@ -33,6 +33,8 @@ class User extends Authenticatable
         'email_otp',
         'email_verified_at',
         'last_activity',
+        'is_vip',
+        'vip_expire',
     ];
 
     /**
@@ -60,6 +62,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'last_activity' => 'datetime',
+        'vip_expire' => 'datetime',
     ];
 
     public function getImageAttribute($data)
@@ -128,5 +131,15 @@ class User extends Authenticatable
     public function receivedInteractions()
     {
         return $this->hasMany(UserInteraction::class, 'target_user_id');
+    }
+
+    /**
+     * Check if user has active VIP membership
+     * 
+     * @return bool
+     */
+    public function isVipActive()
+    {
+        return $this->is_vip && $this->vip_expire && $this->vip_expire->isFuture();
     }
 }

@@ -277,6 +277,67 @@ class PaymentController extends Controller
         ]);
     }
 
+    // Purchase VIP Status
+    public function purchase_vip(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|string',
+            'platform' => 'required|string|in:ios,android',
+            'transaction_id' => 'required|string',
+            'original_transaction_id' => 'nullable|string',
+            'duration' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $user = $request->user();
+
+        // Get VIP duration from request
+        $vipDuration = $request->duration; // days
+        
+        // If user has active VIP, extend from current expiration date
+        // Otherwise, start from now
+        if ($user->is_vip && $user->vip_expire && $user->vip_expire > now()) {
+            $vipExpireDate = Carbon::parse($user->vip_expire)->addDays($vipDuration);
+        } else {
+            $vipExpireDate = now()->addDays($vipDuration);
+        }
+
+        // Update user VIP status
+        $user->is_vip = true;
+        $user->vip_expire = $vipExpireDate;
+        $user->save();
+
+        // Create payment record for VIP
+        $payment = new Payment();
+        $payment->user_id = $user->id;
+        $payment->title = 'VIP Membership';
+        $payment->date = now();
+        $payment->amount = $request->amount;
+        $payment->platform = $request->platform;
+        $payment->transaction_id = $request->transaction_id;
+        $payment->original_transaction_id = $request->original_transaction_id;
+        $payment->payment_type = 'vip';
+        $payment->save();
+
+        // Clear cache
+        Cache::forget("payments_" . $user->id);
+
+        return response()->json([
+            'status' => true,
+            'message' => "VIP membership activated for {$vipDuration} days!",
+            'data' => [
+                'is_vip' => true,
+                'vip_expire' => $user->vip_expire->toISOString(),
+                'activated_at' => now()->toISOString(),
+                'duration_days' => $vipDuration,
+                'remaining_days' => $vipDuration
+            ]
+        ]);
+    }
+
     // Clear profile completion cache
     private function clearProfileCompletionCache($userId)
     {
