@@ -73,6 +73,11 @@ class User extends Authenticatable
         return asset($data);
     }
 
+    public function getIsVipAttribute($data)
+    {
+        return $this->isVipActive();
+    }
+
     /**
      * Display a listing of the resource.
      *
