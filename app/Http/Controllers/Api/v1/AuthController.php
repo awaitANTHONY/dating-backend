@@ -367,6 +367,17 @@ class AuthController extends Controller
 
         foreach ($fillableFields as $field) {
             if ($request->has($field)) {
+                // Validate bio content for contact information
+                if ($field === 'bio' && $request->has('bio')) {
+                    $validationResult = $this->validateContent($request->bio);
+                    if (!$validationResult['valid']) {
+                        \DB::rollBack();
+                        return response()->json([
+                            'status' => false,
+                            'message' => $validationResult['message']
+                        ], 200);
+                    }
+                }
                 $userInformation->$field = $request->$field;
             }
         }
@@ -882,7 +893,7 @@ class AuthController extends Controller
         // Skip validation if removing mood
         if ($moodText != 'none') {
             // Validate mood doesn't contain contact information
-            $validationResult = $this->validateMoodContent($moodText);
+            $validationResult = $this->validateContent($moodText);
             if (!$validationResult['valid']) {
                 return response()->json([
                     'status' => false,
@@ -914,7 +925,7 @@ class AuthController extends Controller
      * @param string $mood
      * @return array
      */
-    private function validateMoodContent(string $mood): array
+    private function validateContent(string $mood): array
     {
         $lowerMood = strtolower($mood);
         
