@@ -230,15 +230,6 @@ class PaymentController extends Controller
             return response()->json(['status' => false, 'message' => 'Package not available for this platform.']);
         }
 
-        // Check for duplicate transaction
-        $exists = ProfileBoost::where('transaction_id', $request->transaction_id)->exists();
-        if ($exists) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Transaction already recorded'
-            ]);
-        }
-
         // Create boost record and auto-activate
         $boost = new ProfileBoost();
         $boost->user_id = $user->id;
