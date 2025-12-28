@@ -235,7 +235,6 @@ class PaymentController extends Controller
         $boost->user_id = $user->id;
         $boost->boost_package_id = $boostPackage->id;
         $boost->status = 'purchased';
-        $boost->platform = $request->platform;
         $boost->save();
 
         // Auto-activate the boost immediately
@@ -250,6 +249,7 @@ class PaymentController extends Controller
         $payment->title = $boostPackage->name . ' - Profile Boost';
         $payment->date = now();
         $payment->amount = $request->amount;
+        $payment->platform = $request->platform;
         $payment->transaction_id = $request->transaction_id;
         $payment->original_transaction_id = $request->original_transaction_id;
         $payment->payment_type = 'boost';
