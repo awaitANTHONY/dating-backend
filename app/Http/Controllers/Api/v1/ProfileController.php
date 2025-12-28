@@ -567,8 +567,6 @@ class ProfileController extends Controller
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
                 'device_token' => $userInfo->device_token,
-                
-                // Add detailed attributes from UserInformation model accessors
                 'relation_goals_details' => $userInfo->relation_goals_details,
                 'interests_details' => $userInfo->interests_details,
                 'ethnicity_details' => $userInfo->ethnicity_details,
