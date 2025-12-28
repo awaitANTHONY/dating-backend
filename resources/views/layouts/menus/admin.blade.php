@@ -1,5 +1,10 @@
 
-
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('users') }}">
+		<i class="fa fa-users u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Manage Users') }}</span>
+	</a>
+</li>
 <li class="u-sidebar-nav-menu__item">
 	<a class="u-sidebar-nav-menu__link" href="{{ url('sliders') }}">
 		<i class="fa fa-users u-sidebar-nav-menu__item-icon"></i>
@@ -108,12 +113,7 @@
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Notifications') }}</span>
 	</a>
 </li>
-<li class="u-sidebar-nav-menu__item">
-	<a class="u-sidebar-nav-menu__link" href="{{ url('users') }}">
-		<i class="fa fa-users u-sidebar-nav-menu__item-icon"></i>
-		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Manage Users') }}</span>
-	</a>
-</li>
+
 <li class="u-sidebar-nav-menu__item">
 	<a class="u-sidebar-nav-menu__link" href="{{ url('cache') }}">
 		<i class="fas fa-trash u-sidebar-nav-menu__item-icon"></i>
