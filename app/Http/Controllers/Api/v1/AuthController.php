@@ -82,7 +82,7 @@ class AuthController extends Controller
 
         $tokenResult = $user->createToken($request->device_token)->plainTextToken;
         
-        $user->is_vip = $user->isVipActive();
+        $user->is_vip = (bool) $user->isVipActive();
         
         return response()->json([
             'status' => true,
@@ -115,7 +115,7 @@ class AuthController extends Controller
 
             $user->user_information = $user->user_information;
             $user->is_profile_completed = $user->user_information ? true : false;
-            $user->is_vip = $user->isVipActive();
+            $user->is_vip = (bool) $user->isVipActive();
 
             return response()->json(['status' => true, 'data' => $user, 'message' => 'Email verified successfully.']);
         } else {
@@ -198,7 +198,7 @@ class AuthController extends Controller
         $user->save();
 
         $user->is_profile_completed = $user->user_information ? true : false;
-        $user->is_vip = $user->isVipActive();
+        $user->is_vip = (bool) $user->isVipActive();
 
         if($user->is_profile_completed) {
             $user->user_information = $user->user_information;
@@ -411,7 +411,7 @@ class AuthController extends Controller
         
         $user = User::find($user->id);
         $user->is_profile_completed = $user->user_information ? true : false;
-        $user->is_vip = $user->isVipActive();
+        $user->is_vip = (bool) $user->isVipActive();
 
         return response()->json(['status' => true, 'user' => $user, 'message' => _lang('Information has been added sucessfully.')]);
     }
@@ -425,7 +425,7 @@ class AuthController extends Controller
         $data->save();
         
         $data->is_profile_completed = $data->user_information ? true : false;
-        $data->is_vip = $data->isVipActive();
+        $data->is_vip = (bool) $data->isVipActive();
         
         return response()->json([
             'status' => true,
@@ -462,7 +462,7 @@ class AuthController extends Controller
         $user->last_activity = now();
         $user->save();
         
-        $user->is_vip = $user->isVipActive();
+        $user->is_vip = (bool) $user->isVipActive();
         
         return response()->json([
             'status' => true,
@@ -503,7 +503,7 @@ class AuthController extends Controller
             $user->last_activity = now(); // Update last activity on profile image upload
             $user->save();
             
-            $user->is_vip = $user->isVipActive();
+            $user->is_vip = (bool) $user->isVipActive();
 
             return response()->json([
                 'status' => true,
@@ -627,7 +627,7 @@ class AuthController extends Controller
 
             $user = User::find($user->id);
             $user_information = $user->user_information;
-            $user->is_vip = $user->isVipActive();
+            $user->is_vip = (bool) $user->isVipActive();
 
             $response = [
                 'status' => true,
