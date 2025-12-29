@@ -584,6 +584,24 @@ if (!function_exists('moderate_image')) {
     }
 }
 
+if (!function_exists('createFirebaseToken')) {
+    /**
+     * Create Firebase custom token for a user
+     * @param int|string $userId User ID
+     * @return string|null
+     */
+    function createFirebaseToken($userId): ?string
+    {
+        try {
+            $firebaseService = new \App\Services\FirebaseService();
+            return $firebaseService->createCustomToken((string) $userId);
+        } catch (\Exception $e) {
+            \Log::error('Firebase token creation failed for user ' . $userId . ': ' . $e->getMessage());
+            return null;
+        }
+    }
+}
+
 if (!function_exists('news_details')) {
     function news_details($url)
     {

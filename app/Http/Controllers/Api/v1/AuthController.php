@@ -16,7 +16,6 @@ use App\Utils\Overrider;
 
 class AuthController extends Controller
 {
-    
     public function signup(Request $request)
     {
 
@@ -84,9 +83,13 @@ class AuthController extends Controller
         
         $user->is_vip = (bool) $user->isVipActive();
         
+        // Create Firebase custom token for non-email providers (email providers get it after verification)
+        $firebaseToken = createFirebaseToken($user->id);
+        
         return response()->json([
             'status' => true,
             'access_token' => $tokenResult,
+            'firebase_token' => $firebaseToken,
             'data' =>  $user,
             'message' => $request->provider == 'email' ? 'Verification code sent to your email.' : 'Signup successful.'
         ]);
@@ -117,7 +120,15 @@ class AuthController extends Controller
             $user->is_profile_completed = $user->user_information ? true : false;
             $user->is_vip = (bool) $user->isVipActive();
 
-            return response()->json(['status' => true, 'data' => $user, 'message' => 'Email verified successfully.']);
+            // Create Firebase custom token
+            $firebaseToken = createFirebaseToken($user->id);
+
+            return response()->json([
+                'status' => true, 
+                'firebase_token' => $firebaseToken,
+                'data' => $user, 
+                'message' => 'Email verified successfully.'
+            ]);
         } else {
             return response()->json(['status' => false, 'message' => 'Invalid OTP.']);
         }
@@ -206,9 +217,14 @@ class AuthController extends Controller
         }
 
         $tokenResult = $user->createToken($request->device_token)->plainTextToken;
+        
+        // Create Firebase custom token
+        $firebaseToken = createFirebaseToken($user->id);
+        
         return response()->json([
             'status' => true,
             'access_token' => $tokenResult,
+            'firebase_token' => $firebaseToken,
             'data' => $user,
         ]);
     }

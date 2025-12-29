@@ -3,14 +3,48 @@
 namespace App\Services;
 
 use Kreait\Firebase\Database;
+use Kreait\Firebase\Factory;
 
 class FirebaseService
 {
     protected $database;
+    protected $auth;
 
     public function __construct(Database $database = null)
     {
         $this->database = $database;
+        
+        // Initialize Firebase Auth
+        if (!$this->auth) {
+            try {
+                $credentialsPath = storage_path(get_option('firebase_json'));
+                $factory = (new Factory)
+                    ->withServiceAccount($credentialsPath);
+                $this->auth = $factory->createAuth();
+            } catch (\Exception $e) {
+                \Log::error('Firebase Auth initialization failed: ' . $e->getMessage());
+                $this->auth = null;
+            }
+        }
+    }
+
+    /**
+     * Create a custom Firebase authentication token for a user
+     * @param string $uid User ID
+     * @return string|null Firebase custom token or null on failure
+     */
+    public function createCustomToken(string $uid): ?string
+    {
+        if (!$this->auth) {
+            return null;
+        }
+        
+        try {
+            return $this->auth->createCustomToken($uid)->toString();
+        } catch (\Exception $e) {
+            \Log::error('Firebase custom token creation failed: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
