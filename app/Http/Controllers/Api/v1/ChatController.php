@@ -136,4 +136,54 @@ class ChatController extends Controller
         });
         return response()->json(['status' => true, 'messages' => $result]);
     }
+
+    // 5. Check VIP status for multiple users
+    public function checkVipStatus(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'user_ids' => 'required|array',
+            'user_ids.*' => 'required|integer|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        $currentUserId = $request->user()->id;
+        $userIds = $request->input('user_ids');
+        
+        // Create cache key with current user ID and sorted user IDs
+        sort($userIds);
+        $cacheKey = 'vip_status_' . $currentUserId . '_' . md5(json_encode($userIds));
+        
+        // Try to get from cache
+        $vipStatus = \Cache::remember($cacheKey, 600, function () use ($userIds) {
+            $users = \App\Models\User::whereIn('id', $userIds)
+                ->select('id', 'is_vip', 'vip_expire')
+                ->get();
+
+            $vipStatus = [];
+            foreach ($users as $user) {
+                $vipStatus[] = [
+                    'user_id' => $user->id,
+                    'is_vip' => (bool) $user->isVipActive()
+                ];
+            }
+
+            // Add false for any requested IDs not found
+            $foundIds = $users->pluck('id')->toArray();
+            foreach ($userIds as $userId) {
+                if (!in_array($userId, $foundIds)) {
+                    $vipStatus[] = [
+                        'user_id' => $userId,
+                        'is_vip' => false
+                    ];
+                }
+            }
+
+            return $vipStatus;
+        });
+
+        return response()->json(['status' => true, 'data' => $vipStatus]);
+    }
 }

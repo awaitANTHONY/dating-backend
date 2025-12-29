@@ -110,6 +110,8 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::get('/chat-list', [\App\Http\Controllers\Api\v1\ChatController::class, 'chatList']);
         // Get all messages for a grou
         Route::get('/messages/{group_id}', [\App\Http\Controllers\Api\v1\ChatController::class, 'messages']);
+        // Check VIP status for multiple users
+        Route::post('/check-vip-status', [\App\Http\Controllers\Api\v1\ChatController::class, 'checkVipStatus']);
 
         Route::post('notification', [Controllers\Api\v1\ApiController::class, 'notification']);
     });
