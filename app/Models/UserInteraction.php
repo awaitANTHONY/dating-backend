@@ -69,7 +69,11 @@ class UserInteraction extends Model
         return self::where('target_user_id', $userId)
             ->where('action', 'like')
             ->with('user')
-            ->get();
+            ->get()
+            ->map(function($interaction) {
+                $interaction->user->is_vip = (bool) $interaction->user->isVipActive();
+                return $interaction;
+            });
     }
 
         /**
@@ -79,6 +83,10 @@ class UserInteraction extends Model
     {
         return self::where('user_id', $userId)
             ->with('targetUser')
-            ->get();
+            ->get()
+            ->map(function($interaction) {
+                $interaction->targetUser->is_vip = (bool) $interaction->targetUser->isVipActive();
+                return $interaction;
+            });
     }
 }

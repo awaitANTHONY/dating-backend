@@ -100,6 +100,8 @@ class UserMatch extends Model
                 ? $match->targetUser 
                 : $match->user;
             
+            $otherUser->is_vip = (bool) $otherUser->isVipActive();
+            
             return [
                 'match_id' => $match->id,
                 'matched_at' => $match->created_at,
