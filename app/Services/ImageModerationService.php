@@ -219,7 +219,7 @@ class ImageModerationService
             $imageUrl = asset($filePath);
 
             $prompt = 'You are a STRICT moderator for a dating app profile photo system.
-Your job is to ensure ONLY real, personal photos of actual people are uploaded.
+Your job is to ensure ONLY real, personal photos of actual people WITH VISIBLE FACES are uploaded.
 
 Analyze the image and respond ONLY in valid JSON format:
 {
@@ -234,13 +234,29 @@ Analyze the image and respond ONLY in valid JSON format:
   "confidence": 0.0-1.0
 }
 
-STRICT RULES:
-1. "has_human_face" = TRUE only if you see a CLEAR, VISIBLE human face (eyes, nose, mouth visible)
-2. "is_real_person" = TRUE only if this is clearly a photograph of a real human being
-3. "personal_photo" = TRUE only if this appears to be a personal photo (not professional, stock, or celebrity)
-4. "is_document_or_screenshot" = TRUE if the image contains receipts, cards, documents, screenshots, or text overlays
-5. Set FALSE for: animals, objects, landscapes, memes, cartoons, drawings, logos, text, receipts, cards, food, screenshots
-6. Be VERY strict - when in doubt, mark as FALSE';
+CRITICAL RULES - MUST FOLLOW EXACTLY:
+1. "has_human_face" = TRUE ONLY if you can clearly see a human face with BOTH EYES, NOSE, and MOUTH visible
+   - Set FALSE for: back of head, obscured faces, distant faces, silhouettes, emoji faces
+   - Set FALSE for: objects, food, drinks, buildings, landscapes, animals, text, receipts, screenshots
+   - Set FALSE for: cartoon faces, drawn faces, illustrated faces, smiley faces, icons
+   
+2. "is_real_person" = TRUE ONLY if this is a photograph of a REAL HUMAN BEING (not drawing/cartoon/AI)
+   - Set FALSE for: illustrations, cartoons, anime, drawings, AI art, digital art, paintings
+   
+3. "personal_photo" = TRUE ONLY if this appears to be a personal photo (not professional, stock, or celebrity)
+   
+4. "is_document_or_screenshot" = TRUE if image contains: receipts, cards, documents, screenshots, text overlays
+
+5. ALWAYS SET FALSE FOR:
+   - Animals, pets
+   - Food, drinks, coffee cups
+   - Objects, buildings, landscapes, scenery
+   - Memes, cartoons, drawings, logos, icons
+   - Text-only images, receipts, cards, documents
+   - Screenshots from apps or websites
+   - Emoji or smiley face symbols
+
+6. Be EXTREMELY strict - if you cannot see a clear human face with eyes, nose, and mouth, set "has_human_face" to FALSE';
 
 
             $response = Http::withHeaders([
@@ -328,14 +344,14 @@ STRICT RULES:
 
         // STRICT REJECTION RULES (in priority order)
         
-        // 1. Reject if no human face detected
-        if (isset($analysis['has_human_face']) && $analysis['has_human_face'] === false) {
+        // 1. CRITICAL: Reject if no human face detected - THIS IS THE MOST IMPORTANT CHECK
+        if (!isset($analysis['has_human_face']) || $analysis['has_human_face'] !== true) {
             $decision = 'rejected';
-            $reason = 'no_human_face';
+            $reason = 'no_human_face_detected';
             $this->storeRejectedHash($hash);
         }
         // 2. Reject if not a real person
-        elseif (isset($analysis['is_real_person']) && $analysis['is_real_person'] === false) {
+        elseif (!isset($analysis['is_real_person']) || $analysis['is_real_person'] !== true) {
             $decision = 'rejected';
             $reason = 'not_real_person';
             $this->storeRejectedHash($hash);
