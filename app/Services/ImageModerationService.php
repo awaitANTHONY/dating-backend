@@ -235,8 +235,11 @@ Analyze the image and respond ONLY in valid JSON format:
 }
 
 CRITICAL RULES - MUST FOLLOW EXACTLY:
-1. "has_human_face" = TRUE ONLY if you can clearly see a human face with BOTH EYES, NOSE, and MOUTH visible
-   - Set FALSE for: back of head, obscured faces, distant faces, silhouettes, emoji faces
+1. "has_human_face" = TRUE if you can clearly see a human face with NOSE and MOUTH visible
+   - Eyes can be covered by sunglasses, glasses, or hands - STILL SET TRUE if face is clearly human
+   - Set TRUE for: people wearing sunglasses, regular glasses, hats, caps
+   - Set FALSE for: face masks, medical masks, bandanas, scarves covering mouth/nose, balaclavas
+   - Set FALSE for: back of head, completely obscured faces, distant faces where features are not visible, silhouettes, emoji faces
    - Set FALSE for: objects, food, drinks, buildings, landscapes, animals, text, receipts, screenshots
    - Set FALSE for: cartoon faces, drawn faces, illustrated faces, smiley faces, icons
    
