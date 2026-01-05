@@ -42,15 +42,15 @@ class ImageModerationService
             }
 
             // Step 2: Hash checking
-            $hash = $this->generatePerceptualHash($localFilePath);
-            if ($this->isHashRejected($hash)) {
-                return [
-                    'decision' => 'rejected',
-                    'reason' => 'duplicate_rejected_image',
-                    'confidence' => 1.0,
-                    'details' => ['hash' => $hash]
-                ];
-            }
+            // $hash = $this->generatePerceptualHash($localFilePath);
+            // if ($this->isHashRejected($hash)) {
+            //     return [
+            //         'decision' => 'rejected',
+            //         'reason' => 'duplicate_rejected_image',
+            //         'confidence' => 1.0,
+            //         'details' => ['hash' => $hash]
+            //     ];
+            // }
 
             // Step 3: Face detection (soft rule - informational only)
             $faceCount = $this->detectFaceCount($localFilePath);
