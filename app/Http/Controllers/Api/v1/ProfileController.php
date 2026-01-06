@@ -1250,6 +1250,12 @@ class ProfileController extends Controller
             $result = null;
             if ($currentTry === 0) {
                 $result = Cache::get($cacheKey);
+                
+                // If cached result exists but is empty, clear cache and regenerate
+                if ($result && !$this->hasSoulmateData($result)) {
+                    Cache::forget($cacheKey);
+                    $result = null;
+                }
             }
             
             // If no cached result or we're retrying, generate new data
@@ -1308,13 +1314,8 @@ class ProfileController extends Controller
         $query = User::with(['user_information'])
             ->whereHas('user_information', function($q) use ($searchPreference) {
                 $q->where('gender', $searchPreference)
-                  // Only include users with complete profiles for soulmates
-                  ->whereNotNull('bio')
+                  
                   ->whereNotNull('age')
-                  ->whereNotNull('religion_id')
-                  ->whereNotNull('education_id')
-                //   ->whereNotNull('carrer_field_id')
-                  ->where('bio', '!=', '')
                   ->where('age', '>', 0);
             })
             ->where('id', '!=', $user->id)
