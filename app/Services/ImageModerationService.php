@@ -218,8 +218,10 @@ class ImageModerationService
             // Generate public URL for the image
             $imageUrl = asset($filePath);
 
-            $prompt = 'You are a STRICT moderator for a dating app profile photo system.
-Your job is to ensure ONLY real, personal photos of actual people WITH VISIBLE FACES are uploaded.
+            $prompt = 'You are an EXTREMELY STRICT moderator for a dating app profile photo system.
+Your PRIMARY job is to REJECT everything except CLEAR, CLOSE-UP photos of REAL HUMAN FACES.
+
+THIS IS A DATING APP - ONLY APPROVE PHOTOS WHERE YOU CAN SEE A PERSON\'S FACE CLEARLY.
 
 Analyze the image and respond ONLY in valid JSON format:
 {
@@ -234,32 +236,56 @@ Analyze the image and respond ONLY in valid JSON format:
   "confidence": 0.0-1.0
 }
 
-CRITICAL RULES - MUST FOLLOW EXACTLY:
-1. "has_human_face" = TRUE if you can clearly see a human face with NOSE and MOUTH visible
-   - Eyes can be covered by sunglasses, glasses, or hands - STILL SET TRUE if face is clearly human
-   - Set TRUE for: people wearing sunglasses, regular glasses, hats, caps
-   - Set FALSE for: face masks, medical masks, bandanas, scarves covering mouth/nose, balaclavas
-   - Set FALSE for: back of head, completely obscured faces, distant faces where features are not visible, silhouettes, emoji faces
-   - Set FALSE for: objects, food, drinks, buildings, landscapes, animals, text, receipts, screenshots
-   - Set FALSE for: cartoon faces, drawn faces, illustrated faces, smiley faces, icons
-   
-2. "is_real_person" = TRUE ONLY if this is a photograph of a REAL HUMAN BEING (not drawing/cartoon/AI)
-   - Set FALSE for: illustrations, cartoons, anime, drawings, AI art, digital art, paintings
-   
-3. "personal_photo" = TRUE ONLY if this appears to be a personal photo (not professional, stock, or celebrity)
-   
-4. "is_document_or_screenshot" = TRUE if image contains: receipts, cards, documents, screenshots, text overlays
+CRITICAL RULES - FOLLOW EXACTLY OR REJECT:
 
-5. ALWAYS SET FALSE FOR:
-   - Animals, pets
-   - Food, drinks, coffee cups
-   - Objects, buildings, landscapes, scenery
-   - Memes, cartoons, drawings, logos, icons
-   - Text-only images, receipts, cards, documents
-   - Screenshots from apps or websites
-   - Emoji or smiley face symbols
+1. "has_human_face" = TRUE **ONLY** IF ALL THESE CONDITIONS ARE MET:
+   ✓ You can see a REAL HUMAN FACE as the MAIN SUBJECT of the photo
+   ✓ The face is CLEAR, CLOSE-UP, and takes up significant portion of the image
+   ✓ You can see NOSE and MOUTH clearly visible
+   ✓ Eyes can be covered by sunglasses/glasses - this is OK
+   ✓ The person is the PRIMARY focus, not a background element
+   
+   SET FALSE FOR (BE STRICT):
+   ✗ Cars, vehicles, dashboards, speedometers, interiors
+   ✗ Car selfies where the car dashboard/interior is more visible than the face
+   ✗ Photos taken inside vehicles where steering wheel/dashboard is prominent
+   ✗ Any photo where objects/environment dominate over the human face
+   ✗ Face masks, medical masks, bandanas, scarves covering nose/mouth
+   ✗ Back of head, side profiles where face is not clearly visible
+   ✗ Distant shots, group photos, tiny faces
+   ✗ Silhouettes, shadows, dark photos where face is unclear
+   ✗ Objects: food, drinks, buildings, landscapes, animals, nature
+   ✗ Screenshots, memes, text images, receipts, documents
+   ✗ Emoji, cartoon faces, drawn faces, illustrated faces, icons
+   ✗ Stock photos, professional photoshoots, magazine covers
+   ✗ Celebrities, models, influencers, public figures
+   
+2. "is_real_person" = TRUE ONLY if this is a PHOTOGRAPH of a REAL HUMAN BEING
+   - NOT drawings, cartoons, anime, AI art, digital art, paintings, illustrations
+   
+3. "personal_photo" = TRUE ONLY if this is clearly a PERSONAL SELFIE or PORTRAIT
+   - NOT professional photos, stock images, celebrity photos, magazine covers
+   - The photo should look like someone took it for dating/social media purposes
+   
+4. "is_document_or_screenshot" = TRUE for:
+   - Screenshots from any app (including camera apps showing dashboard)
+   - Documents, receipts, cards, IDs, text images
+   - Any image with UI elements, buttons, app interfaces
 
-6. Be EXTREMELY strict - if you cannot see a clear human face with eyes, nose, and mouth, set "has_human_face" to FALSE';
+EXTREME REJECTION CRITERIA - IF ANY OF THESE, SET has_human_face = FALSE:
+❌ Cars, vehicles, motorcycles, bikes (even if person visible)
+❌ Car dashboards, speedometers, steering wheels
+❌ Food, drinks, coffee, alcohol, meals
+❌ Animals, pets, cats, dogs, birds
+❌ Buildings, houses, architecture, landscapes
+❌ Nature, trees, flowers, beaches, mountains
+❌ Objects, products, items, gadgets
+❌ Memes, quotes, text overlays
+❌ Any photo where the MAIN SUBJECT is NOT a human face
+
+REMEMBER: This is a DATING APP. People want to see WHO they are matching with.
+ONLY approve photos where a human face is the CLEAR, DOMINANT subject.
+When in doubt, SET FALSE. Be EXTREMELY STRICT.';
 
 
             $response = Http::withHeaders([
