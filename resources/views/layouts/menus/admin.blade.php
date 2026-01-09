@@ -147,6 +147,12 @@
 				<span class="u-sidebar-nav-menu__item-title">{{ _lang('General Settings') }}</span>
 			</a>
 		</li>
+		<li class="u-sidebar-nav-menu__item">
+			<a class="u-sidebar-nav-menu__link" href="{{ url('account-delete-requests') }}">
+				<span class="u-sidebar-nav-menu__item-icon fa fa-angle-right"></span>
+				<span class="u-sidebar-nav-menu__item-title">{{ _lang('Account Delete Requests') }}</span>
+			</a>
+		</li>
 		
 	</ul>
 </li>

@@ -83,6 +83,7 @@ Route::group(['middleware' => ['install']], function () {
         Route::resource('relation_goals', Controllers\RelationGoalController::class);
         Route::resource('gifts', Controllers\GiftController::class);
         Route::resource('faqs', Controllers\FaqController::class);
+        Route::resource('account-delete-requests', Controllers\AccountDeleteRequestController::class);
         
         // SubscriptionController
         Route::post('/subscriptions/reorder', [Controllers\SubscriptionController::class, 'reorder']);
@@ -105,6 +106,10 @@ Route::group(['middleware' => ['install']], function () {
     
     Route::get('/privacy_policy', [Controllers\HomeController::class, 'privacy_policy'])->name('privacy_policy');
     Route::get('/terms_conditions', [Controllers\HomeController::class, 'terms_conditions'])->name('terms_conditions');
+    
+    // Public Account Delete Request Form
+    Route::get('/account-delete-request', [Controllers\AccountDeleteRequestController::class, 'publicForm'])->name('account-delete-request.form');
+    Route::post('/account-delete-request', [Controllers\AccountDeleteRequestController::class, 'publicStore'])->name('account-delete-request.submit');
     
 });
 
