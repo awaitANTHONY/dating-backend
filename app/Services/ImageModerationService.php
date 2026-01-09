@@ -249,7 +249,6 @@ CRITICAL RULES - FOLLOW EXACTLY OR REJECT:
    ⚠️ Professional sports photos: team jerseys, uniforms, official team photos, player headshots
    ⚠️ News/media photos: news site layouts, article headers, captions
    ⚠️ Stock photo watermarks: Getty Images, Shutterstock, iStock, Adobe Stock
-   ⚠️ Professional photography: studio backgrounds, professional lighting, headshot backgrounds
    ⚠️ Documents: IDs, passports, receipts, cards, certificates
    ⚠️ Text overlays: hashtags (#), quotes, memes, motivational text, captions
    ⚠️ Multiple images in one: collages, grids, before/after comparisons
@@ -298,7 +297,6 @@ CRITICAL RULES - FOLLOW EXACTLY OR REJECT:
    - Professional athletes (ANY sport - football, basketball, soccer, etc.)
    - Team jerseys, sports uniforms, official player photos
    - Celebrities, models, influencers with professional photos
-   - Anyone in official team/corporate attire in professional settings
 
 EXTREME REJECTION CRITERIA - SET is_document_or_screenshot = TRUE IF ANY:
 ❌ ANY screenshot from Pinterest, Instagram, Facebook, Google, Twitter, TikTok, etc.
