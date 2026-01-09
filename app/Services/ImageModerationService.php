@@ -238,14 +238,40 @@ Analyze the image and respond ONLY in valid JSON format:
 
 CRITICAL RULES - FOLLOW EXACTLY OR REJECT:
 
-1. "has_human_face" = TRUE **ONLY** IF ALL THESE CONDITIONS ARE MET:
+1. "is_document_or_screenshot" = TRUE **IMMEDIATELY** IF YOU SEE ANY OF THESE:
+   ⚠️ SCREENSHOTS FROM ANY APP/WEBSITE (Pinterest, Instagram, Facebook, Twitter, TikTok, Google Images, etc.)
+   ⚠️ App UI elements: navigation bars, buttons, back arrows, share buttons, menu icons, status bars
+   ⚠️ Website elements: URLs, website headers, "Visit" buttons, "Save" buttons, "Share" options
+   ⚠️ Social media indicators: usernames, @handles, follower counts, like buttons, comment sections
+   ⚠️ Search results: Google Images, Bing Images, Pinterest grids, image search layouts
+   ⚠️ Browser elements: address bars, tabs, bookmarks, browser chrome
+   ⚠️ Phone UI: battery indicator, time, signal bars, notifications at top/bottom
+   ⚠️ Professional sports photos: team jerseys, uniforms, official team photos, player headshots
+   ⚠️ News/media photos: news site layouts, article headers, captions
+   ⚠️ Stock photo watermarks: Getty Images, Shutterstock, iStock, Adobe Stock
+   ⚠️ Professional photography: studio backgrounds, professional lighting, headshot backgrounds
+   ⚠️ Documents: IDs, passports, receipts, cards, certificates
+   ⚠️ Text overlays: hashtags (#), quotes, memes, motivational text, captions
+   ⚠️ Multiple images in one: collages, grids, before/after comparisons
+   
+   EXAMPLE SCREENSHOTS TO ALWAYS REJECT:
+   - Pinterest screenshots (red P logo, "Save" button, "Visit" button, Pinterest layout)
+   - Instagram screenshots (heart icon, comment icon, username at top, IG story interface)
+   - Google Images (grid of images, search bar visible, "Images" tab)
+   - Sports websites (365Scores, ESPN, team logos, jersey numbers, stats)
+   - Any image with visible app/website branding or UI elements
+
+2. "has_human_face" = TRUE **ONLY** IF ALL THESE CONDITIONS ARE MET:
    ✓ You can see a REAL HUMAN FACE as the MAIN SUBJECT of the photo
    ✓ The face is CLEAR, CLOSE-UP, and takes up significant portion of the image
    ✓ You can see NOSE and MOUTH clearly visible
    ✓ Eyes can be covered by sunglasses/glasses - this is OK
    ✓ The person is the PRIMARY focus, not a background element
+   ✓ NO UI elements, buttons, or app interfaces visible
    
    SET FALSE FOR (BE STRICT):
+   ✗ ANY screenshot from apps/websites/browsers
+   ✗ Professional sports photos (jerseys, team uniforms, official photos)
    ✗ Cars, vehicles, dashboards, speedometers, interiors
    ✗ Car selfies where the car dashboard/interior is more visible than the face
    ✗ Photos taken inside vehicles where steering wheel/dashboard is prominent
@@ -255,37 +281,39 @@ CRITICAL RULES - FOLLOW EXACTLY OR REJECT:
    ✗ Distant shots, group photos, tiny faces
    ✗ Silhouettes, shadows, dark photos where face is unclear
    ✗ Objects: food, drinks, buildings, landscapes, animals, nature
-   ✗ Screenshots, memes, text images, receipts, documents
    ✗ Emoji, cartoon faces, drawn faces, illustrated faces, icons
    ✗ Stock photos, professional photoshoots, magazine covers
-   ✗ Celebrities, models, influencers, public figures
+   ✗ Celebrities, athletes, models, influencers, public figures
    
-2. "is_real_person" = TRUE ONLY if this is a PHOTOGRAPH of a REAL HUMAN BEING
+3. "is_real_person" = TRUE ONLY if this is a PHOTOGRAPH of a REAL HUMAN BEING
    - NOT drawings, cartoons, anime, AI art, digital art, paintings, illustrations
    
-3. "personal_photo" = TRUE ONLY if this is clearly a PERSONAL SELFIE or PORTRAIT
-   - NOT professional photos, stock images, celebrity photos, magazine covers
+4. "personal_photo" = TRUE ONLY if this is clearly a PERSONAL SELFIE or PORTRAIT
+   - NOT professional photos, stock images, celebrity photos, magazine covers, athlete photos
+   - NOT screenshots from social media, image search, or any website
    - The photo should look like someone took it for dating/social media purposes
-   
-4. "is_document_or_screenshot" = TRUE for:
-   - Screenshots from any app (including camera apps showing dashboard)
-   - Documents, receipts, cards, IDs, text images
-   - Any image with UI elements, buttons, app interfaces
+   - Must be a DIRECT photo, not a screenshot or saved image from internet
 
-EXTREME REJECTION CRITERIA - IF ANY OF THESE, SET has_human_face = FALSE:
-❌ Cars, vehicles, motorcycles, bikes (even if person visible)
-❌ Car dashboards, speedometers, steering wheels
-❌ Food, drinks, coffee, alcohol, meals
-❌ Animals, pets, cats, dogs, birds
-❌ Buildings, houses, architecture, landscapes
-❌ Nature, trees, flowers, beaches, mountains
-❌ Objects, products, items, gadgets
-❌ Memes, quotes, text overlays
-❌ Any photo where the MAIN SUBJECT is NOT a human face
+5. "likely_public_figure_or_model" = TRUE for:
+   - Professional athletes (ANY sport - football, basketball, soccer, etc.)
+   - Team jerseys, sports uniforms, official player photos
+   - Celebrities, models, influencers with professional photos
+   - Anyone in official team/corporate attire in professional settings
 
-REMEMBER: This is a DATING APP. People want to see WHO they are matching with.
-ONLY approve photos where a human face is the CLEAR, DOMINANT subject.
-When in doubt, SET FALSE. Be EXTREMELY STRICT.';
+EXTREME REJECTION CRITERIA - SET is_document_or_screenshot = TRUE IF ANY:
+❌ ANY screenshot from Pinterest, Instagram, Facebook, Google, Twitter, TikTok, etc.
+❌ Visible UI elements (buttons, icons, navigation bars, status bars)
+❌ Visible app branding or website logos
+❌ Professional sports photos (jerseys, uniforms, team photos)
+❌ Phone interface elements (battery, time, signal bars, back button)
+❌ "Visit" buttons, "Save" buttons, "Share" options
+❌ Search result layouts, image grids, collages
+❌ Any text overlays (hashtags, quotes, captions, watermarks)
+❌ Professional photography studio backgrounds
+
+REMEMBER: This is a DATING APP. People must upload ORIGINAL photos they took themselves.
+REJECT all screenshots, saved images from internet, professional photos, and athlete photos.
+When in doubt, SET is_document_or_screenshot = TRUE. Be EXTREMELY STRICT.';
 
 
             $response = Http::withHeaders([

@@ -1040,7 +1040,9 @@ class AuthController extends Controller
             'unsupported_image_type' => 'The image format is not supported. Please use JPEG, PNG, or WEBP.',
             'resolution_too_low' => 'The image resolution is too low. Please upload an image at least 300x300 pixels.',
             'openai_failure' => 'Image moderation temporarily unavailable. Please try again later.',
-            'moderation_error' => 'An error occurred during image moderation. Please try again.'
+            'moderation_error' => 'An error occurred during image moderation. Please try again.',
+            'likely_public_figure_or_model' => 'The image may be of a celebrity, model, or public figure. Please upload your own photo.',
+            'is_document_or_screenshot' => 'The image appears to be a document or screenshot. Please upload a personal photo.',
         ];
 
         return $messages[$reason] ?? 'The image could not be approved. Please try a different photo.';
