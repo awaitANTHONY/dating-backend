@@ -119,6 +119,13 @@ class ProcessVerificationJob implements ShouldQueue
                 'verified_at' => $result['status'] === 'approved' ? now() : null
             ]);
 
+            // Update user_information.is_verified field
+            if ($user->user_information) {
+                $user->user_information->update([
+                    'is_verified' => $result['status'] === 'approved'
+                ]);
+            }
+
             DB::commit();
 
             // Send notification to user
@@ -265,6 +272,13 @@ class ProcessVerificationJob implements ShouldQueue
                 'verification_status' => 'rejected',
                 'verified_at' => null
             ]);
+
+            // Update user_information.is_verified to false
+            if ($verificationRequest->user->user_information) {
+                $verificationRequest->user->user_information->update([
+                    'is_verified' => false
+                ]);
+            }
 
             DB::commit();
 
