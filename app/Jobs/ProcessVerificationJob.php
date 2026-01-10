@@ -121,6 +121,9 @@ class ProcessVerificationJob implements ShouldQueue
 
             DB::commit();
 
+            // Send notification to user
+            $this->sendVerificationNotification($user, $result['status'], $result['reason']);
+
             Log::info('Verification processed successfully', [
                 'verification_request_id' => $this->verificationRequestId,
                 'status' => $result['status'],
@@ -145,6 +148,61 @@ class ProcessVerificationJob implements ShouldQueue
             }
 
             throw $e; // Re-throw to trigger retry
+        }
+    }
+
+    /**
+     * Send verification notification to user
+     *
+     * @param User $user
+     * @param string $status
+     * @param string $reason
+     * @return void
+     */
+    private function sendVerificationNotification(User $user, string $status, string $reason)
+    {
+        try {
+            // Check if user has device token for push notifications
+            if (!$user->device_token) {
+                Log::info('Skipping notification - no device token', [
+                    'user_id' => $user->id
+                ]);
+                return;
+            }
+
+            $title = '';
+            $message = '';
+            $image = null;
+
+            if ($status === 'approved') {
+                $title = '✅ Verification Approved!';
+                $message = 'Congratulations! Your account is now verified. Enjoy enhanced features and trust from other users.';
+                $image = $user->image ? asset($user->image) : null;
+            } elseif ($status === 'rejected') {
+                $title = '❌ Verification Rejected';
+                $message = 'Your verification was not approved. Reason: ' . $reason . '. Please try again with a new photo.';
+            }
+
+            if ($title && $message) {
+                send_notification(
+                    'single',
+                    $title,
+                    $message,
+                    $image,
+                    ['device_token' => $user->device_token]
+                );
+
+                Log::info('Verification notification sent', [
+                    'user_id' => $user->id,
+                    'status' => $status
+                ]);
+            }
+        } catch (Exception $e) {
+            // Don't fail the job if notification fails
+            Log::error('Failed to send verification notification', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 
@@ -209,6 +267,9 @@ class ProcessVerificationJob implements ShouldQueue
             ]);
 
             DB::commit();
+
+            // Send notification for failed verification
+            $this->sendVerificationNotification($verificationRequest->user, 'rejected', $reason);
 
             Log::warning('Verification marked as failed', [
                 'verification_request_id' => $verificationRequest->id,
