@@ -57,18 +57,22 @@ class VerificationController extends Controller
         try {
             DB::beginTransaction();
 
-            // Store verification photo
+            // Store verification photo in public/uploads/verifications
             $verificationPhoto = $request->file('image');
             $filename = 'verification_' . $user->id . '_' . time() . '.' . $verificationPhoto->getClientOriginalExtension();
-            $path = $verificationPhoto->storeAs('uploads/verifications', $filename, 'public');
             
-            // Create full path for storage
-            $fullPath = 'public/' . $path;
+            $path = 'public/uploads/verifications/';
+            if (!file_exists(base_path($path))) {
+                mkdir(base_path($path), 0755, true);
+            }
+            
+            $verificationPhoto->move(base_path($path), $filename);
+            $imagePath = $path . $filename;
 
             // Create verification request
             $verificationRequest = VerificationRequest::create([
                 'user_id' => $user->id,
-                'image' => $fullPath,
+                'image' => $imagePath,
                 'status' => 'pending',
             ]);
 
@@ -92,7 +96,7 @@ class VerificationController extends Controller
                 'message' => 'Verification photo submitted successfully. We will process your request shortly.',
                 'data' => [
                     'verification_request_id' => $verificationRequest->id,
-                    'image' => asset('storage/' . $path),
+                    'image' => asset($imagePath),
                     'status' => $verificationRequest->status,
                     'submitted_at' => $verificationRequest->created_at->toDateTimeString(),
                 ]
@@ -148,7 +152,7 @@ class VerificationController extends Controller
                 'id' => $verificationRequest->id,
                 'status' => $verificationRequest->status,
                 'reason' => $verificationRequest->reason,
-                'image' => $verificationRequest->image ? asset(str_replace('public/', 'storage/', $verificationRequest->image)) : null,
+                'image' => $verificationRequest->image ? asset($verificationRequest->image) : null,
                 'submitted_at' => $verificationRequest->created_at->toDateTimeString(),
                 'updated_at' => $verificationRequest->updated_at->toDateTimeString(),
             ]
@@ -198,7 +202,7 @@ class VerificationController extends Controller
                     'id' => $verification->id,
                     'status' => $verification->status,
                     'reason' => $verification->reason,
-                    'image' => $verification->image ? asset(str_replace('public/', 'storage/', $verification->image)) : null,
+                    'image' => $verification->image ? asset($verification->image) : null,
                     'submitted_at' => $verification->created_at->toDateTimeString(),
                     'processed_at' => $verification->updated_at->toDateTimeString(),
                 ];
