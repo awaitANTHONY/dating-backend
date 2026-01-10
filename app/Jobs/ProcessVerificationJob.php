@@ -196,7 +196,10 @@ class ProcessVerificationJob implements ShouldQueue
                     $title,
                     $message,
                     $image,
-                    ['device_token' => $user->device_token]
+                    [
+                        'device_token' => $user->device_token, 
+                        'type' => 'verification_status',
+                    ]
                 );
 
                 Log::info('Verification notification sent', [
