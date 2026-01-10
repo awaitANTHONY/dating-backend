@@ -10,7 +10,7 @@ use Exception;
 class VerificationService
 {
     private string $openaiApiKey;
-    private string $model = 'gpt-4o-2024-05-13';
+    private string $model = 'gpt-4o';
 
     public function __construct()
     {
