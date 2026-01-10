@@ -101,6 +101,10 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('boosts/activate', [Controllers\Api\v1\BoostController::class, 'activate_boost']);
         Route::get('boosts/status', [Controllers\Api\v1\BoostController::class, 'boost_status']);
 
+        // VerificationController - Identity Verification
+        Route::post('verification/submit', [Controllers\Api\v1\VerificationController::class, 'submitVerification']);
+        Route::get('verification/status', [Controllers\Api\v1\VerificationController::class, 'getVerificationStatus']);
+        Route::get('verification/history', [Controllers\Api\v1\VerificationController::class, 'getVerificationHistory']);
 
         // --- Chat API (Firebase Realtime) ---
         Route::any('/start-chat', [\App\Http\Controllers\Api\v1\ChatController::class, 'startChat']);

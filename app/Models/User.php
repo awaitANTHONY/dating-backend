@@ -134,6 +134,38 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the verification request for the user.
+     */
+    public function verificationRequest()
+    {
+        return $this->hasOne(VerificationRequest::class)->latestOfMany();
+    }
+
+    /**
+     * Get all verification requests for the user.
+     */
+    public function verificationRequests()
+    {
+        return $this->hasMany(VerificationRequest::class);
+    }
+
+    /**
+     * Check if user is verified.
+     */
+    public function isVerified(): bool
+    {
+        return $this->verification_status === 'approved' && $this->verified_at !== null;
+    }
+
+    /**
+     * Check if user has pending verification.
+     */
+    public function hasPendingVerification(): bool
+    {
+        return $this->verification_status === 'pending';
+    }
+
+    /**
      * Check if user has active VIP membership
      * 
      * @return bool
