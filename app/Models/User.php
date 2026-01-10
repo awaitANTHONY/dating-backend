@@ -35,6 +35,8 @@ class User extends Authenticatable
         'last_activity',
         'is_vip',
         'vip_expire',
+        'verification_status',
+        'verified_at',
     ];
 
     /**
@@ -63,6 +65,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'last_activity' => 'datetime',
         'vip_expire' => 'datetime',
+        'verified_at' => 'datetime',
     ];
 
     public function getImageAttribute($data)
