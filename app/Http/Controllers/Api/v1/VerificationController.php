@@ -92,6 +92,7 @@ class VerificationController extends Controller
                 'message' => 'Verification photo submitted successfully. We will process your request shortly.',
                 'data' => [
                     'verification_request_id' => $verificationRequest->id,
+                    'image' => asset($fullPath),
                     'status' => $verificationRequest->status,
                     'submitted_at' => $verificationRequest->created_at->toDateTimeString(),
                 ]
