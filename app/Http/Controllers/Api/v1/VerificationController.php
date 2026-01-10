@@ -147,7 +147,7 @@ class VerificationController extends Controller
                 'id' => $verificationRequest->id,
                 'status' => $verificationRequest->status,
                 'reason' => $verificationRequest->reason,
-                'image' => $verificationRequest->image ? asset(Storage::url($verificationRequest->image)) : null,
+                'image' => $verificationRequest->image ? asset($verificationRequest->image) : null,
                 'submitted_at' => $verificationRequest->created_at->toDateTimeString(),
                 'updated_at' => $verificationRequest->updated_at->toDateTimeString(),
             ]
