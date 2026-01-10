@@ -32,13 +32,13 @@ class VerificationService
     {
         try {
             // Validate verification photo exists
-            if (!Storage::exists($image)) {
+            $imagePath = base_path($image);
+            if (!file_exists($imagePath)) {
                 return $this->rejectVerification('Verification photo not found', 0.0);
             }
 
             // Get public URL for verification photo
-            $verificationPhotoUrl = Storage::url($image);
-            $verificationPhotoFullUrl = asset($verificationPhotoUrl);
+            $verificationPhotoFullUrl = asset($image);
 
             // Step 1: Check verification photo quality and liveness
             $livenessCheck = $this->checkLivenessAndGesture($verificationPhotoFullUrl);
