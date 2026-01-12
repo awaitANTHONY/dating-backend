@@ -198,7 +198,7 @@ class VerificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($verification) {
-                return [
+                $data = [
                     'id' => $verification->id,
                     'status' => $verification->status,
                     'reason' => $verification->reason,
@@ -206,6 +206,18 @@ class VerificationController extends Controller
                     'submitted_at' => $verification->created_at->toDateTimeString(),
                     'processed_at' => $verification->updated_at->toDateTimeString(),
                 ];
+                
+                // Add unmatched photos if available
+                if ($verification->status === 'rejected' && $verification->ai_response) {
+                    if (isset($verification->ai_response['face_match']['unmatched_photos'])) {
+                        $unmatchedPhotos = $verification->ai_response['face_match']['unmatched_photos'];
+                        if (!empty($unmatchedPhotos)) {
+                            $data['unmatched_photos'] = $unmatchedPhotos;
+                        }
+                    }
+                }
+                
+                return $data;
             });
 
         return response()->json([
