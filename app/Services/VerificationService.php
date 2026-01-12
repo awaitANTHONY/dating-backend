@@ -54,7 +54,13 @@ class VerificationService
             );
 
             if (!$faceMatchResult['success']) {
-                return $this->rejectVerification($faceMatchResult['reason'], $faceMatchResult['confidence']);
+                return [
+                    'status' => 'rejected',
+                    'reason' => $faceMatchResult['reason'],
+                    'confidence' => $faceMatchResult['confidence'],
+                    'liveness_check' => $livenessCheck,
+                    'face_match' => $faceMatchResult
+                ];
             }
 
             // All checks passed - approve verification
