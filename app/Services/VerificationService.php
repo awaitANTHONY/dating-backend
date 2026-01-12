@@ -249,7 +249,7 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(90)->post('https://api.openai.com/v1/chat/completions', [
+            ])->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->model,
                 'messages' => [
                     [
@@ -459,7 +459,7 @@ Analyze the visual similarities objectively.';
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
+            ])->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->model,
                 'messages' => [
                     [
@@ -467,7 +467,7 @@ Analyze the visual similarities objectively.';
                         'content' => $imageContent
                     ]
                 ],
-                'max_tokens' => 500,
+                'max_tokens' => 800,
                 'temperature' => 0.1
             ]);
 

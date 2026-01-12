@@ -30,7 +30,7 @@ class ProcessVerificationJob implements ShouldQueue
      *
      * @var int
      */
-    public $timeout = 90;
+    public $timeout = 180;
 
     /**
      * The verification request ID.
