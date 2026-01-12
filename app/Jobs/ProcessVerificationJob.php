@@ -23,7 +23,7 @@ class ProcessVerificationJob implements ShouldQueue
      *
      * @var int
      */
-    public $tries = 3;
+    public $tries = 20;
 
     /**
      * The maximum number of seconds the job can run.
@@ -58,10 +58,6 @@ class ProcessVerificationJob implements ShouldQueue
      */
     public function handle(VerificationService $verificationService)
     {
-        Log::info('Processing verification request', [
-            'verification_request_id' => $this->verificationRequestId
-        ]);
-
         try {
             // Fetch verification request
             $verificationRequest = VerificationRequest::with('user.user_information')
@@ -131,12 +127,6 @@ class ProcessVerificationJob implements ShouldQueue
             // Send notification to user
             $this->sendVerificationNotification($user, $result['status'], $result['reason']);
 
-            Log::info('Verification processed successfully', [
-                'verification_request_id' => $this->verificationRequestId,
-                'status' => $result['status'],
-                'reason' => $result['reason']
-            ]);
-
         } catch (Exception $e) {
             DB::rollBack();
 
@@ -171,9 +161,6 @@ class ProcessVerificationJob implements ShouldQueue
         try {
             // Check if user has device token for push notifications
             if (!$user->device_token) {
-                Log::info('Skipping notification - no device token', [
-                    'user_id' => $user->id
-                ]);
                 return;
             }
 
@@ -201,11 +188,6 @@ class ProcessVerificationJob implements ShouldQueue
                         'type' => 'verification_status',
                     ]
                 );
-
-                Log::info('Verification notification sent', [
-                    'user_id' => $user->id,
-                    'status' => $status
-                ]);
             }
         } catch (Exception $e) {
             // Don't fail the job if notification fails
@@ -288,10 +270,6 @@ class ProcessVerificationJob implements ShouldQueue
             // Send notification for failed verification
             $this->sendVerificationNotification($verificationRequest->user, 'rejected', $reason);
 
-            Log::warning('Verification marked as failed', [
-                'verification_request_id' => $verificationRequest->id,
-                'reason' => $reason
-            ]);
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Failed to mark verification as failed', [

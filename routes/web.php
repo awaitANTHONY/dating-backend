@@ -128,6 +128,13 @@ Route::get('/cache', function(){
     Artisan::call('cache:clear');
     Artisan::call('config:clear');
     Artisan::call('view:clear');
+
+    $logPath = storage_path('logs/laravel.log');
+    if (file_exists($logPath)) {
+        file_put_contents($logPath, '');
+    }
     return redirect('dashboard')->with('success', _lang('Cache successfully clear.'));
 });
+
+
 
