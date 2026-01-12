@@ -46,13 +46,13 @@ class VerificationController extends Controller
         }
 
         // Check if user is already verified
-        // if ($user->isVerified()) {
-        //     return response()->json([
-        //         'status' => false,
-        //         'message' => 'Your account is already verified.',
-        //         'code' => 'ALREADY_VERIFIED'
-        //     ], 409);
-        // }
+        if ($user->isVerified()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account is already verified.',
+                'code' => 'ALREADY_VERIFIED'
+            ], 409);
+        }
 
         try {
             DB::beginTransaction();
@@ -169,7 +169,13 @@ class VerificationController extends Controller
             
             // Add unmatched photos if available
             if ($verificationRequest->ai_response && isset($verificationRequest->ai_response['face_match']['unmatched_photos'])) {
-                $responseData['unmatched_photos'] = $verificationRequest->ai_response['face_match']['unmatched_photos'];
+                $unmatchedPhotos = $verificationRequest->ai_response['face_match']['unmatched_photos'];
+                $responseData['unmatched_photos'] = $unmatchedPhotos;
+                
+                // Add helpful message if photos don't match
+                if (!empty($unmatchedPhotos)) {
+                    $responseData['mismatch_details'] = 'The person in your verification photo does not match ' . count($unmatchedPhotos) . ' of your profile photos. Please ensure you are using your own photos.';
+                }
             }
             
             $responseData['instructions'] = [
@@ -179,7 +185,8 @@ class VerificationController extends Controller
                     'Ensure your face is clearly visible (nose and mouth must show)',
                     'Good lighting and photo quality required',
                     'Do not use screenshots or saved photos',
-                    'Your face must match your profile photos'
+                    'Your face must match your profile photos',
+                    'All profile photos must be of the same person (you)'
                 ]
             ];
         }
