@@ -164,31 +164,18 @@ class VerificationController extends Controller
         } elseif ($verificationRequest->isApproved()) {
             $responseData['message'] = 'Congratulations! Your account is verified.';
         } elseif ($verificationRequest->isRejected()) {
-            $responseData['message'] = 'Verification rejected. Please review the reason and try again.';
-            $responseData['can_retry'] = true;
-            
             // Add unmatched photos if available
             if ($verificationRequest->ai_response && isset($verificationRequest->ai_response['face_match']['unmatched_photos'])) {
                 $unmatchedPhotos = $verificationRequest->ai_response['face_match']['unmatched_photos'];
-                $responseData['unmatched_photos'] = $unmatchedPhotos;
-                
-                // Add helpful message if photos don't match
                 if (!empty($unmatchedPhotos)) {
-                    $responseData['mismatch_details'] = 'The person in your verification photo does not match ' . count($unmatchedPhotos) . ' of your profile photos. Please ensure you are using your own photos.';
+                    $responseData['unmatched_photos'] = $unmatchedPhotos;
+                    $responseData['message'] = 'Verification rejected. ' . count($unmatchedPhotos) . ' of your profile photos do not match. Please review the reason and submit a new photo.';
+                } else {
+                    $responseData['message'] = 'Verification rejected. Please review the reason and submit a new photo.';
                 }
+            } else {
+                $responseData['message'] = 'Verification rejected. Please review the reason and submit a new photo.';
             }
-            
-            $responseData['instructions'] = [
-                'processing_time' => 'Usually takes 1-2 minutes',
-                'requirements' => [
-                    'Take a fresh live selfie with thumbs-up gesture',
-                    'Ensure your face is clearly visible (nose and mouth must show)',
-                    'Good lighting and photo quality required',
-                    'Do not use screenshots or saved photos',
-                    'Your face must match your profile photos',
-                    'All profile photos must be of the same person (you)'
-                ]
-            ];
         }
 
         return response()->json([
