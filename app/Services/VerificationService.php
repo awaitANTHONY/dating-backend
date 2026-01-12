@@ -511,6 +511,16 @@ Focus on IDENTIFYING if each profile photo shows the SAME PERSON as the verifica
             $hasScreenshot = $data['profile_has_screenshot'] ?? false;
             $unmatchedPhotos = $data['unmatched_photos'] ?? [];
 
+            // Log AI response for debugging
+            Log::info('Face matching AI response', [
+                'all_photos_match' => $allMatch,
+                'overall_confidence' => $confidence,
+                'has_screenshot' => $hasScreenshot,
+                'unmatched_count' => count($unmatchedPhotos),
+                'unmatched_photos' => $unmatchedPhotos,
+                'reasoning' => $reasoning
+            ]);
+
             // Critical security check - reject if any profile photo is screenshot/fake
             if ($hasScreenshot) {
                 return [
@@ -529,8 +539,9 @@ Focus on IDENTIFYING if each profile photo shows the SAME PERSON as the verifica
                 ];
             }
 
-            // If not all match or confidence too low
-            if (!$allMatch || $confidence < 0.7) {
+            // If not all match or confidence too low or ANY unmatched photos exist
+            // CRITICAL: Even if AI doesn't populate unmatched_photos array, all_photos_match=false means rejection
+            if (!$allMatch || $confidence < 0.7 || !empty($unmatchedPhotos)) {
                 // Map photo numbers to URLs
                 $unmatchedWithUrls = array_map(function($photo) use ($profilePhotoUrls) {
                     $index = ($photo['photo_number'] ?? 1) - 1;
@@ -541,9 +552,14 @@ Focus on IDENTIFYING if each profile photo shows the SAME PERSON as the verifica
                     ];
                 }, $unmatchedPhotos);
 
+                // Fallback reason if unmatched_photos is empty but all_photos_match is false
+                $reason = !empty($unmatchedWithUrls) 
+                    ? 'Face does not match all profile photos - ' . count($unmatchedWithUrls) . ' photo(s) mismatch'
+                    : ($allMatch === false ? 'Not all profile photos match the verification photo' : 'Confidence too low for verification');
+
                 return [
                     'success' => false,
-                    'reason' => 'Face does not match all profile photos',
+                    'reason' => $reason,
                     'confidence' => $confidence,
                     'unmatched_photos' => $unmatchedWithUrls,
                     'details' => $data
