@@ -166,6 +166,12 @@ class VerificationController extends Controller
         } elseif ($verificationRequest->isRejected()) {
             $responseData['message'] = 'Verification rejected. Please review the reason and try again.';
             $responseData['can_retry'] = true;
+            
+            // Add unmatched photos if available
+            if ($verificationRequest->ai_response && isset($verificationRequest->ai_response['face_match']['unmatched_photos'])) {
+                $responseData['unmatched_photos'] = $verificationRequest->ai_response['face_match']['unmatched_photos'];
+            }
+            
             $responseData['instructions'] = [
                 'processing_time' => 'Usually takes 1-2 minutes',
                 'requirements' => [
