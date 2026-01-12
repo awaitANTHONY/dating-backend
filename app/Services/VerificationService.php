@@ -310,44 +310,13 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
                 return asset($path);
             }, $profilePhotos);
 
-            // Check each profile photo individually
-            $matchResults = [];
-            $unmatchedPhotos = [];
-            
-            foreach ($profilePhotoUrls as $index => $profileUrl) {
-                $result = $this->checkSinglePhotoMatch($verificationPhotoUrl, $profileUrl, $index + 1);
-                $matchResults[] = $result;
-                
-                if (!$result['matches']) {
-                    $unmatchedPhotos[] = [
-                        'url' => $profileUrl,
-                        'reason' => $result['reason'],
-                        'confidence' => $result['confidence']
-                    ];
-                }
-            }
+            // Limit to 3 photos to avoid timeout and excessive API costs
+            $photoUrlsToCompare = array_slice($profilePhotoUrls, 0, 3);
 
-            // If any profile photo doesn't match, reject
-            if (!empty($unmatchedPhotos)) {
-                return [
-                    'success' => false,
-                    'reason' => 'Face does not match all profile photos',
-                    'confidence' => 0.0,
-                    'unmatched_photos' => $unmatchedPhotos,
-                    'details' => $matchResults
-                ];
-            }
+            // Check all photos in a single API call for efficiency
+            $result = $this->checkMultiplePhotosMatch($verificationPhotoUrl, $photoUrlsToCompare);
 
-            // All photos match - calculate average confidence
-            $totalConfidence = array_sum(array_column($matchResults, 'confidence'));
-            $avgConfidence = $totalConfidence / count($matchResults);
-
-            return [
-                'success' => true,
-                'reason' => 'Face matches all profile photos',
-                'confidence' => $avgConfidence,
-                'details' => $matchResults
-            ];
+            return $result;
 
         } catch (Exception $e) {
             Log::error('Face matching error', ['error' => $e->getMessage()]);
@@ -360,77 +329,99 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
     }
 
     /**
-     * Check if verification photo matches a single profile photo
+     * Check if verification photo matches multiple profile photos in one call
      *
      * @param string $verificationPhotoUrl
-     * @param string $profilePhotoUrl
-     * @param int $photoNumber
+     * @param array $profilePhotoUrls
      * @return array
      */
-    private function checkSinglePhotoMatch(string $verificationPhotoUrl, string $profilePhotoUrl, int $photoNumber): array
+    private function checkMultiplePhotosMatch(string $verificationPhotoUrl, array $profilePhotoUrls): array
     {
         try {
-            $prompt = 'You are a face matching expert for identity verification. Compare the verification photo with the profile photo.
+            $prompt = 'You are a face matching expert for identity verification. Compare the verification photo with ALL profile photos provided.
 
 Respond ONLY in valid JSON format:
 {
-  "same_person": true/false,
-  "confidence": 0.0-1.0,
-  "reasoning": "brief explanation of match/mismatch",
-  "profile_is_screenshot": true/false
+  "all_photos_match": true/false,
+  "overall_confidence": 0.0-1.0,
+  "reasoning": "brief explanation",
+  "profile_has_screenshot": true/false,
+  "unmatched_photos": [
+    {
+      "photo_number": 1,
+      "reason": "specific reason why this photo doesn\'t match",
+      "confidence": 0.0-1.0
+    }
+  ]
 }
 
 CRITICAL PRE-CHECK - REJECT PROFILE PHOTOS IMMEDIATELY IF:
-⚠️ Profile photo is a SCREENSHOT from apps/websites (Pinterest, Instagram, Google Images, etc.)
-⚠️ Profile photo has UI elements (buttons, navigation bars, status bars, app interfaces)
-⚠️ Profile photo has watermarks, text overlays, or professional photo service marks
-⚠️ Profile photo is a professional modeling shot, stock image, or celebrity photo
-⚠️ Profile photo appears to be downloaded from internet or social media
+⚠️ ANY profile photo is a SCREENSHOT from apps/websites (Pinterest, Instagram, Google Images, etc.)
+⚠️ ANY profile photo has UI elements (buttons, navigation bars, status bars, app interfaces)
+⚠️ ANY profile photo has watermarks, text overlays, or professional photo service marks
+⚠️ ANY profile photo is a professional modeling shot, stock image, or celebrity photo
+⚠️ ANY profile photo appears to be downloaded from internet or social media
 
-SET "profile_is_screenshot" = TRUE if profile photo shows these characteristics.
+SET "profile_has_screenshot" = TRUE if ANY profile photo shows these characteristics.
 
-MATCHING RULES (only if profile photo is legitimate):
+MATCHING RULES (only if ALL profile photos are legitimate):
 
-1. "same_person" = TRUE only if the person in verification photo MATCHES the person in profile photo
+1. "all_photos_match" = TRUE only if the person in verification photo MATCHES the person in ALL profile photos
    - Compare facial features: eyes, nose, mouth, jaw line, face shape, facial structure
-   - Consider: age, gender, ethnicity, bone structure should match
+   - ALL photos must show the SAME person with consistent features
    - Minor differences OK: hairstyle, facial hair, glasses, makeup, lighting, angles
    - Different angles/poses are OK as long as core facial features match
    - Age difference should not exceed 5-10 years
 
-2. "confidence" should reflect certainty:
-   - 0.9-1.0 = Very confident match (same person, clear facial feature alignment)
-   - 0.7-0.89 = Good match (likely same person, minor variations)
-   - 0.5-0.69 = Possible match (uncertain, need manual review)
-   - 0.0-0.49 = Not the same person (different facial features)
+2. "overall_confidence" should reflect certainty across ALL photos:
+   - 0.9-1.0 = Very confident match (same person in all photos)
+   - 0.7-0.89 = Good match (likely same person with minor variations)
+   - 0.5-0.69 = Uncertain match (needs manual review)
+   - 0.0-0.49 = Not the same person (different people detected)
 
-3. SET "same_person" = FALSE if:
-   - Different facial structure or bone structure
-   - Different ethnicity or gender
-   - Different age (more than 10 years difference)
-   - Clearly different people with different features
-   - Profile photo appears to be of celebrity, model, or public figure
-   - Profile photo is screenshot or downloaded image (not the user themselves)
+3. "unmatched_photos" array - List ONLY photos that don\'t match:
+   - Include photo_number (1, 2, 3, etc.)
+   - Provide specific reason for mismatch
+   - Include confidence score for that specific photo
 
-APPROVAL THRESHOLD: Confidence must be 0.7 or higher AND same_person = true to approve.
+4. SET "all_photos_match" = FALSE if:
+   - ANY photo shows different facial structure or features
+   - ANY photo shows different ethnicity or gender
+   - Photos appear to be of different people
+   - ANY profile photo is screenshot, celebrity, or downloaded image
 
-SECURITY CHECK: If profile photo looks like screenshot, celebrity photo, or downloaded image, 
-SET profile_is_screenshot = TRUE and same_person = FALSE.
+APPROVAL THRESHOLD: overall_confidence must be 0.7+ AND all_photos_match = true AND profile_has_screenshot = false
 
-Compare carefully and be thorough. Verify this is the SAME REAL PERSON in both photos.';
+IMPORTANT: 
+- If photos are too blurry/dark to analyze, mark as unmatched with reason
+- Be consistent in facial feature comparison across all photos
+- Profile photos should all show the same person who matches the verification photo
 
+Compare carefully and be thorough.';
+
+            // Build image content for prompt
             $imageContent = [
                 ['type' => 'text', 'text' => $prompt],
-                ['type' => 'text', 'text' => 'VERIFICATION PHOTO:'],
+                ['type' => 'text', 'text' => 'VERIFICATION PHOTO (person to verify):'],
                 ['type' => 'image_url', 'image_url' => ['url' => $verificationPhotoUrl]],
-                ['type' => 'text', 'text' => 'PROFILE PHOTO TO COMPARE:'],
-                ['type' => 'image_url', 'image_url' => ['url' => $profilePhotoUrl]]
+                ['type' => 'text', 'text' => 'PROFILE PHOTOS TO COMPARE (must all match verification photo):']
             ];
+
+            foreach ($profilePhotoUrls as $index => $profileUrl) {
+                $imageContent[] = [
+                    'type' => 'text',
+                    'text' => 'Profile Photo ' . ($index + 1) . ':'
+                ];
+                $imageContent[] = [
+                    'type' => 'image_url',
+                    'image_url' => ['url' => $profileUrl]
+                ];
+            }
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(45)->post('https://api.openai.com/v1/chat/completions', [
+            ])->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->model,
                 'messages' => [
                     [
@@ -438,16 +429,19 @@ Compare carefully and be thorough. Verify this is the SAME REAL PERSON in both p
                         'content' => $imageContent
                     ]
                 ],
-                'max_tokens' => 300,
+                'max_tokens' => 500,
                 'temperature' => 0.1
             ]);
 
             if (!$response->successful()) {
+                Log::error('OpenAI API failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
                 return [
-                    'matches' => false,
-                    'confidence' => 0.0,
+                    'success' => false,
                     'reason' => 'Face matching service temporarily unavailable',
-                    'photo_number' => $photoNumber
+                    'confidence' => 0.0
                 ];
             }
 
@@ -456,54 +450,71 @@ Compare carefully and be thorough. Verify this is the SAME REAL PERSON in both p
 
             if (!$data) {
                 return [
-                    'matches' => false,
-                    'confidence' => 0.0,
-                    'reason' => 'Failed to analyze photo',
-                    'photo_number' => $photoNumber
+                    'success' => false,
+                    'reason' => 'Failed to analyze photos',
+                    'confidence' => 0.0
                 ];
             }
 
-            $samePerson = $data['same_person'] ?? false;
-            $confidence = $data['confidence'] ?? 0.0;
+            $allMatch = $data['all_photos_match'] ?? false;
+            $confidence = $data['overall_confidence'] ?? 0.0;
             $reasoning = $data['reasoning'] ?? 'No reasoning provided';
-            $profileIsScreenshot = $data['profile_is_screenshot'] ?? false;
+            $hasScreenshot = $data['profile_has_screenshot'] ?? false;
+            $unmatchedPhotos = $data['unmatched_photos'] ?? [];
 
-            // Critical security check - reject if profile photo is screenshot/fake
-            if ($profileIsScreenshot) {
+            // Critical security check - reject if any profile photo is screenshot/fake
+            if ($hasScreenshot) {
                 return [
-                    'matches' => false,
+                    'success' => false,
+                    'reason' => 'One or more profile photos appear to be screenshots or downloaded images',
                     'confidence' => 0.0,
-                    'reason' => 'Profile photo appears to be screenshot or downloaded image',
-                    'photo_number' => $photoNumber,
+                    'unmatched_photos' => array_map(function($photo) use ($profilePhotoUrls) {
+                        $index = ($photo['photo_number'] ?? 1) - 1;
+                        return [
+                            'url' => $profilePhotoUrls[$index] ?? '',
+                            'reason' => $photo['reason'] ?? 'Screenshot or downloaded image detected',
+                            'confidence' => $photo['confidence'] ?? 0.0
+                        ];
+                    }, $unmatchedPhotos),
                     'details' => $data
                 ];
             }
 
-            if (!$samePerson || $confidence < 0.7) {
+            // If not all match or confidence too low
+            if (!$allMatch || $confidence < 0.7) {
+                // Map photo numbers to URLs
+                $unmatchedWithUrls = array_map(function($photo) use ($profilePhotoUrls) {
+                    $index = ($photo['photo_number'] ?? 1) - 1;
+                    return [
+                        'url' => $profilePhotoUrls[$index] ?? '',
+                        'reason' => $photo['reason'] ?? 'Face does not match',
+                        'confidence' => $photo['confidence'] ?? 0.0
+                    ];
+                }, $unmatchedPhotos);
+
                 return [
-                    'matches' => false,
+                    'success' => false,
+                    'reason' => 'Face does not match all profile photos',
                     'confidence' => $confidence,
-                    'reason' => $reasoning,
-                    'photo_number' => $photoNumber,
+                    'unmatched_photos' => $unmatchedWithUrls,
                     'details' => $data
                 ];
             }
 
+            // All photos match
             return [
-                'matches' => true,
+                'success' => true,
+                'reason' => 'Face matches all profile photos',
                 'confidence' => $confidence,
-                'reason' => $reasoning,
-                'photo_number' => $photoNumber,
                 'details' => $data
             ];
 
         } catch (Exception $e) {
-            Log::error('Single photo match error', ['error' => $e->getMessage()]);
+            Log::error('Multiple photo match error', ['error' => $e->getMessage()]);
             return [
-                'matches' => false,
-                'confidence' => 0.0,
-                'reason' => 'Photo matching failed',
-                'photo_number' => $photoNumber
+                'success' => false,
+                'reason' => 'Photo matching failed: ' . $e->getMessage(),
+                'confidence' => 0.0
             ];
         }
     }
