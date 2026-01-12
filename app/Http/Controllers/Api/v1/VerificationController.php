@@ -46,13 +46,13 @@ class VerificationController extends Controller
         }
 
         // Check if user is already verified
-        if ($user->isVerified()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Your account is already verified.',
-                'code' => 'ALREADY_VERIFIED'
-            ], 409);
-        }
+        // if ($user->isVerified()) {
+        //     return response()->json([
+        //         'status' => false,
+        //         'message' => 'Your account is already verified.',
+        //         'code' => 'ALREADY_VERIFIED'
+        //     ], 409);
+        // }
 
         try {
             DB::beginTransaction();
