@@ -249,7 +249,7 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(30)->post('https://api.openai.com/v1/chat/completions', [
+            ])->timeout(90)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->model,
                 'messages' => [
                     [
@@ -357,8 +357,8 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
                 return asset($path);
             }, $profilePhotos);
 
-            // Limit to 3 photos to avoid timeout and excessive API costs
-            $photoUrlsToCompare = array_slice($profilePhotoUrls, 0, 3);
+            // Limit to 7 photos to avoid excessive API costs while checking more photos
+            $photoUrlsToCompare = array_slice($profilePhotoUrls, 0, 7);
 
             // Check all photos in a single API call for efficiency
             $result = $this->checkMultiplePhotosMatch($verificationPhotoUrl, $photoUrlsToCompare);
