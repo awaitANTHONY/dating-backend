@@ -456,12 +456,6 @@ Analyze the visual similarities objectively.';
                 ];
             }
 
-            Log::info('Sending face matching request', [
-                'verification_url' => $verificationPhotoUrl,
-                'profile_urls' => $profilePhotoUrls,
-                'photo_count' => count($profilePhotoUrls)
-            ]);
-
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
                 'Content-Type' => 'application/json',
@@ -490,12 +484,6 @@ Analyze the visual similarities objectively.';
             }
 
             $content = $response->json()['choices'][0]['message']['content'] ?? '';
-            
-            Log::info('OpenAI face match response', [
-                'content_preview' => substr($content, 0, 300),
-                'content_length' => strlen($content)
-            ]);
-            
             $data = $this->extractJsonFromResponse($content);
 
             if (!$data) {
@@ -514,16 +502,6 @@ Analyze the visual similarities objectively.';
             $reasoning = $data['reasoning'] ?? 'No reasoning provided';
             $hasScreenshot = $data['profile_has_screenshot'] ?? false;
             $unmatchedPhotos = $data['unmatched_photos'] ?? [];
-
-            // Log AI response for debugging
-            Log::info('Face matching AI response', [
-                'all_photos_match' => $allMatch,
-                'overall_confidence' => $confidence,
-                'has_screenshot' => $hasScreenshot,
-                'unmatched_count' => count($unmatchedPhotos),
-                'unmatched_photos' => $unmatchedPhotos,
-                'reasoning' => $reasoning
-            ]);
 
             // Critical security check - reject if any profile photo is screenshot/fake
             if ($hasScreenshot) {
