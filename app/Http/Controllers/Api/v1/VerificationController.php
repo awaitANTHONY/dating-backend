@@ -25,7 +25,7 @@ class VerificationController extends Controller
 
         // Validate request
         $validator = Validator::make($request->all(), [
-            'image' => 'required|image|mimes:jpeg,jpg,png,webp|max:5120', // 5MB max
+            'image' => 'required|image|mimes:jpeg,jpg,png,webp|max:5120', 
         ]);
 
         if ($validator->fails()) {
@@ -33,7 +33,7 @@ class VerificationController extends Controller
                 'status' => false,
                 'message' => 'Validation failed',
                 'errors' => $validator->errors()
-            ], 422);
+            ], 200);
         }
 
         // Check if user already has a pending verification
@@ -42,7 +42,7 @@ class VerificationController extends Controller
                 'status' => false,
                 'message' => 'You already have a pending verification request. Please wait for it to be processed.',
                 'code' => 'PENDING_VERIFICATION'
-            ], 409);
+            ], 200);
         }
 
         // Check if user is already verified
@@ -51,7 +51,7 @@ class VerificationController extends Controller
         //         'status' => false,
         //         'message' => 'Your account is already verified.',
         //         'code' => 'ALREADY_VERIFIED'
-        //     ], 409);
+        //     ], 200);
         // }
 
         try {
@@ -114,7 +114,7 @@ class VerificationController extends Controller
                 'status' => false,
                 'message' => 'Failed to submit verification request. Please try again.',
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            ], 200);
         }
     }
 
