@@ -91,9 +91,8 @@ class VerificationService
     private function checkLivenessAndGesture(string $imageUrl): array
     {
         try {
-            $prompt = 'You are an EXTREMELY STRICT verification system for a dating app identity verification. Your PRIMARY job is to REJECT everything except CLEAR, LIVE SELFIES with THUMBS-UP GESTURE.
+            $prompt = 'Analyze this photo and determine if it meets specific quality requirements. Respond in JSON format:
 
-Respond ONLY in valid JSON format:
 {
   "is_real_person": true/false,
   "single_person": true/false,
@@ -106,7 +105,55 @@ Respond ONLY in valid JSON format:
   "notes": "brief explanation"
 }
 
-CRITICAL VERIFICATION RULES - FOLLOW EXACTLY OR REJECT:
+REQUIREMENTS TO CHECK:
+
+1. SCREENSHOT/DOCUMENT CHECK - Set "is_document_or_screenshot" = true if you detect:
+   - Screenshots from apps or websites (visible UI, buttons, navigation bars)
+   - Social media watermarks or app logos
+   - Browser elements or phone UI elements
+   - Professional studio photos or modeling shots
+   - Photos of screens, documents, or printed images
+   - Text overlays, hashtags, or captions
+   - Image grids, collages, or multiple photos in one
+
+2. REAL PERSON CHECK - Set "is_real_person" = true only if:
+   - This appears to be a photograph of a real human
+   - NOT AI-generated, cartoon, drawing, or illustration
+   - NOT a photo of a photo or screen
+   - Appears to be a fresh selfie taken with a camera
+
+3. SINGLE PERSON - Set "single_person" = true only if:
+   - Exactly one person visible in photo
+   - No additional people in frame or background
+
+4. FACE VISIBLE - Set "face_visible" = true only if:
+   - Person\'s full face is clearly visible
+   - Nose and mouth are clearly showing
+   - Eyes and facial structure visible
+   - Face not covered by hands, masks, or objects (except hand showing gesture)
+   - Not a profile view or partial face
+
+5. THUMBS UP GESTURE - Set "thumbs_up_gesture" = true only if:
+   - Person is making a clear thumbs-up gesture
+   - Thumb pointing upward and clearly visible
+   - This is a REQUIRED gesture
+
+6. GOOD QUALITY - Set "good_quality" = true only if:
+   - Photo is clear, not blurry or pixelated
+   - Good lighting (not too dark or overexposed)
+   - Person\'s face is the main subject
+   - Recent and clear photo quality
+
+7. LIVE PHOTO - Set "is_live_photo" = true only if:
+   - Appears to be a fresh selfie taken just now
+   - NOT a screenshot or saved image
+   - NOT a professional or stock photo
+   - Simple background (home, room, outdoor) not studio
+
+ALL REQUIREMENTS MUST BE TRUE TO PASS (except is_document_or_screenshot must be FALSE).
+Set confidence 0.8+ for clear pass, lower if uncertain.
+
+Analyze objectively without identifying individuals.
 
 1. "is_document_or_screenshot" = TRUE **IMMEDIATELY** IF YOU SEE ANY OF THESE:
    ⚠️ SCREENSHOTS FROM ANY APP/WEBSITE (Pinterest, Instagram, Facebook, Twitter, TikTok, Google Images, dating apps, etc.)
@@ -338,7 +385,7 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
     private function checkMultiplePhotosMatch(string $verificationPhotoUrl, array $profilePhotoUrls): array
     {
         try {
-            $prompt = 'You are a professional face matching system for identity verification. Your task is to compare facial features across multiple photos.
+            $prompt = 'You are an image analysis system that compares visual similarities between photos.
 
 Respond in JSON format:
 {
@@ -349,52 +396,45 @@ Respond in JSON format:
   "unmatched_photos": [{"photo_number": 1, "reason": "description", "confidence": 0.0-1.0}]
 }
 
-SCREENSHOT DETECTION:
-Check if ANY profile photo is a screenshot (UI elements, watermarks, app logos). Set "profile_has_screenshot" = true if detected.
+TASK: Analyze if the person in the verification photo appears to be the same person in each profile photo.
 
-MATCHING PROCESS:
-Compare the verification photo with EACH profile photo individually. For each profile photo, determine if it shows the SAME PERSON.
+SCREENSHOT CHECK:
+Set "profile_has_screenshot" = true if any profile photo contains UI elements, watermarks, or app interfaces.
 
-FACIAL FEATURES TO COMPARE:
-- Face shape (oval, round, square, heart)
-- Eye shape, size, spacing
-- Nose shape and size
-- Mouth and lip shape
-- Bone structure (cheekbones, jawline, chin)
-- Skin tone
-- Gender and age range
-- Ethnicity
+VISUAL COMPARISON CRITERIA:
+Compare these visual characteristics across all photos:
+- Overall facial structure and proportions
+- Eye characteristics and positioning
+- Nose characteristics
+- Mouth and facial features
+- Skin characteristics
+- Apparent gender and age range
 
-IGNORE THESE VARIATIONS (normal for same person):
-- Hairstyle, hair color, hair length
-- Facial hair (beard, mustache)
-- Makeup
-- Lighting and photo quality
-- Facial expressions
-- Camera angles
+NORMAL VARIATIONS TO IGNORE:
+- Different hairstyles or hair colors
+- Presence/absence of facial hair
+- Different makeup
+- Different lighting
+- Different expressions
+- Different angles
 - Glasses
-- Backgrounds
-- Minor weight/aging changes
+- Photo quality differences
+- Minor appearance changes over time
 
-CONFIDENCE SCORING (per photo):
-- 0.9-1.0: Definitely same person
-- 0.7-0.89: Very likely same person
-- 0.5-0.69: Uncertain
-- 0.3-0.49: Probably different person
-- 0.0-0.29: Definitely different person
+CONFIDENCE SCALE:
+- 0.9-1.0: Very high similarity
+- 0.7-0.89: High similarity
+- 0.5-0.69: Moderate similarity
+- 0.3-0.49: Low similarity
+- 0.0-0.29: Very low similarity
 
-UNMATCHED PHOTOS:
-Only list photos where facial features CLEARLY show a DIFFERENT PERSON. Do NOT include photos that match.
+OUTPUT REQUIREMENTS:
+- Set "all_photos_match" = true ONLY if all profile photos appear to show the same person as verification photo
+- Set "all_photos_match" = false if any profile photo appears to show a different person
+- List in "unmatched_photos" only those photos that clearly appear to be different people
+- Calculate "overall_confidence" as the average similarity across all photos
 
-DECISION RULES:
-- "all_photos_match" = TRUE only if ALL profile photos show the SAME PERSON as verification
-- "all_photos_match" = FALSE if even ONE photo shows a different person
-- "overall_confidence" = average across all profile photos
-
-APPROVAL THRESHOLD:
-Approve ONLY if: overall_confidence >= 0.7 AND all_photos_match = true AND profile_has_screenshot = false
-
-Compare facial structure carefully and objectively.';
+Analyze the visual similarities objectively.';
 
 
             // Build image content for prompt
