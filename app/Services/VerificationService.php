@@ -338,7 +338,7 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
     private function checkMultiplePhotosMatch(string $verificationPhotoUrl, array $profilePhotoUrls): array
     {
         try {
-            $prompt = 'You are a face matching expert for identity verification. Compare the verification photo with ALL profile photos provided.
+            $prompt = 'You are a face matching expert for identity verification. Compare the verification photo with EACH profile photo individually.
 
 Respond ONLY in valid JSON format:
 {
@@ -349,68 +349,103 @@ Respond ONLY in valid JSON format:
   "unmatched_photos": [
     {
       "photo_number": 1,
-      "reason": "specific reason why this photo doesn\'t match",
+      "reason": "specific reason why THIS photo doesn\'t match the verification photo",
       "confidence": 0.0-1.0
     }
   ]
 }
 
-CRITICAL PRE-CHECK - REJECT PROFILE PHOTOS ONLY IF:
-⚠️ Profile photo is a SCREENSHOT from apps/websites with visible UI elements (buttons, navigation bars, status bars)
-⚠️ Profile photo has social media watermarks (@username, Instagram logo, TikTok logo, etc.)
-⚠️ Profile photo appears to be a celebrity, public figure, or model (recognizable famous person)
-⚠️ Profile photo is clearly downloaded from internet with search result elements
+TASK: Compare the VERIFICATION PHOTO with EACH PROFILE PHOTO separately. For each profile photo, ask yourself:
+"Does THIS profile photo show the SAME PERSON as the verification photo?"
 
-SET "profile_has_screenshot" = TRUE ONLY if you see clear UI elements or obvious screenshots.
+CRITICAL PRE-CHECK - Screenshot Detection:
+⚠️ Profile photo is a SCREENSHOT from apps/websites with visible UI elements
+⚠️ Profile photo has social media watermarks, app logos
+⚠️ Profile photo appears to be a celebrity or famous person
+⚠️ Profile photo has visible UI buttons, navigation bars, status bars
 
-IMPORTANT: Good quality photos, professional-looking photos, or similar poses are ALLOWED if they show a real person.
+SET "profile_has_screenshot" = TRUE ONLY if you see these elements.
 
-MATCHING RULES - Focus on FACIAL FEATURES:
+MATCHING RULES - Compare verification photo INDIVIDUALLY with EACH profile photo:
 
-1. "all_photos_match" = TRUE if the person has the SAME FACIAL FEATURES across all photos:
-   - SAME face shape (oval, round, square, heart-shaped)
-   - SAME eye shape, size, and spacing
-   - SAME nose shape and size
-   - SAME mouth and lip shape
-   - SAME facial bone structure (cheekbones, jawline, chin)
-   - SAME skin tone and complexion
-   - SAME gender and approximate age
+1. For EACH profile photo, check if it shows the SAME PERSON as verification photo:
+   
+   SAME PERSON = TRUE if these FACIAL FEATURES match:
+   - Face shape (oval, round, square, heart)
+   - Eye shape, size, and spacing between eyes
+   - Nose shape and size
+   - Mouth and lip shape
+   - Facial bone structure (cheekbones, jawline, chin)
+   - Skin tone and complexion
+   - Gender and approximate age range
+   - Ethnicity and racial features
 
-2. IGNORE these differences (they are NORMAL and ALLOWED):
-   - Different hairstyles, hair color, or hair length
-   - Presence or absence of facial hair (beard, mustache)
-   - Different makeup styles or amounts
-   - Different lighting, angles, or photo quality
-   - Different expressions (smiling, serious, etc.)
-   - Different backgrounds or settings
-   - Glasses vs no glasses
-   - Different photo quality (professional vs casual)
-   - Weight changes or aging (up to 5-10 years)
+   DIFFERENT PERSON = FALSE if:
+   - Face shape is clearly different
+   - Eye shape or spacing is noticeably different
+   - Nose structure is different
+   - Different ethnicity, gender, or skin tone
+   - Different person entirely
 
-3. "overall_confidence" scoring:
-   - 0.9-1.0 = Same person, facial features clearly match
-   - 0.7-0.89 = Likely same person, minor variations in features
-   - 0.5-0.69 = Uncertain, features somewhat similar
-   - 0.0-0.49 = Different people, facial features do not match
+2. IGNORE these variations (NORMAL for same person):
+   ✓ Different hairstyles, hair color, hair length
+   ✓ Facial hair (beard, mustache) present or absent
+   ✓ Different makeup or no makeup
+   ✓ Different lighting conditions or photo quality
+   ✓ Different facial expressions (smiling, serious)
+   ✓ Different angles or camera distances
+   ✓ Glasses vs no glasses
+   ✓ Professional vs casual photo quality
+   ✓ Different backgrounds or settings
+   ✓ Minor weight changes or aging (up to 5-10 years)
 
-4. "unmatched_photos" - Only list photos where facial features are CLEARLY DIFFERENT:
-   - Different face shape or bone structure
-   - Different eye shape or spacing
-   - Different nose structure
-   - Different ethnicity or gender
-   - Clearly a different person
+3. CONFIDENCE scoring for EACH photo:
+   - 0.9-1.0 = Definitely the same person, features match clearly
+   - 0.7-0.89 = Very likely same person, features mostly match
+   - 0.5-0.69 = Uncertain, some similarities but unclear
+   - 0.3-0.49 = Probably different person, features don\'t match well
+   - 0.0-0.29 = Definitely different person, features clearly don\'t match
+
+4. "unmatched_photos" array rules:
+   - ONLY include photos where the person is CLEARLY DIFFERENT from verification photo
+   - List photo_number for photos that DON\'T MATCH
+   - If a profile photo shows the SAME PERSON as verification, DO NOT include it
+   - If 2 photos match but 1 doesn\'t → only list the 1 that doesn\'t match
+   - Provide specific reason why THAT SPECIFIC photo doesn\'t match
+
+5. "all_photos_match" decision:
+   - TRUE = ALL profile photos show the SAME PERSON as verification photo
+   - FALSE = At least ONE profile photo shows a DIFFERENT PERSON
+   - If even 1 photo doesn\'t match → all_photos_match = FALSE
+
+6. "overall_confidence" calculation:
+   - Average the confidence scores across ALL profile photos
+   - If most photos match well but 1 doesn\'t → moderate confidence (0.5-0.7)
+   - If all photos match well → high confidence (0.8-1.0)
+   - If multiple photos don\'t match → low confidence (0.0-0.5)
+
+EXAMPLES:
+
+Example 1: User uploads verification selfie + 3 profile photos of themselves
+Result: all_photos_match = TRUE, overall_confidence = 0.9, unmatched_photos = []
+
+Example 2: User has 2 real photos + 1 random person photo
+Result: all_photos_match = FALSE, overall_confidence = 0.6, unmatched_photos = [{"photo_number": 3, "reason": "Different face shape, eye spacing, and nose structure - clearly a different person", "confidence": 0.2}]
+
+Example 3: User has 3 photos of different people
+Result: all_photos_match = FALSE, overall_confidence = 0.1, unmatched_photos = [{"photo_number": 1, ...}, {"photo_number": 2, ...}, {"photo_number": 3, ...}]
+
+CRITICAL INSTRUCTIONS:
+- Compare each profile photo INDIVIDUALLY against the verification photo
+- DO NOT compare profile photos to each other
+- Only mark a photo as "unmatched" if it shows a DIFFERENT PERSON than verification
+- Be LENIENT with styling differences (hair, makeup, lighting)
+- Be STRICT with facial feature differences (face shape, eyes, nose, bone structure)
+- If uncertain about a photo → give it benefit of doubt (mark as matched unless clearly different)
 
 APPROVAL THRESHOLD: overall_confidence 0.7+ AND all_photos_match = true
 
-CRITICAL: Focus ONLY on facial features that identify a person. Do NOT reject based on:
-- Photo quality (professional vs casual)
-- Styling differences (hair, makeup, clothing)
-- Similar poses or backgrounds
-- Good lighting or photo editing
-
-Be LENIENT with legitimate users. Only reject if you are confident the facial features show DIFFERENT PEOPLE.
-
-Compare facial structure carefully.';
+Focus on IDENTIFYING if each profile photo shows the SAME PERSON as the verification photo.';
 
 
             // Build image content for prompt
