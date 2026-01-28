@@ -446,7 +446,8 @@ class ProfileController extends Controller
             'q', 'gender', 'interests', 'languages', 'relation_goals',
             'religion_id', 'relationship_status_id', 'ethnicity_id', 
             'education_id', 'carrer_field_id', 'alkohol', 'smoke',
-            'min_age', 'max_age', 'min_height', 'max_height', 'radius'
+            'min_age', 'max_age', 'min_height', 'max_height', 'radius',
+            'is_verified'
         ];
 
         foreach ($searchParams as $param) {
@@ -634,6 +635,14 @@ class ProfileController extends Controller
             $query->whereHas('user_information', function($q) use ($minHeight, $maxHeight) {
                 if ($minHeight) $q->where('height', '>=', $minHeight);
                 if ($maxHeight) $q->where('height', '<=', $maxHeight);
+            });
+        }
+
+        // Verified filter (accepts true/false, 1/0, "true"/"false")
+        if ($request->has('is_verified') && !is_null($request->input('is_verified'))) {
+            $isVerified = filter_var($request->input('is_verified'), FILTER_VALIDATE_BOOLEAN);
+            $query->whereHas('user_information', function($q) use ($isVerified) {
+                $q->where('is_verified', $isVerified);
             });
         }
     }
