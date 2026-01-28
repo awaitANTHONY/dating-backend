@@ -22,27 +22,20 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $search_by = $request->search_by;
-        $search = $request->search;
-        
-        // Select only needed columns for better performance
-        $users = User::where('user_type', 'user');
-        
-        if ($search_by != '' && $search != '') {
-            $users->where($search_by, 'LIKE', '%' . $search . '%');
-        }
-        
-        $users->orderBy('id', 'DESC');
-
-        $currency = get_option('currency');
-
         if ($request->ajax()) {
+            $search_by = $request->search_by;
+            $search = $request->search;
+            
+            $users = User::select(['id', 'name', 'email', 'image', 'status'])
+                        ->where('user_type', 'user');
+            
+            if (!empty($search_by) && !empty($search)) {
+                $users->where($search_by, 'LIKE', '%' . $search . '%');
+            }
+            
             return DataTables::of($users)
                 ->editColumn('image', function ($user) {
                     return '<img class="img-sm img-thumbnail" src="' . asset($user->image) . '">';
-                })
-                ->addColumn('name', function ($user) {
-                    return $user->name;
                 })
                 ->editColumn('status', function ($user) {
                     if ($user->status == 1) {
@@ -54,51 +47,26 @@ class UserController extends Controller
                     }
                 })
                 ->addColumn('action', function($user){
-
-                    $action = '<div class="dropdown">
-                                    <button class="btn btn-primary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        ' . _lang('Action') . '
-                                    </button>
-                                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">';
-                    $action .= '<a href="' . route('users.show', $user->id) . '" class="dropdown-item" data-title="' . _lang('Details') . '">
-                                        <i class="fas fa-eye"></i>
-                                        ' . _lang('Details') . '
-                                    </a>';
-
-                    $action .= '<a href="' . route('users.edit', $user->id) . '" class="dropdown-item" data-title="' . _lang('Edit') . '">
-                                        <i class="fas fa-edit"></i>
-                                        ' . _lang('Edit') . '
-                                    </a>';
-                    
-                    if ($user->status == 4) {
-                        $action .= '<a href="' . route('users.unban', $user->id) . '" class="dropdown-item ajax-unban" data-title="' . _lang('Unban User') . '">
-                                            <i class="fas fa-unlock"></i>
-                                            ' . _lang('Unban User') . '
-                                        </a>';
-                    } else {
-                        $action .= '<a href="' . route('users.ban', $user->id) . '" class="dropdown-item ajax-ban" data-title="' . _lang('Ban User') . '">
-                                            <i class="fas fa-ban"></i>
-                                            ' . _lang('Ban User') . '
-                                        </a>';
-                    }
-                    
-                    $action .= '<form action="' . route('users.destroy', $user->id) . '" method="post" class="ajax-delete">'
-                                . csrf_field() 
-                                . method_field('DELETE') 
-                                . '<button type="button" class="btn-remove dropdown-item">
-                                        <i class="fas fa-trash-alt"></i>
-                                        ' . _lang('Delete') . '
-                                    </button>
-                                </form>';
-                    $action .= '</div>
+                    return '<div class="dropdown">
+                                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-toggle="dropdown">' . _lang('Action') . '</button>
+                                <div class="dropdown-menu">
+                                    <a href="' . route('users.show', $user->id) . '" class="dropdown-item"><i class="fas fa-eye"></i> ' . _lang('Details') . '</a>
+                                    <a href="' . route('users.edit', $user->id) . '" class="dropdown-item"><i class="fas fa-edit"></i> ' . _lang('Edit') . '</a>
+                                    ' . ($user->status == 4 
+                                        ? '<a href="' . route('users.unban', $user->id) . '" class="dropdown-item ajax-unban"><i class="fas fa-unlock"></i> ' . _lang('Unban User') . '</a>'
+                                        : '<a href="' . route('users.ban', $user->id) . '" class="dropdown-item ajax-ban"><i class="fas fa-ban"></i> ' . _lang('Ban User') . '</a>'
+                                    ) . '
+                                    <form action="' . route('users.destroy', $user->id) . '" method="post" class="ajax-delete">' . csrf_field() . method_field('DELETE') . '
+                                        <button type="button" class="btn-remove dropdown-item"><i class="fas fa-trash-alt"></i> ' . _lang('Delete') . '</button>
+                                    </form>
+                                </div>
                             </div>';
-                    return $action;
                 })
-                ->rawColumns(['action', 'status', 'image', 'app_unique_id'])
+                ->rawColumns(['action', 'status', 'image'])
                 ->make(true);
         }
 
-        return view('backend.users.index', compact('users'));
+        return view('backend.users.index');
     }
 
     /**
