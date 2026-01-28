@@ -19,9 +19,3 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
-
-# Increase timeout for Hostinger shared hosting
-<IfModule mod_php.c>
-    php_value max_execution_time 300
-    php_value max_input_time 300
-</IfModule>
