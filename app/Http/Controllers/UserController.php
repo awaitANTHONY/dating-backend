@@ -24,16 +24,15 @@ class UserController extends Controller
     {
         $search_by = $request->search_by;
         $search = $request->search;
+        
+        // Select only needed columns for better performance
+        $users = User::where('user_type', 'user');
+        
         if ($search_by != '' && $search != '') {
-            
-
-            $users = User::where('user_type', 'user')
-                            ->where($search_by, 'LIKE', '%' . $search . '%')
-                            ->orderBy('id', 'DESC');
-        }else{
-            $users = User::where('user_type', 'user')
-                            ->orderBy('id', 'DESC');
+            $users->where($search_by, 'LIKE', '%' . $search . '%');
         }
+        
+        $users->orderBy('id', 'DESC');
 
         $currency = get_option('currency');
 
