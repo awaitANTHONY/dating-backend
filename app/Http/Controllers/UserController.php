@@ -22,9 +22,18 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
+        $search_by = $request->search_by;
+        $search = $request->search;
+        if ($search_by != '' && $search != '') {
+            
 
-        $users = User::where('user_type', 'user')
+            $users = User::where('user_type', 'user')
+                            ->where($search_by, 'LIKE', '%' . $search . '%')
                             ->orderBy('id', 'DESC');
+        }else{
+            $users = User::where('user_type', 'user')
+                            ->orderBy('id', 'DESC');
+        }
 
         $currency = get_option('currency');
 
