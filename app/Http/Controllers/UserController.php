@@ -32,6 +32,8 @@ class UserController extends Controller
             if (!empty($search_by) && !empty($search)) {
                 $users->where($search_by, 'LIKE', '%' . $search . '%');
             }
+
+            $users = $users->orderBy('id', 'DESC');
             
             return DataTables::of($users)
                 ->editColumn('image', function ($user) {
