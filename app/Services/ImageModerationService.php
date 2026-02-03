@@ -216,10 +216,10 @@ class ImageModerationService
             // Generate public URL for the image
             $imageUrl = asset($filePath);
 
-            $prompt = 'You are an EXTREMELY STRICT moderator for a dating app profile photo system.
-Your PRIMARY job is to REJECT everything except CLEAR, CLOSE-UP photos of REAL HUMAN FACES.
+            $prompt = 'You are a moderator for a dating app profile photo system.
+Your job is to APPROVE photos of REAL PEOPLE and REJECT inappropriate content.
 
-THIS IS A DATING APP - ONLY APPROVE PHOTOS WHERE YOU CAN SEE A PERSON\'S FACE CLEARLY.
+THIS IS A DATING APP - Approve photos where you can see a real person.
 
 Analyze the image and respond ONLY in valid JSON format:
 {
@@ -234,66 +234,54 @@ Analyze the image and respond ONLY in valid JSON format:
   "confidence": 0.0-1.0
 }
 
-CRITICAL RULES - FOLLOW EXACTLY OR REJECT:
+RULES:
 
-1. "is_document_or_screenshot" = TRUE **IMMEDIATELY** IF YOU SEE ANY OF THESE:
-   ⚠️ SCREENSHOTS FROM ANY APP/WEBSITE (Pinterest, Instagram, Facebook, Twitter, TikTok, Google Images, WhatsApp, Snapchat, etc.)
-   ⚠️ App UI elements: navigation bars, buttons, back arrows, share buttons, menu icons, status bars
-   ⚠️ Website elements: URLs, website headers, "Visit" buttons, "Save" buttons, "Share" options
-   ⚠️ Social media indicators: usernames, @handles, follower counts, like buttons, comment sections
-   ⚠️ Search results: Google Images, Bing Images, Pinterest grids, image search layouts
-   ⚠️ Browser elements: address bars, tabs, bookmarks, browser chrome
-   ⚠️ Phone UI: battery indicator, time, signal bars, wifi icon, notifications at top/bottom
-   ⚠️ Professional sports photos: team jerseys, uniforms, official team photos, player headshots
-   ⚠️ News/media photos: news site layouts, article headers, captions
-   ⚠️ Stock photo watermarks: Getty Images, Shutterstock, iStock, Adobe Stock
-   ⚠️ Documents: IDs, passports, receipts, cards, certificates
-   ⚠️ Text overlays: hashtags (#), quotes, memes, motivational text, captions
-   ⚠️ Multiple images in one: collages, grids, before/after comparisons
-
-2. "has_human_face" = TRUE **ONLY** IF ALL THESE CONDITIONS ARE MET:
-   ✓ You can see a REAL HUMAN FACE as the MAIN SUBJECT of the photo
-   ✓ The face is CLEAR, CLOSE-UP, and takes up significant portion of the image
-   ✓ You can see NOSE and MOUTH clearly visible
-   ✓ Eyes can be covered by sunglasses/glasses - this is OK
-   ✓ The person is the PRIMARY focus, not a background element
-   ✓ NO UI elements, buttons, or app interfaces visible
+1. "has_human_face" = TRUE if:
+   ✓ You can see a REAL HUMAN FACE in the photo (even if not close-up)
+   ✓ Full body shots with visible face = TRUE
+   ✓ Portrait shots = TRUE
+   ✓ Selfies = TRUE
+   ✓ Photos with unusual lighting (colored lights, dim, bright) but face visible = TRUE
+   ✓ Person wearing sunglasses/glasses = TRUE (eyes covered is OK)
    
-   SET FALSE FOR (BE STRICT):
-   ✗ ANY screenshot from apps/websites/browsers
-   ✗ Professional sports photos (jerseys, team uniforms, official photos)
-   ✗ Cars, vehicles, dashboards, speedometers, interiors
-   ✗ Car selfies where the car dashboard/interior is more visible than the face
-   ✗ Photos taken inside vehicles where steering wheel/dashboard is prominent
-   ✗ Any photo where objects/environment dominate over the human face
-   ✗ Face masks, medical masks, bandanas, scarves covering nose/mouth
-   ✗ Back of head, side profiles where face is not clearly visible
-   ✗ Distant shots, group photos, tiny faces
-   ✗ Silhouettes, shadows, dark photos where face is unclear
-   ✗ Objects: food, drinks, buildings, landscapes, animals, nature, shoes, clothes, jeans
-   ✗ Emoji, cartoon faces, drawn faces, illustrated faces, icons
-   ✗ Stock photos, professional photoshoots, magazine covers
-   ✗ Celebrities, athletes, models, influencers, public figures
+   SET FALSE ONLY FOR:
+   ✗ NO human face at all (only objects like cars, shoes, food, landscapes, buildings)
+   ✗ Back of head only, face completely hidden
+   ✗ Cartoons, drawings, anime, memes, illustrations
+   ✗ Animals only (no human)
+
+2. "is_real_person" = TRUE if this is a PHOTOGRAPH of a REAL HUMAN BEING
+   - FALSE for: drawings, cartoons, anime, AI art, memes, illustrations
+
+3. "personal_photo" = TRUE if this looks like a personal photo someone took
+   - Can be selfie, portrait, or full body shot
+   - Can have unusual lighting or filters
+   - FALSE only for: obvious stock photos, celebrity/athlete professional photos, screenshots from websites
+
+4. "is_document_or_screenshot" = TRUE ONLY if you see:
+   - Screenshots from Facebook, Instagram, Pinterest, Twitter, TikTok, WhatsApp, Snapchat
+   - Screenshots from Google Images, Bing Images, or any image search
+   - Visible app UI elements: navigation bars, like buttons, share buttons, status bars with time/battery
+   - Website URLs, browser tabs, address bars
+   - Memes with TEXT OVERLAYS or captions
+   - Documents, IDs, receipts
+   - Stock photo watermarks (Getty, Shutterstock, iStock)
    
-3. "is_real_person" = TRUE ONLY if this is a PHOTOGRAPH of a REAL HUMAN BEING
-   - NOT drawings, cartoons, anime, AI art, digital art, paintings, illustrations, memes
-   
-4. "personal_photo" = TRUE ONLY if this is clearly a PERSONAL SELFIE or PORTRAIT
-   - NOT professional photos, stock images, celebrity photos, magazine covers, athlete photos
-   - NOT screenshots from social media, image search, or any website
-   - The photo should look like someone took it for dating/social media purposes
-   - Must be a DIRECT photo, not a screenshot or saved image from internet
+   SET FALSE for:
+   - Normal photos with no UI elements
+   - Photos with colored lighting or filters (these are NOT screenshots)
 
-5. "likely_public_figure_or_model" = TRUE for:
-   - Professional athletes (ANY sport - football, basketball, soccer, etc.)
-   - Team jerseys, sports uniforms, official player photos
-   - Celebrities, models, influencers with professional photos
+5. "watermark_or_text" = TRUE only if there is obvious watermark or large text overlay on the image
 
-6. "watermark_or_text" = TRUE if visible text/watermarks on image
+6. "likely_public_figure_or_model" = TRUE only for obvious celebrities, professional athletes in jerseys, famous models
 
-REMEMBER: This is a DATING APP. People must upload ORIGINAL photos they took themselves.
-REJECT all screenshots, saved images from internet, professional photos, and athlete photos.
-When in doubt, REJECT. Be EXTREMELY STRICT.';
+7. "nsfw" = TRUE for nudity, sexual content, explicit material
+
+IMPORTANT: 
+- Full body shots with visible face = APPROVE
+- Photos with colored/unusual lighting = APPROVE (not a screenshot)
+- Personal photos in any setting (home, outside, etc.) = APPROVE
+- Only reject if there is NO human face or it is clearly a screenshot/meme/fake';
 
 
             $response = Http::withHeaders([
