@@ -590,8 +590,11 @@ class AuthController extends Controller
                 $profileImageUpdated = true;
             }
 
-            // Handle multiple images upload
+            // Handle multiple images upload - process all images, don't fail on first rejection
             if ($request->hasFile('images')) {
+                $rejectedImages = [];
+                $approvedImages = [];
+                
                 foreach ($request->file('images') as $index => $imageFile) {
                     $extension = $imageFile->getClientOriginalExtension();
                     $fileName = 'gallery_' . time() . '_' . uniqid() . '_' . $index . '.' . $extension;
@@ -601,35 +604,47 @@ class AuthController extends Controller
                     
                     $galleryImagePath = $userPath . $fileName;
                     
-                    // Moderate image synchronously
+                    // Moderate image synchronously - allow extra time for each image
                     $moderationResult = moderate_image($galleryImagePath, $user->id, 'gallery');
                     
                     if ($moderationResult['decision'] === 'rejected') {
-                        // Delete rejected image
+                        // Delete rejected image but continue processing others
                         @unlink(base_path($galleryImagePath));
-                        
-                        \DB::rollBack();
-                        return response()->json([
-                            'status' => false,
-                            'message' => 'Gallery image rejected: ' . $this->getModerationMessage($moderationResult['reason']),
-                            'moderation' => [
-                                'decision' => 'rejected',
-                                'reason' => $moderationResult['reason'],
-                                'confidence' => $moderationResult['confidence']
-                            ]
-                        ], 400);
+                        $rejectedImages[] = [
+                            'index' => $index + 1,
+                            'reason' => $moderationResult['reason'],
+                            'message' => $this->getModerationMessage($moderationResult['reason'])
+                        ];
+                    } elseif ($moderationResult['decision'] === 'review') {
+                        // Image needs manual review - still save it but flag it
+                        $approvedImages[] = $galleryImagePath;
+                        $uploadedImages[] = $galleryImagePath;
+                    } else {
+                        // Image approved
+                        $approvedImages[] = $galleryImagePath;
+                        $uploadedImages[] = $galleryImagePath;
                     }
-                    
-                    $uploadedImages[] = $galleryImagePath;
                 }
 
-                // Update user information with new gallery images
-                $userInfo = $user->user_information;
-                if ($userInfo) {
-                    $existingImages =  $userInfo->images != null ? $userInfo->images : [];
-                    $allImages = array_merge($existingImages, $uploadedImages);
-                    $userInfo->images = $allImages;
-                    $userInfo->save();
+                // If ALL images were rejected, return error
+                if (count($rejectedImages) > 0 && count($approvedImages) === 0) {
+                    \DB::rollBack();
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'All gallery images were rejected',
+                        'rejected_images' => $rejectedImages
+                    ], 200);
+                }
+
+                // Update user information with approved gallery images
+                if (!empty($uploadedImages)) {
+                    $userInfo = $user->user_information;
+                    if ($userInfo) {
+                        $existingImages = $userInfo->images != null ? $userInfo->images : [];
+                        $allImages = array_merge($existingImages, $uploadedImages);
+                        $userInfo->images = $allImages;
+                        $userInfo->save();
+                    }
                 }
             }
 
@@ -645,11 +660,20 @@ class AuthController extends Controller
             $user_information = $user->user_information;
             $user->is_vip = (bool) $user->isVipActive();
 
+            // Build response with info about any rejected images
             $response = [
                 'status' => true,
                 'message' => 'Images uploaded successfully',
-                'user' => $user
+                'user' => $user,
+                'approved_count' => count($uploadedImages),
             ];
+            
+            // Include rejected images info if any were rejected but some passed
+            if (isset($rejectedImages) && count($rejectedImages) > 0) {
+                $response['message'] = count($uploadedImages) . ' image(s) approved, ' . count($rejectedImages) . ' image(s) rejected';
+                $response['rejected_images'] = $rejectedImages;
+            }
+            
             return response()->json($response);
 
         } catch (\Exception $e) {

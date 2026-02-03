@@ -213,8 +213,6 @@ class ImageModerationService
     private function classifyWithOpenAI(string $filePath): array
     {
         try {
-            $fullPath = base_path($filePath);
-            
             // Generate public URL for the image
             $imageUrl = asset($filePath);
 
@@ -239,26 +237,19 @@ Analyze the image and respond ONLY in valid JSON format:
 CRITICAL RULES - FOLLOW EXACTLY OR REJECT:
 
 1. "is_document_or_screenshot" = TRUE **IMMEDIATELY** IF YOU SEE ANY OF THESE:
-   ⚠️ SCREENSHOTS FROM ANY APP/WEBSITE (Pinterest, Instagram, Facebook, Twitter, TikTok, Google Images, etc.)
+   ⚠️ SCREENSHOTS FROM ANY APP/WEBSITE (Pinterest, Instagram, Facebook, Twitter, TikTok, Google Images, WhatsApp, Snapchat, etc.)
    ⚠️ App UI elements: navigation bars, buttons, back arrows, share buttons, menu icons, status bars
    ⚠️ Website elements: URLs, website headers, "Visit" buttons, "Save" buttons, "Share" options
    ⚠️ Social media indicators: usernames, @handles, follower counts, like buttons, comment sections
    ⚠️ Search results: Google Images, Bing Images, Pinterest grids, image search layouts
    ⚠️ Browser elements: address bars, tabs, bookmarks, browser chrome
-   ⚠️ Phone UI: battery indicator, time, signal bars, notifications at top/bottom
+   ⚠️ Phone UI: battery indicator, time, signal bars, wifi icon, notifications at top/bottom
    ⚠️ Professional sports photos: team jerseys, uniforms, official team photos, player headshots
    ⚠️ News/media photos: news site layouts, article headers, captions
    ⚠️ Stock photo watermarks: Getty Images, Shutterstock, iStock, Adobe Stock
    ⚠️ Documents: IDs, passports, receipts, cards, certificates
    ⚠️ Text overlays: hashtags (#), quotes, memes, motivational text, captions
    ⚠️ Multiple images in one: collages, grids, before/after comparisons
-   
-   EXAMPLE SCREENSHOTS TO ALWAYS REJECT:
-   - Pinterest screenshots (red P logo, "Save" button, "Visit" button, Pinterest layout)
-   - Instagram screenshots (heart icon, comment icon, username at top, IG story interface)
-   - Google Images (grid of images, search bar visible, "Images" tab)
-   - Sports websites (365Scores, ESPN, team logos, jersey numbers, stats)
-   - Any image with visible app/website branding or UI elements
 
 2. "has_human_face" = TRUE **ONLY** IF ALL THESE CONDITIONS ARE MET:
    ✓ You can see a REAL HUMAN FACE as the MAIN SUBJECT of the photo
@@ -279,13 +270,13 @@ CRITICAL RULES - FOLLOW EXACTLY OR REJECT:
    ✗ Back of head, side profiles where face is not clearly visible
    ✗ Distant shots, group photos, tiny faces
    ✗ Silhouettes, shadows, dark photos where face is unclear
-   ✗ Objects: food, drinks, buildings, landscapes, animals, nature
+   ✗ Objects: food, drinks, buildings, landscapes, animals, nature, shoes, clothes, jeans
    ✗ Emoji, cartoon faces, drawn faces, illustrated faces, icons
    ✗ Stock photos, professional photoshoots, magazine covers
    ✗ Celebrities, athletes, models, influencers, public figures
    
 3. "is_real_person" = TRUE ONLY if this is a PHOTOGRAPH of a REAL HUMAN BEING
-   - NOT drawings, cartoons, anime, AI art, digital art, paintings, illustrations
+   - NOT drawings, cartoons, anime, AI art, digital art, paintings, illustrations, memes
    
 4. "personal_photo" = TRUE ONLY if this is clearly a PERSONAL SELFIE or PORTRAIT
    - NOT professional photos, stock images, celebrity photos, magazine covers, athlete photos
@@ -298,26 +289,17 @@ CRITICAL RULES - FOLLOW EXACTLY OR REJECT:
    - Team jerseys, sports uniforms, official player photos
    - Celebrities, models, influencers with professional photos
 
-EXTREME REJECTION CRITERIA - SET is_document_or_screenshot = TRUE IF ANY:
-❌ ANY screenshot from Pinterest, Instagram, Facebook, Google, Twitter, TikTok, etc.
-❌ Visible UI elements (buttons, icons, navigation bars, status bars)
-❌ Visible app branding or website logos
-❌ Professional sports photos (jerseys, uniforms, team photos)
-❌ Phone interface elements (battery, time, signal bars, back button)
-❌ "Visit" buttons, "Save" buttons, "Share" options
-❌ Search result layouts, image grids, collages
-❌ Any text overlays (hashtags, quotes, captions, watermarks)
-❌ Professional photography studio backgrounds
+6. "watermark_or_text" = TRUE if visible text/watermarks on image
 
 REMEMBER: This is a DATING APP. People must upload ORIGINAL photos they took themselves.
 REJECT all screenshots, saved images from internet, professional photos, and athlete photos.
-When in doubt, SET is_document_or_screenshot = TRUE. Be EXTREMELY STRICT.';
+When in doubt, REJECT. Be EXTREMELY STRICT.';
 
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(30)->post('https://api.openai.com/v1/chat/completions', [
+            ])->timeout(60)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => $this->model,
                 'messages' => [
                     [
