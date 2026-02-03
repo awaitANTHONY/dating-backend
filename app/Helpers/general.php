@@ -553,7 +553,7 @@ if (!function_exists('moderate_image')) {
     {
         try {
             $moderationService = new \App\Services\ImageModerationService();
-            $result = $moderationService->moderateImage($localFilePath);
+            $result = $moderationService->moderateImage($localFilePath, $imageType);
             
             // Log the moderation result
             \Log::info('Image moderation completed', [

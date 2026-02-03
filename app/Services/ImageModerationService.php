@@ -27,7 +27,7 @@ class ImageModerationService
      * @param string $localFilePath Local file path (e.g., public/uploads/images/users/1/profile.jpg)
      * @return array ['decision' => 'approved|rejected|review', 'reason' => string, 'confidence' => float, 'details' => array]
      */
-    public function moderateImage(string $localFilePath): array
+    public function moderateImage(string $localFilePath, string $imageType): array
     {
         try {
             // Step 1: Basic validation
@@ -56,7 +56,7 @@ class ImageModerationService
             $faceCount = $this->detectFaceCount($localFilePath);
 
             // Step 4: OpenAI Vision classification
-            $openaiResult = $this->classifyWithOpenAI($localFilePath);
+            $openaiResult = $this->classifyWithOpenAI($localFilePath, $imageType);
             
             if (!$openaiResult['success']) {
                 Log::warning('OpenAI moderation failed, sending to review', [
@@ -73,8 +73,8 @@ class ImageModerationService
 
             $analysis = $openaiResult['data'];
 
-            // Step 5: Decision logic
-            $decision = $this->makeDecision($analysis, $hash);
+            // Step 5: Decision logic (different rules for profile vs gallery)
+            $decision = $this->makeDecision($analysis, $hash, $imageType);
 
             // Log moderation result
             Log::info('Image moderation completed', [
@@ -210,78 +210,18 @@ class ImageModerationService
     /**
      * Classify image using OpenAI Vision API
      */
-    private function classifyWithOpenAI(string $filePath): array
+    private function classifyWithOpenAI(string $filePath, string $imageType = 'gallery'): array
     {
         try {
             // Generate public URL for the image
             $imageUrl = asset($filePath);
 
-            $prompt = 'You are a moderator for a dating app profile photo system.
-Your job is to APPROVE photos of REAL PEOPLE and REJECT inappropriate content.
-
-THIS IS A DATING APP - Approve photos where you can see a real person.
-
-Analyze the image and respond ONLY in valid JSON format:
-{
-  "has_human_face": true/false,
-  "is_real_person": true/false,
-  "personal_photo": true/false,
-  "likely_public_figure_or_model": true/false,
-  "nsfw": true/false,
-  "ai_generated": true/false,
-  "watermark_or_text": true/false,
-  "is_document_or_screenshot": true/false,
-  "confidence": 0.0-1.0
-}
-
-RULES:
-
-1. "has_human_face" = TRUE if:
-   ✓ You can see a REAL HUMAN FACE in the photo (even if not close-up)
-   ✓ Full body shots with visible face = TRUE
-   ✓ Portrait shots = TRUE
-   ✓ Selfies = TRUE
-   ✓ Photos with unusual lighting (colored lights, dim, bright) but face visible = TRUE
-   ✓ Person wearing sunglasses/glasses = TRUE (eyes covered is OK)
-   
-   SET FALSE ONLY FOR:
-   ✗ NO human face at all (only objects like cars, shoes, food, landscapes, buildings)
-   ✗ Back of head only, face completely hidden
-   ✗ Cartoons, drawings, anime, memes, illustrations
-   ✗ Animals only (no human)
-
-2. "is_real_person" = TRUE if this is a PHOTOGRAPH of a REAL HUMAN BEING
-   - FALSE for: drawings, cartoons, anime, AI art, memes, illustrations
-
-3. "personal_photo" = TRUE if this looks like a personal photo someone took
-   - Can be selfie, portrait, or full body shot
-   - Can have unusual lighting or filters
-   - FALSE only for: obvious stock photos, celebrity/athlete professional photos, screenshots from websites
-
-4. "is_document_or_screenshot" = TRUE ONLY if you see:
-   - Screenshots from Facebook, Instagram, Pinterest, Twitter, TikTok, WhatsApp, Snapchat
-   - Screenshots from Google Images, Bing Images, or any image search
-   - Visible app UI elements: navigation bars, like buttons, share buttons, status bars with time/battery
-   - Website URLs, browser tabs, address bars
-   - Memes with TEXT OVERLAYS or captions
-   - Documents, IDs, receipts
-   - Stock photo watermarks (Getty, Shutterstock, iStock)
-   
-   SET FALSE for:
-   - Normal photos with no UI elements
-   - Photos with colored lighting or filters (these are NOT screenshots)
-
-5. "watermark_or_text" = TRUE only if there is obvious watermark or large text overlay on the image
-
-6. "likely_public_figure_or_model" = TRUE only for obvious celebrities, professional athletes in jerseys, famous models
-
-7. "nsfw" = TRUE for nudity, sexual content, explicit material
-
-IMPORTANT: 
-- Full body shots with visible face = APPROVE
-- Photos with colored/unusual lighting = APPROVE (not a screenshot)
-- Personal photos in any setting (home, outside, etc.) = APPROVE
-- Only reject if there is NO human face or it is clearly a screenshot/meme/fake';
+            // Different prompts for profile (strict) vs gallery (relaxed)
+            if ($imageType === 'profile') {
+                $prompt = $this->getProfilePrompt();
+            } else {
+                $prompt = $this->getGalleryPrompt();
+            }
 
 
             $response = Http::withHeaders([
@@ -361,15 +301,31 @@ IMPORTANT:
     /**
      * Make final moderation decision
      */
-    private function makeDecision(array $analysis, string $hash): array
+    private function makeDecision(array $analysis, string $hash, string $imageType = 'gallery'): array
     {
         $decision = 'approved';
         $reason = 'passed_moderation';
         $confidence = $analysis['confidence'] ?? 0.5;
 
-        // STRICT REJECTION RULES (in priority order)
+        // Use strict rules for profile, relaxed for gallery
+        if ($imageType === 'profile') {
+            return $this->makeProfileDecision($analysis, $hash, $confidence);
+        } else {
+            return $this->makeGalleryDecision($analysis, $hash, $confidence);
+        }
+    }
+
+    /**
+     * Strict decision rules for PROFILE images - must have clear face
+     */
+    private function makeProfileDecision(array $analysis, string $hash, float $confidence): array
+    {
+        $decision = 'approved';
+        $reason = 'passed_moderation';
+
+        // STRICT RULES FOR PROFILE IMAGES
         
-        // 1. CRITICAL: Reject if no human face detected - THIS IS THE MOST IMPORTANT CHECK
+        // 1. CRITICAL: Reject if no human face detected
         if (!isset($analysis['has_human_face']) || $analysis['has_human_face'] !== true) {
             $decision = 'rejected';
             $reason = 'no_human_face_detected';
@@ -381,7 +337,7 @@ IMPORTANT:
             $reason = 'not_real_person';
             $this->storeRejectedHash($hash);
         }
-        // 3. Reject if document/screenshot/receipt
+        // 3. Reject if document/screenshot
         elseif (isset($analysis['is_document_or_screenshot']) && $analysis['is_document_or_screenshot'] === true) {
             $decision = 'rejected';
             $reason = 'document_or_screenshot';
@@ -405,13 +361,13 @@ IMPORTANT:
             $reason = 'ai_generated_image';
             $this->storeRejectedHash($hash);
         }
-        // 7. STRICT: Reject if not a personal photo (lowered threshold from 0.7 to 0.5)
+        // 7. Reject if not a personal photo
         elseif (isset($analysis['personal_photo']) && $analysis['personal_photo'] === false && $confidence > 0.5) {
             $decision = 'rejected';
             $reason = 'not_personal_photo';
             $this->storeRejectedHash($hash);
         }
-        // 8. STRICT: Reject if has watermark or text (changed from review to reject)
+        // 8. Reject if has watermark or text
         elseif (isset($analysis['watermark_or_text']) && $analysis['watermark_or_text'] === true) {
             $decision = 'rejected';
             $reason = 'watermark_or_text_detected';
@@ -424,5 +380,161 @@ IMPORTANT:
             'confidence' => $confidence,
             'details' => $analysis
         ];
+    }
+
+    /**
+     * Relaxed decision rules for GALLERY images - more flexible
+     */
+    private function makeGalleryDecision(array $analysis, string $hash, float $confidence): array
+    {
+        $decision = 'approved';
+        $reason = 'passed_moderation';
+
+        // RELAXED RULES FOR GALLERY IMAGES
+        // Gallery can have: side profiles, artistic shots, full body without clear face, lifestyle photos
+        
+        // 1. Reject if document/screenshot (still reject these)
+        if (isset($analysis['is_document_or_screenshot']) && $analysis['is_document_or_screenshot'] === true) {
+            $decision = 'rejected';
+            $reason = 'document_or_screenshot';
+            $this->storeRejectedHash($hash);
+        }
+        // 2. Reject if NSFW (always reject)
+        elseif (isset($analysis['nsfw']) && $analysis['nsfw'] === true) {
+            $decision = 'rejected';
+            $reason = 'nsfw_content';
+            $this->storeRejectedHash($hash);
+        }
+        // 3. Reject if not a real person (cartoons, memes, drawings)
+        elseif (!isset($analysis['is_real_person']) || $analysis['is_real_person'] !== true) {
+            $decision = 'rejected';
+            $reason = 'not_real_person';
+            $this->storeRejectedHash($hash);
+        }
+        // 4. Reject if AI generated
+        elseif (isset($analysis['ai_generated']) && $analysis['ai_generated'] === true) {
+            $decision = 'rejected';
+            $reason = 'ai_generated_image';
+            $this->storeRejectedHash($hash);
+        }
+        // 5. Reject if likely public figure (celebrity/athlete photos)
+        elseif (isset($analysis['likely_public_figure_or_model']) && $analysis['likely_public_figure_or_model'] === true) {
+            $decision = 'rejected';
+            $reason = 'public_figure_or_model';
+            $this->storeRejectedHash($hash);
+        }
+        // NOTE: For gallery, we DO NOT reject for:
+        // - No face visible (side profile, back, artistic shots OK)
+        // - Watermarks/text (minor text OK)
+        // - Not personal photo (lifestyle/artistic OK)
+
+        return [
+            'decision' => $decision,
+            'reason' => $reason,
+            'confidence' => $confidence,
+            'details' => $analysis
+        ];
+    }
+
+    /**
+     * Get strict prompt for PROFILE images
+     */
+    private function getProfilePrompt(): string
+    {
+        return 'You are a moderator for a dating app PROFILE photo.
+Profile photos must show a clear human face.
+
+Analyze the image and respond ONLY in valid JSON format:
+{
+  "has_human_face": true/false,
+  "is_real_person": true/false,
+  "personal_photo": true/false,
+  "likely_public_figure_or_model": true/false,
+  "nsfw": true/false,
+  "ai_generated": true/false,
+  "watermark_or_text": true/false,
+  "is_document_or_screenshot": true/false,
+  "confidence": 0.0-1.0
+}
+
+RULES FOR PROFILE PHOTO:
+
+1. "has_human_face" = TRUE if you can see a REAL HUMAN FACE clearly
+   - Full body with visible face = TRUE
+   - Selfies, portraits = TRUE
+   - Unusual lighting but face visible = TRUE
+   - Sunglasses/glasses OK = TRUE
+   
+   SET FALSE FOR:
+   - No face at all (objects only: cars, shoes, landscapes)
+   - Back of head, face completely hidden
+   - Cartoons, drawings, memes
+
+2. "is_real_person" = TRUE for photographs of real humans
+   - FALSE for: drawings, cartoons, anime, memes, illustrations
+
+3. "is_document_or_screenshot" = TRUE if you see:
+   - Screenshots from apps (Facebook, Instagram, Pinterest, Twitter, TikTok, WhatsApp)
+   - App UI elements: navigation bars, like buttons, status bars with time/battery
+   - Memes with text overlays
+   - Stock photo watermarks
+
+4. "nsfw" = TRUE for nudity, sexual content
+
+5. "likely_public_figure_or_model" = TRUE for celebrities, athletes in jerseys
+
+6. "personal_photo" = TRUE for personal photos, FALSE for stock/celebrity photos';
+    }
+
+    /**
+     * Get relaxed prompt for GALLERY images
+     */
+    private function getGalleryPrompt(): string
+    {
+        return 'You are a RELAXED moderator for a dating app GALLERY photo.
+Gallery photos can be more artistic and flexible - they do NOT need to show a clear face.
+
+Analyze the image and respond ONLY in valid JSON format:
+{
+  "has_human_face": true/false,
+  "is_real_person": true/false,
+  "personal_photo": true/false,
+  "likely_public_figure_or_model": true/false,
+  "nsfw": true/false,
+  "ai_generated": true/false,
+  "watermark_or_text": true/false,
+  "is_document_or_screenshot": true/false,
+  "confidence": 0.0-1.0
+}
+
+RELAXED RULES FOR GALLERY PHOTO:
+
+1. "has_human_face" - Just indicate if a face is visible, but gallery photos WITHOUT face are OK
+   - Side profiles = TRUE (face partially visible)
+   - Back of person showing = FALSE but still acceptable for gallery
+
+2. "is_real_person" = TRUE if photo contains a real human (even partial, back view, side view)
+   - Side profile with only partial face = TRUE
+   - Person from behind = TRUE
+   - FALSE ONLY for: cartoons, drawings, anime, memes, pure landscapes with no human
+
+3. "is_document_or_screenshot" = TRUE ONLY if you clearly see:
+   - Screenshots from apps with visible UI (buttons, status bar, like buttons)
+   - Memes with text overlays/captions
+   - Stock photo watermarks
+   
+   FALSE for: normal photos, artistic photos, photos with filters or colored lighting
+
+4. "nsfw" = TRUE for nudity, explicit content
+
+5. "likely_public_figure_or_model" = TRUE only for obvious celebrities, athletes in jerseys
+
+6. "personal_photo" = TRUE for most personal photos including artistic/lifestyle shots
+
+IMPORTANT FOR GALLERY:
+- Side profiles, back views = APPROVE (real person visible)
+- Artistic/lifestyle photos = APPROVE
+- Photos with unusual lighting/filters = APPROVE
+- Only reject if it is clearly a screenshot/meme/fake or NSFW';
     }
 }
