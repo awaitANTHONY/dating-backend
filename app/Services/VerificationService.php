@@ -385,7 +385,7 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
     private function checkMultiplePhotosMatch(string $verificationPhotoUrl, array $profilePhotoUrls): array
     {
         try {
-            $prompt = 'You are an image analysis system that compares visual similarities between photos.
+            $prompt = 'You are a RELAXED image analysis system for a dating app verification.
 
 Respond in JSON format:
 {
@@ -393,48 +393,57 @@ Respond in JSON format:
   "overall_confidence": 0.0-1.0,
   "reasoning": "brief explanation",
   "profile_has_screenshot": true/false,
-  "unmatched_photos": [{"photo_number": 1, "reason": "description", "confidence": 0.0-1.0}]
+  "unmatched_photos": [{"photo_number": 1, "reason": "description", "confidence": 0.0-1.0}],
+  "skipped_photos": [{"photo_number": 1, "reason": "no face visible - side/back view"}]
 }
 
-TASK: Analyze if the person in the verification photo appears to be the same person in each profile photo.
+TASK: Compare the verification photo to profile photos. Be RELAXED and understanding.
+
+IMPORTANT - GALLERY PHOTOS ARE ALLOWED:
+Profile photos can be gallery-style images that may NOT show a clear face:
+- Side profiles (face partially visible) = SKIP, do not mark as unmatched
+- Back view photos = SKIP, do not mark as unmatched  
+- Artistic/lifestyle photos without clear face = SKIP, do not mark as unmatched
+- Photos with unusual lighting/filters = STILL TRY TO MATCH
+
+SKIP vs UNMATCH:
+- If a photo shows NO FACE or only partial view (back, side) = add to "skipped_photos", NOT "unmatched_photos"
+- Only add to "unmatched_photos" if you can clearly see a DIFFERENT person\'s face
 
 SCREENSHOT CHECK:
-Set "profile_has_screenshot" = true if any profile photo contains UI elements, watermarks, or app interfaces.
+Set "profile_has_screenshot" = true ONLY for obvious:
+- App UI elements (buttons, status bars, navigation)
+- Memes with text overlays
+- Stock photo watermarks
+Normal photos with filters or colored lighting are NOT screenshots.
 
-VISUAL COMPARISON CRITERIA:
-Compare these visual characteristics across all photos:
-- Overall facial structure and proportions
-- Eye characteristics and positioning
-- Nose characteristics
-- Mouth and facial features
-- Skin characteristics
-- Apparent gender and age range
+MATCHING CRITERIA (when face is visible):
+Compare visual characteristics:
+- Facial structure and proportions
+- Eye, nose, mouth characteristics
+- Skin tone and apparent gender/age
 
-NORMAL VARIATIONS TO IGNORE:
-- Different hairstyles or hair colors
-- Presence/absence of facial hair
-- Different makeup
-- Different lighting
-- Different expressions
-- Different angles
-- Glasses
+NORMAL VARIATIONS TO ALLOW:
+- Different hairstyles, hair colors
+- Facial hair changes
+- Different makeup, expressions, angles
+- Different lighting (including colored/unusual lighting)
+- Glasses, sunglasses
 - Photo quality differences
-- Minor appearance changes over time
+- Appearance changes over time
 
 CONFIDENCE SCALE:
-- 0.9-1.0: Very high similarity
-- 0.7-0.89: High similarity
-- 0.5-0.69: Moderate similarity
-- 0.3-0.49: Low similarity
-- 0.0-0.29: Very low similarity
+- 0.7+: Match (same person likely)
+- 0.5-0.69: Uncertain but acceptable
+- Below 0.5: Different person
 
-OUTPUT REQUIREMENTS:
-- Set "all_photos_match" = true ONLY if all profile photos appear to show the same person as verification photo
-- Set "all_photos_match" = false if any profile photo appears to show a different person
-- List in "unmatched_photos" only those photos that clearly appear to be different people
-- Calculate "overall_confidence" as the average similarity across all photos
+RELAXED OUTPUT REQUIREMENTS:
+- "all_photos_match" = true if all COMPARABLE photos (with visible faces) appear to match
+- Photos without clear faces should be SKIPPED, not counted as unmatched
+- Only mark as "unmatched" if you see a CLEARLY DIFFERENT person\'s face
+- Be generous - when in doubt, give the benefit of the doubt
 
-Analyze the visual similarities objectively.';
+BE RELAXED: Dating app users have various photo styles. Only reject if clearly different person.';
 
 
             // Build image content for prompt
@@ -502,6 +511,7 @@ Analyze the visual similarities objectively.';
             $reasoning = $data['reasoning'] ?? 'No reasoning provided';
             $hasScreenshot = $data['profile_has_screenshot'] ?? false;
             $unmatchedPhotos = $data['unmatched_photos'] ?? [];
+            $skippedPhotos = $data['skipped_photos'] ?? [];
 
             // Critical security check - reject if any profile photo is screenshot/fake
             if ($hasScreenshot) {
@@ -521,10 +531,11 @@ Analyze the visual similarities objectively.';
                 ];
             }
 
-            // If not all match or confidence too low or ANY unmatched photos exist
-            // CRITICAL: Even if AI doesn't populate unmatched_photos array, all_photos_match=false means rejection
-            if (!$allMatch || $confidence < 0.7 || !empty($unmatchedPhotos)) {
-                // Map photo numbers to URLs
+            // RELAXED LOGIC: Only reject if there are ACTUAL unmatched photos (different faces)
+            // Skipped photos (no face visible - side/back views) are OK for gallery-style images
+            
+            // If there are unmatched photos (clearly different people), reject
+            if (!empty($unmatchedPhotos)) {
                 $unmatchedWithUrls = array_map(function($photo) use ($profilePhotoUrls) {
                     $index = ($photo['photo_number'] ?? 1) - 1;
                     return [
@@ -534,25 +545,38 @@ Analyze the visual similarities objectively.';
                     ];
                 }, $unmatchedPhotos);
 
-                // Fallback reason if unmatched_photos is empty but all_photos_match is false
-                $reason = !empty($unmatchedWithUrls) 
-                    ? 'Face does not match all profile photos - ' . count($unmatchedWithUrls) . ' photo(s) mismatch'
-                    : ($allMatch === false ? 'Not all profile photos match the verification photo' : 'Confidence too low for verification');
-
                 return [
                     'success' => false,
-                    'reason' => $reason,
+                    'reason' => 'Face does not match all profile photos - ' . count($unmatchedWithUrls) . ' photo(s) show a different person',
                     'confidence' => $confidence,
                     'unmatched_photos' => $unmatchedWithUrls,
                     'details' => $data
                 ];
             }
 
-            // All photos match
+            // RELAXED: Lower confidence threshold from 0.7 to 0.5
+            // And only reject if all_photos_match is explicitly false AND confidence is very low
+            if (!$allMatch && $confidence < 0.5) {
+                return [
+                    'success' => false,
+                    'reason' => 'Confidence too low for verification',
+                    'confidence' => $confidence,
+                    'unmatched_photos' => [],
+                    'details' => $data
+                ];
+            }
+
+            // All comparable photos match (skipped photos are OK)
+            $skippedCount = count($skippedPhotos);
+            $successReason = $skippedCount > 0 
+                ? "Face matches profile photos ($skippedCount gallery-style photos without clear face were skipped)"
+                : 'Face matches all profile photos';
+
             return [
                 'success' => true,
-                'reason' => 'Face matches all profile photos',
+                'reason' => $successReason,
                 'confidence' => $confidence,
+                'skipped_photos' => $skippedPhotos,
                 'details' => $data
             ];
 
