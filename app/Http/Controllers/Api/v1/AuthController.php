@@ -51,6 +51,12 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
         }
+
+        // Validate name doesn't contain contact information
+        $nameValidation = $this->validateContent($request->name);
+        if (!$nameValidation['valid']) {
+            return response()->json(['status' => false, 'message' => 'Name cannot contain contact information such as phone numbers or social media handles.']);
+        }
         
         $user = new User();
 
@@ -290,6 +296,11 @@ class AuthController extends Controller
 
         // Update user name if provided
         if($request->has('name')){
+            // Validate name doesn't contain contact information
+            $nameValidation = $this->validateContent($request->name);
+            if (!$nameValidation['valid']) {
+                return response()->json(['status' => false, 'message' => 'Name cannot contain contact information such as phone numbers or social media handles.']);
+            }
             $user->name = $request->name;
             $user->save();
         }
@@ -388,9 +399,9 @@ class AuthController extends Controller
 
         foreach ($fillableFields as $field) {
             if ($request->has($field)) {
-                // Validate bio content for contact information
-                if ($field === 'bio' && $request->has('bio')) {
-                    $validationResult = $this->validateContent($request->bio);
+                // Validate bio and address content for contact information
+                if (in_array($field, ['bio', 'address']) && $request->has($field)) {
+                    $validationResult = $this->validateContent($request->$field);
                     if (!$validationResult['valid']) {
                         \DB::rollBack();
                         return response()->json([
@@ -471,6 +482,15 @@ class AuthController extends Controller
             if(in_array($key, $not_allow_keys)){
                 return response()->json(['status' => false, 'message' => "The selected $key is invalid."]);
             }
+            
+            // Validate string fields for contact information
+            if (is_string($value) && in_array($key, ['name', 'bio', 'address'])) {
+                $validationResult = $this->validateContent($value);
+                if (!$validationResult['valid']) {
+                    return response()->json(['status' => false, 'message' => ucfirst($key) . ' cannot contain contact information such as phone numbers or social media handles.']);
+                }
+            }
+            
             $user->$key = $value;
         }
 
