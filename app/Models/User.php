@@ -153,6 +153,24 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all profile boosts for the user.
+     */
+    public function profileBoosts()
+    {
+        return $this->hasMany(ProfileBoost::class);
+    }
+
+    /**
+     * Get active profile boost for the user.
+     */
+    public function activeBoost()
+    {
+        return $this->hasOne(ProfileBoost::class)
+                    ->where('status', 'active')
+                    ->where('expires_at', '>', now());
+    }
+
+    /**
      * Check if user is verified.
      */
     public function isVerified(): bool
@@ -176,5 +194,15 @@ class User extends Authenticatable
     public function isVipActive()
     {
         return ($this->is_vip ?? false) || ($this->vip_expire && $this->vip_expire->isFuture());
+    }
+
+    /**
+     * Check if user has active boost
+     * 
+     * @return bool
+     */
+    public function isBoosted()
+    {
+        return $this->activeBoost()->exists();
     }
 }

@@ -162,6 +162,7 @@ class ProfileController extends Controller
                 'country_code' => $userInfo->country_code,
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
+                'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -563,6 +564,7 @@ class ProfileController extends Controller
                 'preffered_age' => $userInfo->preffered_age,
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
+                'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -1119,6 +1121,7 @@ class ProfileController extends Controller
                 'data' => [
                     'profile' => $profileData,
                     'is_vip' => (bool) $targetUser->isVipActive(),
+                    'is_boosted' => (bool) $targetUser->isBoosted(),
                     'compatibility' => $compatibility,
                     'interaction_status' => $interactionStatus,
                     'distance' => $distance ? round($distance, 1) . ' km' : 'Unknown'
@@ -1402,6 +1405,7 @@ class ProfileController extends Controller
                 'country_code' => $userInfo->country_code,
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
+                'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -1912,6 +1916,7 @@ class ProfileController extends Controller
                     'name' => $visitor->name,
                     'image' => $visitor->image,
                     'is_vip' => (bool) $visitor->isVipActive(),
+                    'is_boosted' => (bool) $visitor->isBoosted(),
                 ];
             })->filter()->values();
 
@@ -1930,5 +1935,161 @@ class ProfileController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
+    }
+
+    /**
+     * Get nearby users for the map view
+     */
+    public function nearby(Request $request)
+    {
+        $user = $request->user();
+
+        $userInformation = $user ? $user->user_information : null;
+
+        if (!$userInformation) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User profile information not found. Please complete your profile first.'
+            ], 400);
+        }
+
+        
+        $latitude = $request->input('latitude', $userInformation->latitude);
+        $longitude = $request->input('longitude', $userInformation->longitude);
+        $radius = $request->input('radius', $userInformation->search_radius ?? 300);
+        $filter = $request->input('filter');
+        $searchPreference = $userInformation->search_preference ?? 'male';
+
+        if (!$latitude || !$longitude) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Location coordinates are required. Please enable location services.'
+            ], 400);
+        }
+
+        // Build base query
+        $query = User::with(['user_information'])
+            ->whereHas('user_information', function ($q) use ($searchPreference) {
+                $q->where('gender', $searchPreference);
+            })
+            ->where('id', '!=', $user->id)
+            ->where('status', 1)
+            ->whereDoesntHave('blockedByUsers', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->whereDoesntHave('blockedUsers', function ($q) use ($user) {
+                $q->where('blocked_user_id', $user->id);
+            });
+
+        // Apply filter-specific constraints
+        if ($filter === 'online') {
+            $query->where('last_activity', '>=', now()->subHours(3));
+        }
+
+        if ($filter === 'verified') {
+            $query->whereHas('user_information', function ($q) {
+                $q->where('is_verified', true);
+            });
+        }
+
+        if ($filter === 'popular') {
+            // Only show users who have an active boost
+            $boostedIds = ProfileBoost::getActiveBoostedUsers();
+            $query->whereIn('id', $boostedIds);
+        }
+
+        // Distance filter
+        $query->whereHas('user_information', function ($q) use ($latitude, $longitude, $radius) {
+            $q->whereNotNull('latitude')
+              ->whereNotNull('longitude')
+              ->whereRaw("(
+                    6371 * acos(
+                        cos(radians(?)) *
+                        cos(radians(latitude)) *
+                        cos(radians(longitude) - radians(?)) +
+                        sin(radians(?)) *
+                        sin(radians(latitude))
+                    )
+                ) <= ?", [$latitude, $longitude, $latitude, $radius]);
+        });
+
+        $results = $query->limit(200)->get();
+
+        // Transform results and add distance calculation
+        $transformedResults = $results->map(function ($user) use ($latitude, $longitude) {
+            $userInfo = $user->user_information;
+            if (!$userInfo || !$userInfo->latitude || !$userInfo->longitude) return null;
+
+            $distance = $this->calculateDistance(
+                $latitude, $longitude,
+                $userInfo->latitude, $userInfo->longitude
+            );
+
+            return (object) [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'image' => $user->image,
+                'images' => $userInfo->images,
+                'bio' => $userInfo->bio,
+                'gender' => $userInfo->gender,
+                'date_of_birth' => $userInfo->date_of_birth,
+                'age' => $userInfo->age,
+                'height' => $userInfo->height,
+                'relation_goals' => $userInfo->relation_goals,
+                'interests' => $userInfo->interests,
+                'languages' => $userInfo->languages,
+                'latitude' => $userInfo->latitude,
+                'longitude' => $userInfo->longitude,
+                'religion_id' => $userInfo->religion_id,
+                'relationship_status_id' => $userInfo->relationship_status_id,
+                'ethnicity_id' => $userInfo->ethnicity_id,
+                'education_id' => $userInfo->education_id,
+                'carrer_field_id' => $userInfo->carrer_field_id,
+                'alkohol' => $userInfo->alkohol,
+                'smoke' => $userInfo->smoke,
+                'preffered_age' => $userInfo->preffered_age,
+                'is_zodiac_sign_matter' => $userInfo->is_zodiac_sign_matter,
+                'is_food_preference_matter' => $userInfo->is_food_preference_matter,
+                'country_code' => $userInfo->country_code,
+                'is_verified' => $userInfo->is_verified ?? false,
+                'is_vip' => (bool) $user->isVipActive(),
+                'is_boosted' => (bool) $user->isBoosted(),
+                'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'distance' => $distance ? round($distance, 1) : null,
+                'mood' => $userInfo->mood,
+                'address' => $userInfo->address,
+                'device_token' => $userInfo->device_token,
+
+                // Add detailed attributes from UserInformation model accessors
+                'relation_goals_details' => $userInfo->relation_goals_details,
+                'interests_details' => $userInfo->interests_details,
+                'ethnicity_details' => $userInfo->ethnicity_details,
+                'languages_details' => $userInfo->languages_details,
+            ];
+        })->filter()->values();
+
+        // Sort: boosted first, then online, then by distance
+        $sorted = $transformedResults->sortBy(function ($profile) {
+            $priority = 0;
+            if ($profile->is_boosted) $priority -= 1000;
+            if ($profile->is_online) $priority -= 500;
+            $priority += ($profile->distance ?? 9999);
+            return $priority;
+        })->values();
+
+        return response()->json([
+            'status' => true,
+            'data' => $sorted,
+            'meta' => [
+                'total' => $sorted->count(),
+                'radius' => $radius,
+                'filter' => $filter,
+                'center' => [
+                    'latitude' => (float) $latitude,
+                    'longitude' => (float) $longitude,
+                ],
+            ],
+        ]);
     }
 }

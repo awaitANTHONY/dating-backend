@@ -68,6 +68,7 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::get('profiles/details/{id}', [Controllers\Api\v1\ProfileController::class, 'details']);
         Route::get('profiles/soulmates', [Controllers\Api\v1\ProfileController::class, 'soulmates']);
         Route::get('profiles/visitors', [Controllers\Api\v1\ProfileController::class, 'profile_visitors']);
+        Route::post('profiles/nearby', [Controllers\Api\v1\ProfileController::class, 'nearby']);
         
         // User Interactions
         Route::post('interactions', [Controllers\Api\v1\UserInteractionController::class, 'store']);
