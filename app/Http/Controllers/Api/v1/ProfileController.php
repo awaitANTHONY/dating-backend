@@ -79,8 +79,9 @@ class ProfileController extends Controller
         // Get current user's preferences and location
         $currentLat = $userInformation->latitude ?? 0;
         $currentLng = $userInformation->longitude ?? 0;
-        $searchRadius = $userInformation->search_radius ?? 1000;
+        $searchRadius = $userInformation->search_radius ?? 50;
         $searchPreference = $userInformation->search_preference ?? 'male';
+        $currentCountryCode = $userInformation->country_code ?? null;
 
         // Build query for recommendations with smart matching
         $query = User::with(['user_information'])
@@ -99,6 +100,13 @@ class ProfileController extends Controller
             ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
+
+        // Filter by same country to prevent cross-country matching
+        if ($currentCountryCode) {
+            $query->whereHas('user_information', function($q) use ($currentCountryCode) {
+                $q->where('country_code', $currentCountryCode);
+            });
+        }
 
         // Exclude already-shown profiles (from client's current session)
         if (!empty($excludeIds) && is_array($excludeIds)) {
@@ -1998,22 +2006,29 @@ class ProfileController extends Controller
             $query->whereIn('id', $boostedIds);
         }
 
-        // Distance filter
+        // Distance filter using ST_Distance_Sphere for accuracy
         $query->whereHas('user_information', function ($q) use ($latitude, $longitude, $radius) {
             $q->whereNotNull('latitude')
               ->whereNotNull('longitude')
-              ->whereRaw("(
-                    6371 * acos(
-                        cos(radians(?)) *
-                        cos(radians(latitude)) *
-                        cos(radians(longitude) - radians(?)) +
-                        sin(radians(?)) *
-                        sin(radians(latitude))
-                    )
-                ) <= ?", [$latitude, $longitude, $latitude, $radius]);
+              ->whereRaw('
+                    ST_Distance_Sphere(
+                        point(longitude, latitude),
+                        point(?, ?)
+                    ) <= ?
+                ', [$longitude, $latitude, $radius * 1000]); // *1000 converts km to metres
         });
 
-        $results = $query->limit(200)->get();
+        // Order by distance ascending so the closest users are returned
+        $results = $query
+            ->orderByRaw('
+                ST_Distance_Sphere(
+                    point((SELECT longitude FROM user_information WHERE user_id = users.id),
+                          (SELECT latitude FROM user_information WHERE user_id = users.id)),
+                    point(?, ?)
+                ) ASC
+            ', [$longitude, $latitude])
+            ->limit(50)
+            ->get();
 
         // Transform results and add distance calculation
         $transformedResults = $results->map(function ($user) use ($latitude, $longitude) {
