@@ -98,6 +98,11 @@ Route::group(['middleware' => ['install']], function () {
 
         // Package CRUD
         Route::resource('packages', Controllers\PackageController::class);
+
+        // Reports
+        Route::get('reports/{id}/{status}', [Controllers\ReportController::class, 'updateStatus'])->name('reports.update-status')->where('status', 'reviewed|dismissed');
+        Route::post('reports/bulk-update', [Controllers\ReportController::class, 'bulkUpdateStatus'])->name('reports.bulk-update');
+        Route::resource('reports', Controllers\ReportController::class)->only(['index', 'show', 'destroy']);
     // Fake User Generator
     Route::get('fake-user-generator', [App\Http\Controllers\FakeUserGeneratorController::class, 'index'])->name('fake-user-generator.index');
     Route::post('fake-user-generator/generate', [App\Http\Controllers\FakeUserGeneratorController::class, 'generate'])->name('fake-user-generator.generate');

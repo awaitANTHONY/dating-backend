@@ -107,6 +107,10 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::get('verification/status', [Controllers\Api\v1\VerificationController::class, 'getVerificationStatus']);
         Route::get('verification/history', [Controllers\Api\v1\VerificationController::class, 'getVerificationHistory']);
 
+        // Reports
+        Route::post('reports', [Controllers\Api\v1\ReportController::class, 'store']);
+        Route::get('reports', [Controllers\Api\v1\ReportController::class, 'index']);
+
         // --- Chat API (Firebase Realtime) ---
         Route::any('/start-chat', [\App\Http\Controllers\Api\v1\ChatController::class, 'startChat']);
         // Send a message to a user (creates group if needed)
