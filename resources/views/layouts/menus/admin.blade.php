@@ -81,6 +81,12 @@
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Gifts') }}</span>
 	</a>
 </li>
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('reports') }}">
+		<i class="fa fa-flag u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Reports') }}</span>
+	</a>
+</li>
 
 <li class="u-sidebar-nav-menu__item">
 	<a class="u-sidebar-nav-menu__link" href="{{ url('faqs') }}">
