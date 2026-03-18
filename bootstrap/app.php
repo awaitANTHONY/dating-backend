@@ -16,6 +16,10 @@ use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
         
+        // Force JSON responses on all API routes so Laravel never
+        // returns HTML redirects (fixes login-loop for unverified emails).
+        $middleware->prependToGroup('api', \App\Http\Middleware\ForceJsonResponse::class);
+
         $middleware->alias([
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
@@ -23,6 +27,7 @@ use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
             'x_check' => \App\Http\Middleware\XCheck::class,
             'permission' => \App\Http\Middleware\Permission::class,
             'optional_auth' => \App\Http\Middleware\OptionaAuth::class,
+            'force_json' => \App\Http\Middleware\ForceJsonResponse::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -32,6 +37,16 @@ use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
                     'status' => false,
                     'message' => 'Unauthenticated.'
                 ], 401);
+            }
+        });
+
+        // Catch email-verification redirects and return JSON for API routes
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $e->getMessage() ?: 'Request failed.',
+                ], $e->getStatusCode());
             }
         });
     })->create();

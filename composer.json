@@ -9,12 +9,11 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2.0",
+        "php": "^8.2",
         "google/apiclient": "^2.15.0",
         "guzzlehttp/guzzle": "^7.10",
         "guzzlehttp/psr7": "^2.8",
         "http-interop/http-factory-guzzle": "^1.2",
-        "imdbphp/imdbphp": "^8.0",
         "intervention/image": "^3.0",
         "kreait/firebase-php": "^7.16",
         "kreait/laravel-firebase": "^6.0",

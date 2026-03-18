@@ -506,6 +506,45 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Update user's map visibility preference.
+     * PATCH /api/v1/user/map-visibility
+     */
+    public function updateMapVisibility(Request $request)
+    {
+        $validator = \Validator::make($request->all(), [
+            'visible_on_map' => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $user = $request->user();
+        $userInfo = $user->user_information;
+
+        if (!$userInfo) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User profile information not found. Please complete your profile first.',
+            ], 400);
+        }
+
+        $userInfo->visible_on_map = $request->boolean('visible_on_map');
+        $userInfo->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => $request->boolean('visible_on_map')
+                ? 'You are now visible on the map.'
+                : 'You are now hidden from the map.',
+            'visible_on_map' => $userInfo->visible_on_map,
+        ]);
+    }
+
     public function upload_profile(Request $request)
     {   
         $validator = \Validator::make($request->all(), [

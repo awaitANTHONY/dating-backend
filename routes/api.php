@@ -49,6 +49,7 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('user_information', [Controllers\Api\v1\AuthController::class, 'user_information']);
         Route::get('user', [Controllers\Api\v1\AuthController::class, 'user']);
         Route::post('user_update', [Controllers\Api\v1\AuthController::class, 'user_update']);
+        Route::patch('user/map-visibility', [Controllers\Api\v1\AuthController::class, 'updateMapVisibility']);
         Route::post('upload_profile', [Controllers\Api\v1\AuthController::class, 'upload_profile']);
         
         // Image Upload Routes

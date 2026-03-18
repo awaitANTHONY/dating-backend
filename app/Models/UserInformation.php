@@ -90,6 +90,7 @@ class UserInformation extends Model
         'films_books',
         'mood_text',
         'mood_expires_at',
+        'visible_on_map',
     ];
 
     protected $casts = [
@@ -103,6 +104,7 @@ class UserInformation extends Model
         'images' => 'array',
         'wallet_balance' => 'decimal:2',
         'is_verified' => 'boolean',
+        'visible_on_map' => 'boolean',
         'activities' => 'array',
         'food_drinks' => 'array',
         'sport' => 'array',

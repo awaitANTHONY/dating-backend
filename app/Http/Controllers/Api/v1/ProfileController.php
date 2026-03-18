@@ -45,6 +45,8 @@ class ProfileController extends Controller
         }
 
         // Check if this is a search request (has filters) or recommendations request (no filters)
+        // Note: is_verified and sort_by are handled inside generateRecommendations
+        // so they go through the full scoring pipeline with compatibility_details
         $isSearchRequest = $this->hasSearchFilters($request);
         
         // For search requests, don't use cache as they are dynamic
@@ -52,12 +54,13 @@ class ProfileController extends Controller
             return $this->handleSearchWithFilters($request, $user, $userInformation);
         }
 
-        // For recommendations, if client sends exclude_ids, don't use cache (fresh results)
-        // Otherwise use cache for performance
+        // For recommendations, if client sends exclude_ids or tab-specific filters,
+        // don't use cache (fresh results)
         $excludeIds = $request->input('exclude_ids', []);
+        $hasTabFilters = $request->has('is_verified') || $request->has('sort_by');
         
-        if (!empty($excludeIds)) {
-            // Client is tracking shown profiles - generate fresh results excluding those IDs
+        if (!empty($excludeIds) || $hasTabFilters) {
+            // Client is tracking shown profiles or using tab filters - generate fresh results
             return $this->generateRecommendations($request, $user, $userInformation, $excludeIds);
         }
         
@@ -111,6 +114,14 @@ class ProfileController extends Controller
         // Exclude already-shown profiles (from client's current session)
         if (!empty($excludeIds) && is_array($excludeIds)) {
             $query->whereNotIn('id', $excludeIds);
+        }
+
+        // Verified tab — only show verified users when requested
+        if ($request->has('is_verified') && !is_null($request->input('is_verified'))) {
+            $isVerified = filter_var($request->input('is_verified'), FILTER_VALIDATE_BOOLEAN);
+            $query->whereHas('user_information', function($q) use ($isVerified) {
+                $q->where('is_verified', $isVerified);
+            });
         }
 
         // Apply distance filter if coordinates are available
@@ -172,6 +183,7 @@ class ProfileController extends Controller
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'last_activity' => $user->last_activity,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
@@ -443,6 +455,14 @@ class ProfileController extends Controller
             ->take($limit * 2) // Double the final limit to show more matches
             ->values();
 
+        // Near You tab — sort by distance ascending when requested
+        $sortBy = $request->input('sort_by');
+        if ($sortBy === 'distance') {
+            $finalResults = $finalResults->sortBy(function ($profile) {
+                return $profile->distance ?? PHP_INT_MAX;
+            })->values();
+        }
+
         return response()->json(['status' => true, 'data' => $finalResults]);
     }
 
@@ -455,8 +475,7 @@ class ProfileController extends Controller
             'q', 'gender', 'interests', 'languages', 'relation_goals',
             'religion_id', 'relationship_status_id', 'ethnicity_id', 
             'education_id', 'carrer_field_id', 'alkohol', 'smoke',
-            'min_age', 'max_age', 'min_height', 'max_height', 'radius',
-            'is_verified'
+            'min_age', 'max_age', 'min_height', 'max_height', 'radius'
         ];
 
         foreach ($searchParams as $param) {
@@ -574,6 +593,7 @@ class ProfileController extends Controller
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'last_activity' => $user->last_activity,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
@@ -585,6 +605,35 @@ class ProfileController extends Controller
 
             ];
         })->filter()->values();
+
+        // Add compatibility scoring to search results so tabs (Same Goal, etc.) work
+        $userRelationGoals = $userInformation->relation_goals ?? [];
+        if (is_string($userRelationGoals)) {
+            $userRelationGoals = json_decode($userRelationGoals, true);
+            if (is_string($userRelationGoals)) $userRelationGoals = json_decode($userRelationGoals, true) ?? [];
+        }
+        $userRelationGoals = is_array($userRelationGoals) ? $userRelationGoals : [];
+
+        $transformedResults = $transformedResults->map(function($profile) use ($userInformation, $userRelationGoals) {
+            $profileGoals = $profile->relation_goals;
+            if (is_string($profileGoals)) {
+                $profileGoals = json_decode($profileGoals, true);
+                if (is_string($profileGoals)) $profileGoals = json_decode($profileGoals, true) ?? [];
+            }
+            $profileGoals = is_array($profileGoals) ? $profileGoals : [];
+
+            $rgOverlap = !empty($userRelationGoals) && !empty($profileGoals)
+                ? array_values(array_intersect($userRelationGoals, $profileGoals))
+                : [];
+
+            $profile->compatibility_details = [
+                'relation_goals_match' => !empty($rgOverlap),
+                'age_compatible' => ($userInformation->age && $profile->age && abs($userInformation->age - $profile->age) <= 5),
+                'within_distance' => ($profile->distance !== null && $profile->distance <= ($userInformation->search_radius ?? 50)),
+            ];
+            $profile->match_score = 0;
+            return $profile;
+        });
 
         // Separate VIP and regular profiles for search results
         $vipProfiles = $transformedResults->filter(function($profile) {
@@ -1982,6 +2031,10 @@ class ProfileController extends Controller
             })
             ->where('id', '!=', $user->id)
             ->where('status', 1)
+            // Exclude users who opted out of map visibility
+            ->whereHas('user_information', function ($q) {
+                $q->where('visible_on_map', true);
+            })
             ->whereDoesntHave('blockedByUsers', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
@@ -2071,6 +2124,7 @@ class ProfileController extends Controller
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'last_activity' => $user->last_activity,
                 'distance' => $distance ? round($distance, 1) : null,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
