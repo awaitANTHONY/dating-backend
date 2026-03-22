@@ -10,7 +10,7 @@ use Exception;
 class ImageModerationService
 {
     private string $openaiApiKey;
-    private string $model = 'gpt-4o';
+    private string $model = 'gpt-4o-mini';
     
     public function __construct()
     {

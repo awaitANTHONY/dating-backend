@@ -31,3 +31,16 @@ Schedule::command('moods:cleanup')
     ->onFailure(function () {
         \Log::error('Mood cleanup failed');
     });
+
+// Schedule AI image monitoring scan every hour
+Schedule::command('images:scan')
+    ->hourly()
+    ->name('scan-user-images')
+    ->description('Scan user images for AI moderation (reject bad images)')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Image scan completed successfully');
+    })
+    ->onFailure(function () {
+        \Log::error('Image scan failed');
+    });
