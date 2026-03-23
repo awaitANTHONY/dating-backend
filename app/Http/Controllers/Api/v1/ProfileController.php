@@ -184,11 +184,12 @@ class ProfileController extends Controller
                 'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'last_activity' => $user->last_activity,
+                'created_at' => $user->created_at,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
                 'device_token' => $userInfo->device_token,
-                
+
                 // Add detailed attributes from UserInformation model accessors
                 'relation_goals_details' => $userInfo->relation_goals_details,
                 'interests_details' => $userInfo->interests_details,
@@ -422,14 +423,11 @@ class ProfileController extends Controller
         })->sortByDesc('match_score')->values();
 
         $vipProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
-            // Get the full user model to check VIP status
-            $user = User::find($profile->id);
-            return !in_array($profile->id, $boostedUserIds) && $user && $user->isVipActive();
+            return !in_array($profile->id, $boostedUserIds) && $profile->is_vip;
         })->sortByDesc('match_score')->values();
 
         $regularProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
-            $user = User::find($profile->id);
-            return !in_array($profile->id, $boostedUserIds) && (!$user || !$user->isVipActive());
+            return !in_array($profile->id, $boostedUserIds) && !$profile->is_vip;
         })->sortByDesc('match_score')->values();
 
         // Separate profiles with and without relationship goals match for regular profiles
@@ -594,6 +592,7 @@ class ProfileController extends Controller
                 'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'last_activity' => $user->last_activity,
+                'created_at' => $user->created_at,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
@@ -637,13 +636,11 @@ class ProfileController extends Controller
 
         // Separate VIP and regular profiles for search results
         $vipProfiles = $transformedResults->filter(function($profile) {
-            $user = User::find($profile->id);
-            return $user && $user->isVipActive();
+            return $profile->is_vip;
         });
 
         $regularProfiles = $transformedResults->filter(function($profile) {
-            $user = User::find($profile->id);
-            return !$user || !$user->isVipActive();
+            return !$profile->is_vip;
         });
 
         // For search results, sort by distance within each group
@@ -1464,11 +1461,12 @@ class ProfileController extends Controller
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'created_at' => $user->created_at,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
                 'device_token' => $userInfo->device_token,
-                
+
                 // Add detailed attributes
                 'relation_goals_details' => $userInfo->relation_goals_details,
                 'interests_details' => $userInfo->interests_details,
@@ -1716,13 +1714,11 @@ class ProfileController extends Controller
 
         // Separate VIP and regular soulmates
         $vipSoulmates = $highScoreSoulmates->filter(function($profile) {
-            $user = User::find($profile->id);
-            return $user && $user->isVipActive();
+            return $profile->is_vip;
         })->shuffle()->values();
 
         $regularSoulmates = $highScoreSoulmates->filter(function($profile) {
-            $user = User::find($profile->id);
-            return !$user || !$user->isVipActive();
+            return !$profile->is_vip;
         })->shuffle()->values();
 
         // Combine VIP first, then regular
@@ -1740,13 +1736,11 @@ class ProfileController extends Controller
                 });
 
             $vipSoulmates = $mediumScoreSoulmates->filter(function($profile) {
-                $user = User::find($profile->id);
-                return $user && $user->isVipActive();
+                return $profile->is_vip;
             })->shuffle()->values();
 
             $regularSoulmates = $mediumScoreSoulmates->filter(function($profile) {
-                $user = User::find($profile->id);
-                return !$user || !$user->isVipActive();
+                return !$profile->is_vip;
             })->shuffle()->values();
 
             $soulmates = $vipSoulmates
@@ -1764,13 +1758,11 @@ class ProfileController extends Controller
                 });
 
             $vipSoulmates = $lowScoreSoulmates->filter(function($profile) {
-                $user = User::find($profile->id);
-                return $user && $user->isVipActive();
+                return $profile->is_vip;
             })->shuffle()->values();
 
             $regularSoulmates = $lowScoreSoulmates->filter(function($profile) {
-                $user = User::find($profile->id);
-                return !$user || !$user->isVipActive();
+                return !$profile->is_vip;
             })->shuffle()->values();
 
             $soulmates = $vipSoulmates
@@ -1963,17 +1955,21 @@ class ProfileController extends Controller
                 ->get()
                 ->filter();
 
-            // Transform visitor data - only basic info
+            // Transform visitor data
             $transformedVisitors = $visitors->map(function($visit) {
                 $visitor = $visit->visitor;
-                
+                $userInfo = $visitor->user_information;
 
                 return [
                     'id' => $visitor->id,
                     'name' => $visitor->name,
                     'image' => $visitor->image,
+                    'age' => $userInfo ? $userInfo->age : null,
                     'is_vip' => (bool) $visitor->isVipActive(),
                     'is_boosted' => (bool) $visitor->isBoosted(),
+                    'is_verified' => $userInfo ? ($userInfo->is_verified ?? false) : false,
+                    'is_online' => $visitor->last_activity && $visitor->last_activity->diffInHours(now()) <= 3,
+                    'visited_at' => $visit->visited_at,
                 ];
             })->filter()->values();
 
@@ -2125,6 +2121,7 @@ class ProfileController extends Controller
                 'is_boosted' => (bool) $user->isBoosted(),
                 'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
                 'last_activity' => $user->last_activity,
+                'created_at' => $user->created_at,
                 'distance' => $distance ? round($distance, 1) : null,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
@@ -2137,6 +2134,21 @@ class ProfileController extends Controller
                 'languages_details' => $userInfo->languages_details,
             ];
         })->filter()->values();
+
+        // Add match_score and compatibility_details so the Flutter app can use them
+        $transformedResults = $transformedResults->map(function ($profile) {
+            $profile->match_score = 0;
+            $profile->compatibility_details = [
+                'relation_goals_match' => false,
+                'language_match' => false,
+                'interests_match' => false,
+                'religion_match' => false,
+                'lifestyle_compatible' => false,
+                'age_compatible' => false,
+                'within_distance' => true,
+            ];
+            return $profile;
+        });
 
         // Sort: boosted first, then online, then by distance
         $sorted = $transformedResults->sortBy(function ($profile) {

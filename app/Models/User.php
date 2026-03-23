@@ -50,7 +50,6 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'created_at',
         'updated_at',
         'provider',
         'is_fake',
@@ -70,6 +69,7 @@ class User extends Authenticatable
         'vip_expire' => 'datetime',
         'verified_at' => 'datetime',
         'last_scanned_at' => 'datetime',
+        'is_vip' => 'boolean',
     ];
 
     public function getImageAttribute($data)
