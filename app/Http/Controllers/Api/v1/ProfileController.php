@@ -57,7 +57,7 @@ class ProfileController extends Controller
         // For recommendations, if client sends exclude_ids or tab-specific filters,
         // don't use cache (fresh results)
         $excludeIds = $request->input('exclude_ids', []);
-        $hasTabFilters = $request->has('is_verified') || $request->has('sort_by');
+        $hasTabFilters = $request->has('is_verified') || $request->has('is_online') || $request->has('same_goal') || $request->has('sort_by');
         
         if (!empty($excludeIds) || $hasTabFilters) {
             // Client is tracking shown profiles or using tab filters - generate fresh results
@@ -79,6 +79,10 @@ class ProfileController extends Controller
      */
     private function generateRecommendations(Request $request, $user, $userInformation, $excludeIds = [])
     {
+        // Check if a tab filter is active (Verified, Online, Same Goal)
+        // Tab filters show discovery results — don't exclude already-interacted profiles
+        $isTabFilter = $request->has('is_verified') || $request->has('is_online') || $request->has('same_goal');
+
         // Get current user's preferences and location
         $currentLat = $userInformation->latitude ?? 0;
         $currentLng = $userInformation->longitude ?? 0;
@@ -98,11 +102,16 @@ class ProfileController extends Controller
             })
             ->whereDoesntHave('blockedUsers', function($q) use ($user) {
                 $q->where('blocked_user_id', $user->id);
-            })
-            // Exclude users the current user has already interacted with
-            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
+            });
+
+        // Only exclude already-interacted users for the main "For You" swiper.
+        // Tab filters (Verified, Online, Same Goal) are discovery views —
+        // they should show all matching profiles regardless of past swipes.
+        if (!$isTabFilter) {
+            $query->whereDoesntHave('receivedInteractions', function($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
+        }
 
         // Filter by same country to prevent cross-country matching
         if ($currentCountryCode) {
@@ -122,6 +131,11 @@ class ProfileController extends Controller
             $query->whereHas('user_information', function($q) use ($isVerified) {
                 $q->where('is_verified', $isVerified);
             });
+        }
+
+        // Online tab — only show users active within the last 3 hours
+        if ($request->has('is_online') && filter_var($request->input('is_online'), FILTER_VALIDATE_BOOLEAN)) {
+            $query->where('last_activity', '>=', now()->subHours(3));
         }
 
         // Apply distance filter if coordinates are available
@@ -452,6 +466,14 @@ class ProfileController extends Controller
             ->concat($profilesWithoutGoalMatch->take($limit - $boostedProfiles->count() - $vipProfiles->count()))
             ->take($limit * 2) // Double the final limit to show more matches
             ->values();
+
+        // Same Goal tab — only show users whose relationship goals match
+        if ($request->has('same_goal') && filter_var($request->input('same_goal'), FILTER_VALIDATE_BOOLEAN)) {
+            $finalResults = $finalResults->filter(function($profile) {
+                return isset($profile->compatibility_details['relation_goals_match']) &&
+                       $profile->compatibility_details['relation_goals_match'] === true;
+            })->values();
+        }
 
         // Near You tab — sort by distance ascending when requested
         $sortBy = $request->input('sort_by');
