@@ -124,9 +124,9 @@ class ProfileController extends Controller
             });
         }
 
-        // Online tab — only show users active within the last 3 hours
+        // Online tab — only show users active within the last 15 minutes
         if ($request->has('is_online') && filter_var($request->input('is_online'), FILTER_VALIDATE_BOOLEAN)) {
-            $query->where('last_activity', '>=', now()->subHours(3));
+            $query->where('last_activity', '>=', now()->subMinutes(15));
         }
 
         // Apply distance filter if coordinates are available
@@ -187,7 +187,7 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
-                'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'is_online' => $user->last_activity && $user->last_activity->diffInMinutes(now()) <= 15,
                 'last_activity' => $user->last_activity,
                 'created_at' => $user->created_at,
                 'distance' => $distance,
@@ -603,7 +603,7 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
-                'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'is_online' => $user->last_activity && $user->last_activity->diffInMinutes(now()) <= 15,
                 'last_activity' => $user->last_activity,
                 'created_at' => $user->created_at,
                 'distance' => $distance,
@@ -1473,7 +1473,7 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
-                'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'is_online' => $user->last_activity && $user->last_activity->diffInMinutes(now()) <= 15,
                 'created_at' => $user->created_at,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -1981,7 +1981,7 @@ class ProfileController extends Controller
                     'is_vip' => (bool) $visitor->isVipActive(),
                     'is_boosted' => (bool) $visitor->isBoosted(),
                     'is_verified' => $userInfo ? ($userInfo->is_verified ?? false) : false,
-                    'is_online' => $visitor->last_activity && $visitor->last_activity->diffInHours(now()) <= 3,
+                    'is_online' => $visitor->last_activity && $visitor->last_activity->diffInMinutes(now()) <= 15,
                     'visited_at' => $visit->visited_at,
                 ];
             })->filter()->values();
@@ -2053,7 +2053,7 @@ class ProfileController extends Controller
 
         // Apply filter-specific constraints
         if ($filter === 'online') {
-            $query->where('last_activity', '>=', now()->subHours(3));
+            $query->where('last_activity', '>=', now()->subMinutes(15));
         }
 
         if ($filter === 'verified') {
@@ -2132,7 +2132,7 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
-                'is_online' => $user->last_activity && $user->last_activity->diffInHours(now()) <= 3,
+                'is_online' => $user->last_activity && $user->last_activity->diffInMinutes(now()) <= 15,
                 'last_activity' => $user->last_activity,
                 'created_at' => $user->created_at,
                 'distance' => $distance ? round($distance, 1) : null,
