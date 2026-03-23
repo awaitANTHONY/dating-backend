@@ -240,6 +240,7 @@ class AuthController extends Controller
         // Define all possible validation rules
         $rules = [
             'name' => 'nullable|string|max:191',
+            'device_token' => 'nullable|string',
             'bio' => 'nullable|string|max:1000',
             'gender' => 'nullable|in:male,female,other',
             'religion_id' => 'nullable|exists:religions,id',
@@ -302,6 +303,12 @@ class AuthController extends Controller
                 return response()->json(['status' => false, 'message' => 'Name cannot contain contact information such as phone numbers or social media handles.']);
             }
             $user->name = $request->name;
+            $user->save();
+        }
+
+        // Sync FCM device token when provided (e.g. after token refresh)
+        if ($request->has('device_token') && !empty($request->device_token)) {
+            $user->device_token = $request->device_token;
             $user->save();
         }
 
