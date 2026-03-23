@@ -97,6 +97,7 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::get('payments/history', [Controllers\Api\v1\PaymentController::class, 'payments']);
         Route::post('payments/boost', [Controllers\Api\v1\PaymentController::class, 'purchase_boost']);
         Route::post('payments/vip', [Controllers\Api\v1\PaymentController::class, 'purchase_vip']);
+        Route::post('payments/sync-entitlements', [Controllers\Api\v1\PaymentController::class, 'syncEntitlements']);
         
         // BoostController - Profile Boost Management
         Route::get('boosts/packages', [Controllers\Api\v1\BoostController::class, 'boost_packages']);

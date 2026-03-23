@@ -197,7 +197,7 @@ class User extends Authenticatable
      */
     public function isVipActive()
     {
-        return ($this->is_vip ?? false) || ($this->vip_expire && $this->vip_expire->isFuture());
+        return ($this->is_vip ?? false) && ($this->vip_expire && $this->vip_expire->isFuture());
     }
 
     /**
