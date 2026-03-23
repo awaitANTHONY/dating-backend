@@ -79,10 +79,6 @@ class ProfileController extends Controller
      */
     private function generateRecommendations(Request $request, $user, $userInformation, $excludeIds = [])
     {
-        // Check if a tab filter is active (Verified, Online, Same Goal)
-        // Tab filters show discovery results — don't exclude already-interacted profiles
-        $isTabFilter = $request->has('is_verified') || $request->has('is_online') || $request->has('same_goal');
-
         // Get current user's preferences and location
         $currentLat = $userInformation->latitude ?? 0;
         $currentLng = $userInformation->longitude ?? 0;
@@ -102,16 +98,11 @@ class ProfileController extends Controller
             })
             ->whereDoesntHave('blockedUsers', function($q) use ($user) {
                 $q->where('blocked_user_id', $user->id);
-            });
-
-        // Only exclude already-interacted users for the main "For You" swiper.
-        // Tab filters (Verified, Online, Same Goal) are discovery views —
-        // they should show all matching profiles regardless of past swipes.
-        if (!$isTabFilter) {
-            $query->whereDoesntHave('receivedInteractions', function($q) use ($user) {
+            })
+            // Exclude users the current user has already interacted with
+            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
-        }
 
         // Filter by same country to prevent cross-country matching
         if ($currentCountryCode) {
