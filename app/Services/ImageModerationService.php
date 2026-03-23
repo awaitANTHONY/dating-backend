@@ -14,10 +14,10 @@ class ImageModerationService
     
     public function __construct()
     {
-        $this->openaiApiKey = env('OPENAI_API_KEY');
-        
+        $this->openaiApiKey = config('services.openai.api_key');
+
         if (empty($this->openaiApiKey)) {
-            throw new Exception('OPENAI_API_KEY is not configured in .env');
+            throw new Exception('OPENAI_API_KEY is not configured. Add it to your .env file.');
         }
     }
 
@@ -198,12 +198,11 @@ class ImageModerationService
     }
 
     /**
-     * Detect face count (soft rule - informational only)
+     * Detect face count (placeholder - not implemented).
+     * Returns 1 as default. Used for logging only, does not affect moderation decisions.
      */
     private function detectFaceCount(string $filePath): int
     {
-        // Placeholder for face detection
-        // Not mandatory - returns 1 as default assumption
         return 1;
     }
 

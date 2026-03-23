@@ -14,10 +14,10 @@ class VerificationService
 
     public function __construct()
     {
-        $this->openaiApiKey = env('OPENAI_API_KEY');
+        $this->openaiApiKey = config('services.openai.api_key');
 
         if (empty($this->openaiApiKey)) {
-            throw new Exception('OPENAI_API_KEY is not configured in .env');
+            throw new Exception('OPENAI_API_KEY is not configured. Add it to your .env file.');
         }
     }
 

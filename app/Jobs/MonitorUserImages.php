@@ -26,7 +26,6 @@ class MonitorUserImages implements ShouldQueue
     public function __construct(int $userId)
     {
         $this->userId = $userId;
-        $this->onQueue('image-monitoring');
     }
 
     public function handle(): void
@@ -114,10 +113,12 @@ class MonitorUserImages implements ShouldQueue
         DB::beginTransaction();
 
         try {
+            $galleryRejectedCount = 0;
+
             if (isset($results[0]) && $monitor->shouldReject($results[0])) {
+                // Remove the bad image but DON'T disable the account
                 $user->image = null;
                 $user->verification_status = 'rejected';
-                $user->status = 0;
                 $user->verified_at = null;
                 $user->save();
 
@@ -127,6 +128,7 @@ class MonitorUserImages implements ShouldQueue
                 }
 
                 $this->deleteImageFile($profileRawPath);
+                $this->notifyUser($user, 'profile');
 
                 Log::info('MonitorUserImages: Profile image rejected and removed', [
                     'user_id'    => $user->id,
@@ -143,6 +145,7 @@ class MonitorUserImages implements ShouldQueue
 
                     if (isset($results[$resultIndex]) && $monitor->shouldReject($results[$resultIndex])) {
                         $this->deleteImageFile($galleryPath);
+                        $galleryRejectedCount++;
 
                         Log::info('MonitorUserImages: Gallery image rejected and deleted', [
                             'user_id'     => $user->id,
@@ -158,6 +161,10 @@ class MonitorUserImages implements ShouldQueue
 
                 $userInfo->images = $updatedGallery;
                 $userInfo->save();
+
+                if ($galleryRejectedCount > 0) {
+                    $this->notifyUser($user, 'gallery');
+                }
             }
 
             $user->last_scanned_at = now();
@@ -199,6 +206,39 @@ class MonitorUserImages implements ShouldQueue
     private function isLocalPath(string $path): bool
     {
         return !str_starts_with($path, 'http://') && !str_starts_with($path, 'https://');
+    }
+
+    private function notifyUser(User $user, string $type): void
+    {
+        try {
+            if (empty($user->device_token)) {
+                return;
+            }
+
+            if ($type === 'profile') {
+                $title = 'Profile Photo Removed';
+                $message = 'Your profile photo was removed because it did not meet our community guidelines. Please upload a new photo.';
+            } else {
+                $title = 'Gallery Photo Removed';
+                $message = 'One or more gallery photos were removed because they did not meet our community guidelines.';
+            }
+
+            send_notification(
+                'single',
+                $title,
+                $message,
+                null,
+                [
+                    'device_token' => $user->device_token,
+                    'type' => 'image_moderation',
+                ]
+            );
+        } catch (Exception $e) {
+            Log::warning('MonitorUserImages: Failed to send notification', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+        }
     }
 
     public function failed(Exception $exception): void
