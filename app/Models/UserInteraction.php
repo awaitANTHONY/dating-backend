@@ -68,10 +68,18 @@ class UserInteraction extends Model
     {
         return self::where('target_user_id', $userId)
             ->where('action', 'like')
-            ->with('user')
+            ->with(['user.user_information'])
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function($interaction) {
-                $interaction->user->is_vip = (bool) $interaction->user->isVipActive();
+                $user = $interaction->user;
+                $userInfo = $user->user_information;
+
+                $interaction->user->is_vip = (bool) $user->isVipActive();
+                $interaction->user->is_boosted = (bool) $user->isBoosted();
+                $interaction->user->is_verified = $userInfo ? ($userInfo->is_verified ?? false) : false;
+                $interaction->user->is_online = $user->last_activity && $user->last_activity->diffInHours(now()) <= 3;
+
                 return $interaction;
             });
     }

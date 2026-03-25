@@ -9,11 +9,11 @@ use Exception;
 class OpenAIImageMonitor
 {
     private string $apiKey;
-    private string $model = 'gpt-4o';
+    private string $model = 'gpt-4o-mini';
 
     public function __construct()
     {
-        $this->apiKey = config('services.openai.api_key', env('OPENAI_API_KEY'));
+        $this->apiKey = config('services.openai.api_key');
 
         if (empty($this->apiKey)) {
             throw new Exception('OPENAI_API_KEY is not configured.');
@@ -88,7 +88,7 @@ class OpenAIImageMonitor
                 'type'      => 'image_url',
                 'image_url' => [
                     'url'    => $imageUrl,
-                    'detail' => 'high',
+                    'detail' => 'low',
                 ],
             ];
         }

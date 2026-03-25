@@ -23,7 +23,12 @@ class ProcessVerificationJob implements ShouldQueue
      *
      * @var int
      */
-    public $tries = 20;
+    public $tries = 3;
+
+    /**
+     * The number of seconds to wait before retrying.
+     */
+    public $backoff = [30, 60, 120];
 
     /**
      * The maximum number of seconds the job can run.

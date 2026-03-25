@@ -240,6 +240,7 @@ class AuthController extends Controller
         // Define all possible validation rules
         $rules = [
             'name' => 'nullable|string|max:191',
+            'device_token' => 'nullable|string',
             'bio' => 'nullable|string|max:1000',
             'gender' => 'nullable|in:male,female,other',
             'religion_id' => 'nullable|exists:religions,id',
@@ -302,6 +303,12 @@ class AuthController extends Controller
                 return response()->json(['status' => false, 'message' => 'Name cannot contain contact information such as phone numbers or social media handles.']);
             }
             $user->name = $request->name;
+            $user->save();
+        }
+
+        // Sync FCM device token when provided (e.g. after token refresh)
+        if ($request->has('device_token') && !empty($request->device_token)) {
+            $user->device_token = $request->device_token;
             $user->save();
         }
 
@@ -546,46 +553,9 @@ class AuthController extends Controller
     }
 
     public function upload_profile(Request $request)
-    {   
-        $validator = \Validator::make($request->all(), [
-
-            'image' => 'required|image',
-
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()->first()]);
-        }
-
-        $user = $request->user();
-
-        $receiver = new FileReceiver("image", $request, HandlerFactory::classFromRequest($request));
-        if ($receiver->isUploaded() === false) {
-            throw new UploadMissingFileException();
-        }
-        $save = $receiver->receive();
-        if ($save->isFinished()) {
-
-            $file = $save->getFile();
-
-            $path = 'public/images/users/';
-            $extension = $file->getClientOriginalExtension();
-            $fileName =  rand() . time() . "." . $extension;
-
-            $file->move($path, $fileName);
-
-            $user->image = $path . $fileName;
-            $user->last_activity = now(); // Update last activity on profile image upload
-            $user->save();
-            
-            $user->is_vip = (bool) $user->isVipActive();
-
-            return response()->json([
-                'status' => true,
-                'user' => $user,
-            ]);
-        }
-        $handler = $save->handler();
+    {
+        // Redirect to upload_images which includes moderation
+        return $this->upload_images($request);
     }
 
     public function upload_images(Request $request)
@@ -675,7 +645,13 @@ class AuthController extends Controller
                             'message' => $this->getModerationMessage($moderationResult['reason'])
                         ];
                     } elseif ($moderationResult['decision'] === 'review') {
-                        // Image needs manual review - still save it but flag it
+                        // Image needs manual review - still save it but log for tracking
+                        \Log::warning('IMAGE_REVIEW_NEEDED', [
+                            'user_id' => $user->id,
+                            'image_path' => $galleryImagePath,
+                            'reason' => $moderationResult['reason'],
+                            'confidence' => $moderationResult['confidence'] ?? 0,
+                        ]);
                         $approvedImages[] = $galleryImagePath;
                         $uploadedImages[] = $galleryImagePath;
                     } else {

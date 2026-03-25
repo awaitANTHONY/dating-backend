@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+    ],
+
+    'revenuecat' => [
+        'secret_key' => env('REVENUECAT_SECRET_API_KEY'),
+    ],
+
 ];
