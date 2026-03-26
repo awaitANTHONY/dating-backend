@@ -14,7 +14,7 @@ class RevenueCatService
 
     public function __construct()
     {
-        $this->secretApiKey = config('services.revenuecat.secret_key', '');
+        $this->secretApiKey = config('services.revenuecat.secret_key') ?? '';
     }
 
     /**
