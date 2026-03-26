@@ -81,6 +81,43 @@ class User extends Authenticatable
     }
 
     /**
+     * Small thumbnail (200x200) for avatars, map markers, chat lists.
+     */
+    public function getImageThumbAttribute()
+    {
+        $data = $this->attributes['image'] ?? null;
+        if (!$data) {
+            return asset('public/default/profile.png');
+        }
+        $dir = dirname($data);
+        $filename = basename($data);
+        $thumbPath = $dir . '/thumb_' . $filename;
+        // Fallback to original if thumbnail doesn't exist yet
+        if (file_exists(base_path($thumbPath))) {
+            return asset($thumbPath);
+        }
+        return asset($data);
+    }
+
+    /**
+     * Medium thumbnail (600x600) for swipe cards, profile sheets.
+     */
+    public function getImageMediumAttribute()
+    {
+        $data = $this->attributes['image'] ?? null;
+        if (!$data) {
+            return asset('public/default/profile.png');
+        }
+        $dir = dirname($data);
+        $filename = basename($data);
+        $mediumPath = $dir . '/medium_' . $filename;
+        if (file_exists(base_path($mediumPath))) {
+            return asset($mediumPath);
+        }
+        return asset($data);
+    }
+
+    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
