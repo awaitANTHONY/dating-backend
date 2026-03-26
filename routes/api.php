@@ -101,7 +101,6 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         
         // BoostController - Profile Boost Management
         Route::get('boosts/packages', [Controllers\Api\v1\BoostController::class, 'boost_packages']);
-        Route::post('boosts/activate', [Controllers\Api\v1\BoostController::class, 'activate_boost']);
         Route::get('boosts/status', [Controllers\Api\v1\BoostController::class, 'boost_status']);
 
         // VerificationController - Identity Verification
