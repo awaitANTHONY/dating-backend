@@ -44,3 +44,12 @@ Schedule::command('images:scan')
     ->onFailure(function () {
         \Log::error('Image scan failed');
     });
+
+// Expire old boosts every 5 minutes — marks expired boosts as 'expired' in DB
+// and clears their cache keys so boost status checks stay accurate
+Schedule::call(function () {
+    \App\Models\ProfileBoost::expireOldBoosts();
+})
+    ->everyFiveMinutes()
+    ->name('expire-old-boosts')
+    ->description('Mark expired profile boosts and clear their cache');
