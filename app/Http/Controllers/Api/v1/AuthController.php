@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\UserInformation;
 use App\Models\AppModel;
+use App\Jobs\GenerateThumbnails;
 use Pion\Laravel\ChunkUpload\Exceptions\UploadMissingFileException;
 use Pion\Laravel\ChunkUpload\Handler\AbstractHandler;
 use Pion\Laravel\ChunkUpload\Handler\HandlerFactory;
@@ -617,6 +618,9 @@ class AuthController extends Controller
                 $user->image = $profileImagePath;
                 $user->save();
                 $profileImageUpdated = true;
+
+                // Generate thumbnails in background
+                GenerateThumbnails::dispatch($profileImagePath);
             }
 
             // Handle multiple images upload - process all images, don't fail on first rejection
@@ -679,6 +683,11 @@ class AuthController extends Controller
                         $allImages = array_merge($existingImages, $uploadedImages);
                         $userInfo->images = $allImages;
                         $userInfo->save();
+                    }
+
+                    // Generate thumbnails for approved images in background
+                    foreach ($uploadedImages as $imgPath) {
+                        GenerateThumbnails::dispatch($imgPath);
                     }
                 }
             }
@@ -917,6 +926,8 @@ class AuthController extends Controller
                     if (unlink($fullPath)) {
                         // Remove from array
                         unset($currentImages[$imageIndex]);
+                        // Also delete thumbnails
+                        GenerateThumbnails::deleteThumbnails($imageToDelete);
                     } else {
                         // Could not delete file, log error
                     }

@@ -22,7 +22,6 @@ class UserInformation extends Model
         if (is_string($value)) {
             $decoded = json_decode($value, true);
             if (is_array($decoded)) {
-                // Convert relative paths to full URLs using asset()
                 return array_map(function($path) {
                     return $path ? asset($path) : null;
                 }, $decoded);
@@ -30,12 +29,47 @@ class UserInformation extends Model
             return null;
         }
         if (is_array($value)) {
-            // Convert relative paths to full URLs using asset()
             return array_map(function($path) {
                 return $path ? asset($path) : null;
             }, $value);
         }
         return null;
+    }
+
+    /**
+     * Gallery thumbnails (200x200) for grids and lists.
+     */
+    public function getImagesThumbnailsAttribute()
+    {
+        return $this->getThumbnailUrls('thumb_');
+    }
+
+    /**
+     * Gallery medium images (600x600) for swipe cards and detail views.
+     */
+    public function getImagesMediumAttribute()
+    {
+        return $this->getThumbnailUrls('medium_');
+    }
+
+    private function getThumbnailUrls(string $prefix): ?array
+    {
+        $raw = $this->attributes['images'] ?? null;
+        if (!$raw) return null;
+
+        $paths = is_string($raw) ? json_decode($raw, true) : $raw;
+        if (!is_array($paths)) return null;
+
+        return array_map(function ($path) use ($prefix) {
+            if (!$path) return null;
+            $dir = dirname($path);
+            $filename = basename($path);
+            $thumbPath = $dir . '/' . $prefix . $filename;
+            if (file_exists(base_path($thumbPath))) {
+                return asset($thumbPath);
+            }
+            return asset($path);
+        }, $paths);
     }
 
     public function setImagesAttribute($value)
