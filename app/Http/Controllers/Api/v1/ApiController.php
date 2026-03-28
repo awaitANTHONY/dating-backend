@@ -68,14 +68,16 @@ class ApiController extends Controller
                                 ->whereNotIn("name", $not_allowed_keys)
                                 ->pluck("value", "name")
                                 ->toArray();
+
+            // Ensure daily limits are always present — rows seeded by migration,
+            // fallback to sensible defaults for clean installs that haven't migrated yet.
+            $settings['daily_like_limit'] = $settings['daily_like_limit'] ?? '20';
+            $settings['daily_chat_limit'] = $settings['daily_chat_limit'] ?? '5';
+
             return $settings;
         });
 
-        // Inject your limits into response
-$settings['daily_like_limit'] = Setting::where('name', 'daily_like_limit')->value('value') ?? 20;
-$settings['daily_chat_limit'] = Setting::where('name', 'daily_chat_limit')->value('value') ?? 5;
-
-return response()->json(['status' => true, 'data' => $settings]);
+        return response()->json(['status' => true, 'data' => $settings]);
     }
 
     public function sliders(Request $request)
