@@ -73,7 +73,6 @@ class ScanLegacyUsers extends Command
                           ->where('ui.images', '!=', '');
                 });
             })
-            ->orderBy('u.created_at')
             ->distinct()
             ->pluck('u.id')
             ->toArray();
