@@ -71,17 +71,13 @@ class AuthController extends Controller
         $user->status = $request->provider == 'email' ? 3 : 1;
         $user->last_activity = now(); // Set last activity on signup
 
-        $isDevelopment = env('APP_DEBUG') == true;
-
-        // Generate and send OTP if provider is email
+        // Generate and send OTP for email signups
         if ($request->provider == 'email') {
-            $otp = $isDevelopment ? 111111 : rand(100000, 999999);
+            $otp = rand(100000, 999999);
             $user->email_otp = \Hash::make($otp);
             $user->email_verified_at = null;
-            if(!$isDevelopment){
-                Overrider::load('Settings');
-                \Mail::to($user->email)->send(new \App\Mail\EmailVerificationOtp($otp, $user->name));
-            }
+            Overrider::load('Settings');
+            \Mail::to($user->email)->send(new \App\Mail\EmailVerificationOtp($otp, $user->name));
         }
 
         $user->save();
