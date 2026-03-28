@@ -15,7 +15,7 @@ use App\Http\Controllers;
 |
 */
 
-Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
+Route::group(['prefix' => 'v1'], function ()
 {
     //Api Controller
     Route::get('settings', [Controllers\Api\v1\ApiController::class, 'settings']);

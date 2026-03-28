@@ -71,7 +71,11 @@ class ApiController extends Controller
             return $settings;
         });
 
-        return response()->json(['status' => true, 'data' => $settings]);
+        // Inject your limits into response
+$settings['daily_like_limit'] = Setting::where('name', 'daily_like_limit')->value('value') ?? 20;
+$settings['daily_chat_limit'] = Setting::where('name', 'daily_chat_limit')->value('value') ?? 5;
+
+return response()->json(['status' => true, 'data' => $settings]);
     }
 
     public function sliders(Request $request)
