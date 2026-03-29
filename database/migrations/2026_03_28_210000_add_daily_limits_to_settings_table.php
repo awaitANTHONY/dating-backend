@@ -35,13 +35,17 @@ return new class extends Migration
             });
         }
 
-        // ── 2. Insert the correct key-value rows ──────────────────────────────
+        // ── 2. Insert or update the correct key-value rows ───────────────────
         $now = now();
 
         DB::table('settings')->insertOrIgnore([
             ['name' => 'daily_like_limit', 'value' => '20', 'created_at' => $now, 'updated_at' => $now],
-            ['name' => 'daily_chat_limit', 'value' => '5',  'created_at' => $now, 'updated_at' => $now],
+            ['name' => 'daily_chat_limit', 'value' => '3',  'created_at' => $now, 'updated_at' => $now],
         ]);
+
+        // Ensure the live row reflects the correct default (3) even if it was
+        // previously seeded as 5 by an earlier version of this migration.
+        DB::table('settings')->where('name', 'daily_chat_limit')->where('value', '5')->update(['value' => '3', 'updated_at' => $now]);
     }
 
     public function down(): void

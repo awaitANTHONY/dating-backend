@@ -72,7 +72,7 @@ class ApiController extends Controller
             // Ensure daily limits are always present — rows seeded by migration,
             // fallback to sensible defaults for clean installs that haven't migrated yet.
             $settings['daily_like_limit'] = $settings['daily_like_limit'] ?? '20';
-            $settings['daily_chat_limit'] = $settings['daily_chat_limit'] ?? '5';
+            $settings['daily_chat_limit'] = $settings['daily_chat_limit'] ?? '3';
 
             return $settings;
         });
