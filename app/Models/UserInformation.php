@@ -17,6 +17,19 @@ class UserInformation extends Model
         return $date ? \Illuminate\Support\Carbon::parse($date)->format('Y-m-d') : null;
     }
 
+    /**
+     * Always compute age from date_of_birth so it stays accurate.
+     * Falls back to the stored column value if date_of_birth is missing.
+     */
+    public function getAgeAttribute($value)
+    {
+        $dob = $this->attributes['date_of_birth'] ?? null;
+        if ($dob) {
+            return \Illuminate\Support\Carbon::parse($dob)->age;
+        }
+        return $value; // fallback to stored column
+    }
+
     public function getImagesAttribute($value)
     {
         if (is_string($value)) {
