@@ -138,6 +138,13 @@ if (!function_exists('send_notification')) {
             ]
         ];
 
+        // Pass extra fields (e.g. type) as FCM data so the client can route taps
+        $dataFields = array_diff_key($additional_data, array_flip(['device_token', 'firebase_topic']));
+        if (!empty($dataFields)) {
+            // FCM data values must be strings
+            $payload["message"]["data"] = array_map('strval', $dataFields);
+        }
+
         if($type == 'single'){
             $payload["message"]["token"] = $additional_data['device_token'];
         }else{

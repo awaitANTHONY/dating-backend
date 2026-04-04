@@ -207,7 +207,8 @@ class AuthController extends Controller
             }
         }
         
-        $user->tokens()->delete();
+        // Only delete tokens for this specific device, not all devices
+        $user->tokens()->where('name', $request->device_token)->delete();
 
         $user->device_token = $request->device_token;
         $user->last_activity = now(); // Update last activity on signin
