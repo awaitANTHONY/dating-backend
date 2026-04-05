@@ -44,3 +44,15 @@ Schedule::command('images:scan')
     ->onFailure(function () {
         \Log::error('Image scan failed');
     });
+
+// Expire pending Direct Connect requests older than 7 days
+Schedule::command('direct-connect:expire')
+    ->hourly()
+    ->name('expire-contact-requests')
+    ->description('Expire pending contact requests and notify requesters')
+    ->onSuccess(function () {
+        \Log::info('Direct Connect expire check completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Direct Connect expire check failed');
+    });

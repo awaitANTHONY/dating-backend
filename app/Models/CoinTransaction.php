@@ -11,6 +11,9 @@ class CoinTransaction extends Model
         'user_id',
         'amount',
         'status',
+        'description',
+        'reference_type',
+        'reference_id',
     ];
 
     public function user()

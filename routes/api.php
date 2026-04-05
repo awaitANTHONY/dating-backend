@@ -125,6 +125,20 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('/check-vip-status', [\App\Http\Controllers\Api\v1\ChatController::class, 'checkVipStatus']);
 
         Route::post('notification', [Controllers\Api\v1\ApiController::class, 'notification']);
+
+        // Direct Connect - Contact Sharing
+        Route::get('contact-platforms', [Controllers\Api\v1\DirectConnectController::class, 'platforms']);
+        Route::get('my-contacts', [Controllers\Api\v1\DirectConnectController::class, 'myContacts']);
+        Route::post('my-contacts', [Controllers\Api\v1\DirectConnectController::class, 'storeContact']);
+        Route::delete('my-contacts/{id}', [Controllers\Api\v1\DirectConnectController::class, 'deleteContact']);
+        Route::get('user/{id}/contacts', [Controllers\Api\v1\DirectConnectController::class, 'userContactInfo']);
+        Route::post('direct-connect/request', [Controllers\Api\v1\DirectConnectController::class, 'sendRequest']);
+        Route::post('direct-connect/respond', [Controllers\Api\v1\DirectConnectController::class, 'respondToRequest']);
+        Route::get('direct-connect/sent', [Controllers\Api\v1\DirectConnectController::class, 'sentRequests']);
+        Route::get('direct-connect/received', [Controllers\Api\v1\DirectConnectController::class, 'receivedRequests']);
+        Route::get('coin-packages', [Controllers\Api\v1\DirectConnectController::class, 'coinPackages']);
+        Route::post('coins/purchase', [Controllers\Api\v1\DirectConnectController::class, 'purchaseCoins']);
+        Route::get('coins/balance', [Controllers\Api\v1\DirectConnectController::class, 'coinBalance']);
     });
 });
 
