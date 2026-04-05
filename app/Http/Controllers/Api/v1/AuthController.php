@@ -616,6 +616,18 @@ class AuthController extends Controller
                 
                 // Update user's profile image (store relative path)
                 $user->image = $profileImagePath;
+
+                // Reset verification if user was verified (profile photo changed)
+                if ($user->verification_status === 'approved') {
+                    $user->verification_status = null;
+                    $user->verified_at = null;
+                    if ($user->user_information) {
+                        $user->user_information->is_verified = false;
+                        $user->user_information->save();
+                    }
+                    \Log::info('Verification reset: user changed profile photo', ['user_id' => $user->id]);
+                }
+
                 $user->save();
                 $profileImageUpdated = true;
             }
@@ -934,6 +946,16 @@ class AuthController extends Controller
             $user_information->images = $currentImages;
             $user_information->save();
 
+            // Reset verification if user was verified (photos changed)
+            if ($user->verification_status === 'approved') {
+                $user->verification_status = null;
+                $user->verified_at = null;
+                $user_information->is_verified = false;
+                $user_information->save();
+
+                \Log::info('Verification reset: user deleted gallery photos', ['user_id' => $user->id]);
+            }
+
             // Update user's last activity
             $user->last_activity = now();
             $user->save();
@@ -944,6 +966,7 @@ class AuthController extends Controller
             $response = [
                 'status' => true,
                 'message' => 'Gallery images deletion completed.',
+                'verification_reset' => $user->verification_status === null && $request->user()->verification_status === 'approved',
             ];
 
             return response()->json($response);
