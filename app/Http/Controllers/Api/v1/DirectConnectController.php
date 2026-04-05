@@ -481,13 +481,29 @@ class DirectConnectController extends Controller
 
     private function getContactLimit(User $user): int
     {
-        if ($user->isVipActive()) return (int) get_option('dc_contact_limit_vip', '100');
-        if ($user->subscription) {
-            $subName = strtolower($user->subscription->name ?? '');
-            if (str_contains($subName, 'gold')) return (int) get_option('dc_contact_limit_gold', '4');
-            if (str_contains($subName, 'premium')) return (int) get_option('dc_contact_limit_premium', '2');
-        }
+        if ($user->isVipActive()) return (int) get_option('dc_contact_limit_vip', '3');
+
+        $tier = $this->getSubscriptionTier($user);
+        if ($tier === 'gold') return (int) get_option('dc_contact_limit_gold', '4');
+        if ($tier === 'premium') return (int) get_option('dc_contact_limit_premium', '2');
+
         return (int) get_option('dc_contact_limit_free', '0');
+    }
+
+    private function getSubscriptionTier(User $user): ?string
+    {
+        // Must have a real subscription_id and not be expired
+        if (!$user->subscription_id || $user->subscription_id == 0) return null;
+        if ($user->expired_at && \Carbon\Carbon::parse($user->expired_at)->isPast()) return null;
+
+        $subName = strtolower($user->subscription->name ?? '');
+        $productId = strtolower($user->subscription->product_id ?? '');
+
+        if (str_contains($subName, 'gold') || str_contains($productId, 'gold')) return 'gold';
+        if (str_contains($subName, 'premium') || str_contains($productId, 'premium')) return 'premium';
+
+        // Any active subscription is at least premium
+        return 'premium';
     }
 
     private function getFreeRequestsRemaining(User $user): int
@@ -506,11 +522,11 @@ class DirectConnectController extends Controller
     private function getDailyFreeRequests(User $user): int
     {
         if ($user->isVipActive()) return (int) get_option('dc_free_requests_vip', '10');
-        if ($user->subscription) {
-            $subName = strtolower($user->subscription->name ?? '');
-            if (str_contains($subName, 'gold')) return (int) get_option('dc_free_requests_gold', '5');
-            if (str_contains($subName, 'premium')) return (int) get_option('dc_free_requests_premium', '3');
-        }
+
+        $tier = $this->getSubscriptionTier($user);
+        if ($tier === 'gold') return (int) get_option('dc_free_requests_gold', '5');
+        if ($tier === 'premium') return (int) get_option('dc_free_requests_premium', '3');
+
         return (int) get_option('dc_free_requests_free', '0');
     }
 
