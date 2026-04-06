@@ -220,8 +220,8 @@ class DirectConnectController extends Controller
 
         // Check if blocked
         $isBlocked = DB::table('user_blocks')
-            ->where('blocker_id', $ownerId)
-            ->where('blocked_id', $user->id)
+            ->where('user_id', $ownerId)
+            ->where('blocked_user_id', $user->id)
             ->exists();
         if ($isBlocked) {
             return response()->json(['status' => false, 'message' => 'Cannot send request to this user.']);
