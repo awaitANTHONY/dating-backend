@@ -35,6 +35,46 @@
 			width: 70px !important;
 			height: 70px !important;
 		}
+
+		/* Mobile responsive overrides */
+		@media (max-width: 767px) {
+			.card-body { padding: 0.85rem; }
+			.card-body h3 { font-size: 1.4rem; }
+			.card-body h4 { font-size: 1.15rem; }
+			.table { font-size: 0.85em; }
+			.table .img-sm, .table .img-thumbnail { width: 28px !important; height: 28px !important; }
+			.btn-sm { font-size: 0.75rem; padding: 0.2rem 0.5rem; }
+			.dropdown-menu { font-size: 0.85rem; }
+			.badge { font-size: 0.7em; }
+
+			/* Stack filter form on mobile */
+			#user-filter-form .col-md-2,
+			#user-filter-form .col-md-3 { flex: 0 0 50%; max-width: 50%; }
+
+			/* User show: profile card full width */
+			.col-md-4, .col-md-8 { flex: 0 0 100%; max-width: 100%; }
+
+			/* Report modal: smaller profile image */
+			.modal-body img.img-thumbnail[style*="width:80px"] { width: 60px !important; height: 60px !important; }
+			.modal-body img.img-thumbnail[style*="width:100px"] { width: 70px !important; height: 70px !important; }
+
+			/* Quick actions wrap */
+			.d-flex.flex-wrap { gap: 4px !important; }
+			.d-flex.flex-wrap .btn { font-size: 0.72rem; }
+
+			/* Dashboard stat icons */
+			.rounded-circle[style*="width:48px"] { width: 38px !important; height: 38px !important; }
+		}
+
+		@media (max-width: 575px) {
+			#user-filter-form .col-md-2,
+			#user-filter-form .col-md-3 { flex: 0 0 100%; max-width: 100%; }
+		}
+
+		/* Ensure all tables scroll on small screens */
+		.card-body > .table,
+		.card-body > table { width: 100%; }
+		.card > .card-body { overflow-x: auto; }
 	</style>
 	@include('layouts.others.variables')
 </head>

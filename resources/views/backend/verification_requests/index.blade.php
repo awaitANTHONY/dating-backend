@@ -31,8 +31,9 @@
     </div>
     <div class="col-md-12">
         <div class="card">
-            <div class="card-body">
-                <table class="table table-bordered" id="data-table">
+            <div class="card-body p-0 p-md-3">
+                <div class="table-responsive">
+                <table class="table table-bordered mb-0" id="data-table">
                     <thead>
                         <tr>
                             <th>{{ _lang('User') }}</th>
@@ -44,6 +45,7 @@
                         </tr>
                     </thead>
                 </table>
+                </div>
             </div>
         </div>
     </div>

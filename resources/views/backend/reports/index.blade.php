@@ -9,8 +9,8 @@
 	</div>
 
 	{{-- Status Filter --}}
-	<div class="col-md-12 mb-3">
-		<div class="btn-group" role="group">
+	<div class="col-12 mb-3">
+		<div class="d-flex flex-wrap" style="gap:4px;">
 			<a href="{{ url('reports') }}" class="btn btn-sm {{ !request('status') ? 'btn-primary' : 'btn-outline-primary' }}">
 				{{ _lang('All') }}
 			</a>
@@ -28,8 +28,9 @@
 
 	<div class="col-md-12">
 		<div class="card">
-			<div class="card-body">
-				<table class="table table-bordered" id="reports-table">
+			<div class="card-body p-0 p-md-3">
+				<div class="table-responsive">
+				<table class="table table-bordered mb-0" id="reports-table">
 					<thead>
 						<tr>
 							<th>{{ _lang('Reporter') }}</th>
@@ -42,6 +43,7 @@
 						</tr>
 					</thead>
 				</table>
+				</div>
 			</div>
 		</div>
 	</div>
