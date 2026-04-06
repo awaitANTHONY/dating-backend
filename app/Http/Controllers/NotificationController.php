@@ -16,7 +16,7 @@ class NotificationController extends Controller
      */
     public function index(Request $request)
     {
-        $notifications = Notification::where('app', 'football_app')->orderBy('id', 'DESC');
+        $notifications = Notification::orderBy('id', 'DESC');
 
         if ($request->ajax()) {
             return DataTables::of($notifications)

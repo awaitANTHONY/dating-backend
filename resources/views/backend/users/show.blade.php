@@ -1,23 +1,95 @@
 @extends('layouts.app')
 
 @section('content')
-<h2 class="card-title d-none">{{ _lang('Details') }}</h2>
+@php
+    $info = optional($user->user_information);
+@endphp
 <div class="row">
-    
-    <!-- Profile and Other Images -->
-    <div class="col-md-3">
+    <div class="col-md-6 breadcrumb-box"></div>
+    <div class="col-md-6 mb-2 text-right">
+        <a href="{{ url('users') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left mr-1"></i> {{ _lang('Back to Users') }}
+        </a>
+        <a href="{{ route('users.edit', $user->id) }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-edit mr-1"></i> {{ _lang('Edit') }}
+        </a>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="col-md-4">
         <div class="card mb-3">
             <div class="card-body text-center">
-                <h5>{{ _lang('My Profile') }}</h5>
-                <img src="{{ $user->image }}" class="img-lg img-thumbnail rounded-circle mb-2">
-                <div><b>{{ $user->name }}</b></div>
+                <img src="{{ asset($user->image) }}" class="img-thumbnail rounded-circle mb-3" style="width:120px;height:120px;object-fit:cover;">
+                <h4 class="mb-1">{{ $user->name }}</h4>
+                <p class="text-muted mb-2">{{ $user->email }}</p>
+
+                {{-- Status badges --}}
+                <div class="mb-3">
+                    @if($user->status == 1)
+                        <span class="badge badge-success"><i class="fas fa-check-circle"></i> Active</span>
+                    @elseif($user->status == 4)
+                        <span class="badge badge-danger"><i class="fas fa-ban"></i> Banned</span>
+                    @else
+                        <span class="badge badge-secondary">Inactive</span>
+                    @endif
+
+                    @if(optional($info)->is_verified)
+                        <span class="badge badge-info"><i class="fas fa-check-circle"></i> Verified</span>
+                    @endif
+
+                    @if($user->is_vip && $user->vip_expire && \Carbon\Carbon::parse($user->vip_expire)->isFuture())
+                        <span class="badge" style="background:#9b59b6;color:#fff;"><i class="fas fa-gem"></i> VIP</span>
+                    @endif
+
+                    @if($user->subscription_id && $user->subscription_id > 0)
+                        <span class="badge badge-warning"><i class="fas fa-crown"></i> {{ optional($user->subscription)->name ?? 'Subscriber' }}</span>
+                    @endif
+                </div>
+
+                {{-- Quick stats --}}
+                <div class="row text-center mb-2">
+                    <div class="col-4">
+                        <strong style="font-size:1.3em;">{{ number_format($user->wallet_balance ?? 0) }}</strong>
+                        <br><small class="text-muted">Wallet</small>
+                    </div>
+                    <div class="col-4">
+                        <strong style="font-size:1.3em;">{{ number_format($user->coin_balance ?? 0) }}</strong>
+                        <br><small class="text-muted">Coins</small>
+                    </div>
+                    <div class="col-4">
+                        <strong style="font-size:1.3em;">{{ $user->created_at ? $user->created_at->format('M Y') : '-' }}</strong>
+                        <br><small class="text-muted">Joined</small>
+                    </div>
+                </div>
+
+                {{-- Ban / Unban --}}
+                <div class="mt-3">
+                    @if($user->status == 4)
+                        <a href="{{ route('users.unban', $user->id) }}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-unlock mr-1"></i> {{ _lang('Unban') }}
+                        </a>
+                    @else
+                        <a href="{{ route('users.ban', $user->id) }}" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-ban mr-1"></i> {{ _lang('Ban') }}
+                        </a>
+                    @endif
+                    <form action="{{ route('users.destroy', $user->id) }}" method="post" class="ajax-delete d-inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-remove">
+                            <i class="fas fa-trash-alt mr-1"></i> {{ _lang('Delete') }}
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
+
+        {{-- Other Photos --}}
         <div class="card mb-3">
-            <div class="card-body text-center">
-                <h5>{{ _lang('Other Picture') }}</h5>
+            <div class="card-body">
+                <h6 class="mb-2">{{ _lang('Photos') }}</h6>
                 @php
-                    $otherImagesRaw = optional($user->user_information)->images;
+                    $otherImagesRaw = optional($info)->images;
                     $otherImages = [];
                     if (is_array($otherImagesRaw)) {
                         $otherImages = $otherImagesRaw;
@@ -26,118 +98,198 @@
                         if (is_array($decoded)) $otherImages = $decoded;
                     }
                 @endphp
-                @foreach($otherImages as $img)
-                    <img src="{{ asset($img) }}" class="img-thumbnail rounded-circle mx-1" style="width:60px;height:60px;object-fit:cover;">
-                @endforeach
+                @if(count($otherImages) > 0)
+                    <div class="d-flex flex-wrap" style="gap:6px;">
+                    @foreach($otherImages as $img)
+                        <img src="{{ asset($img) }}" class="img-thumbnail" style="width:70px;height:70px;object-fit:cover;border-radius:8px;">
+                    @endforeach
+                    </div>
+                @else
+                    <p class="text-muted mb-0">No additional photos</p>
+                @endif
             </div>
         </div>
+
+        {{-- Wallet & Coins --}}
         <div class="card mb-3">
             <div class="card-body text-center">
-                <h5>{{ _lang('Wallet and Coin Operations') }}</h5>
-                <a href="{{ route('users.wallet_manage', $user->id) }}" class="btn mb-3" style="background:#6c00ff;color:#fff;font-weight:600;border-radius:24px;padding:10px 32px;font-size:1.1em;">Wallet Operation</a>
-
-                <a href="{{ route('users.coin_manage', $user->id) }}" class="btn" style="background:#eab308;color:#fff;font-weight:600;border-radius:24px;padding:10px 32px;font-size:1.1em;">Coin Operation</a>
+                <h6 class="mb-3">{{ _lang('Wallet & Coins') }}</h6>
+                <a href="{{ route('users.wallet_manage', $user->id) }}" class="btn btn-sm mb-2" style="background:#6c00ff;color:#fff;font-weight:600;border-radius:20px;padding:8px 24px;">
+                    <i class="fas fa-wallet mr-1"></i> Wallet Operation
+                </a>
+                <a href="{{ route('users.coin_manage', $user->id) }}" class="btn btn-sm" style="background:#eab308;color:#fff;font-weight:600;border-radius:20px;padding:8px 24px;">
+                    <i class="fas fa-coins mr-1"></i> Coin Operation
+                </a>
             </div>
         </div>
     </div>
-    <!-- Other Information -->
-    <div class="col-md-9">
+
+    <!-- Details -->
+    <div class="col-md-8">
+        {{-- Bio --}}
+        @if(optional($info)->bio)
         <div class="card mb-3">
             <div class="card-body">
+                <h6><i class="fas fa-quote-left text-muted mr-1"></i> {{ _lang('Bio') }}</h6>
+                <p class="mb-0">{!! nl2br(e($info->bio)) !!}</p>
+            </div>
+        </div>
+        @endif
+
+        {{-- Personal Info --}}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="mb-3">{{ _lang('Personal Information') }}</h6>
                 <div class="row">
-                    <div class="col-md-12">
-                    <h5>{{ _lang('Other Information') }}</h5>
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr>
+                                <td class="text-muted" style="width:40%;">Gender</td>
+                                <td><strong>{{ ucfirst(optional($info)->gender ?? '-') }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Age</td>
+                                <td><strong>{{ optional($info)->age ?? '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Birth Date</td>
+                                <td><strong>{{ optional($info)->date_of_birth ?? '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Height</td>
+                                <td><strong>{{ optional($info)->height ? $info->height . ' cm' : '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Country</td>
+                                <td><strong>{{ optional($info)->country_code ? strtoupper($info->country_code) : '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Phone</td>
+                                <td><strong>{{ optional($info)->phone ?? '-' }}</strong></td>
+                            </tr>
+                        </table>
                     </div>
                     <div class="col-md-6">
-                        <p><b>Email:</b> {{ strtoupper($user->email) }}</p>
-                        <p><b>Phone:</b> {{ optional($user->user_information)->country_code }}{{ optional($user->user_information)->phone }}</p>
-                        <p><b>Profile Bio:</b><br> {!! nl2br(e(optional($user->user_information)->bio)) !!}</p>
-                        <p><b>Search Preference:</b> {{ is_array(optional($user->user_information)->search_preference) ? implode(', ', optional($user->user_information)->search_preference) : (optional($user->user_information)->search_preference ?? '-') }}</p>
-                        <p><b>Gender:</b> {{ strtoupper(optional($user->user_information)->gender) }}</p>
-                        <p><b>Age:</b> {{ optional($user->user_information)->age ?? '-' }}</p>
-                        <p><b>Height:</b> {{ optional($user->user_information)->height ? optional($user->user_information)->height . ' cm' : '-' }}</p>
-                        <p><b>Preferred Age Range:</b> {{ optional($user->user_information)->preffered_age ?? '-' }}</p>
-                        <p><b>Radius Search:</b> {{ optional($user->user_information)->search_radius ?? '-' }}KM</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><b>Birth Date:</b> {{ optional($user->user_information)->date_of_birth }}</p>
-                        <p><b>Religion:</b> {{ optional($user->user_information)->religion->title ?? '-' }}</p>
-                        <p><b>Relationship Status:</b> {{ optional($user->user_information)->relationshipStatus->title ?? '-' }}</p>
-                        <p><b>Ethnicity:</b> {{ optional($user->user_information)->ethnicity->title ?? '-' }}</p>
-                        <p><b>Education:</b> {{ optional($user->user_information)->education->title ?? '-' }}</p>
-                        <p><b>Career Field:</b> {{ optional($user->user_information)->careerField->title ?? '-' }}</p>
-                        <p><b>Alcohol:</b> {{ optional($user->user_information)->alkohol ? ucwords(str_replace('_', ' ', optional($user->user_information)->alkohol)) : '-' }}</p>
-                        <p><b>Smoking:</b> {{ optional($user->user_information)->smoke ? ucwords(str_replace('_', ' ', optional($user->user_information)->smoke)) : '-' }}</p>
-                        <p><b>Zodiac Sign Matters:</b> {{ optional($user->user_information)->is_zodiac_sign_matter ? 'Yes' : 'No' }}</p>
-                        <p><b>Food Preference Matters:</b> {{ optional($user->user_information)->is_food_preference_matter ? 'Yes' : 'No' }}</p>
-                        <p><b>Wallet Balance:</b> {{ $user->wallet_balance }}$</p>
-                        <p><b>Relation Goal:</b><br>
-                            @php
-                                $goals = optional($user->user_information)->relation_goals_details;
-                            @endphp
-                            @if(is_iterable($goals) && count($goals))
-                                @foreach($goals as $goal)
-                                    <span class="d-inline-block text-center mx-2">
-                                        {{ $goal->title }}
-                                    </span>
-                                @endforeach
-                            @else
-                                -
-                            @endif
-                        </p>
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr>
+                                <td class="text-muted" style="width:40%;">Religion</td>
+                                <td><strong>{{ optional(optional($info)->religion)->title ?? '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Relationship</td>
+                                <td><strong>{{ optional(optional($info)->relationshipStatus)->title ?? '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Ethnicity</td>
+                                <td><strong>{{ optional(optional($info)->ethnicity)->title ?? '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Education</td>
+                                <td><strong>{{ optional(optional($info)->education)->title ?? '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Career</td>
+                                <td><strong>{{ optional(optional($info)->careerField)->title ?? '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Alcohol</td>
+                                <td><strong>{{ optional($info)->alkohol ? ucwords(str_replace('_', ' ', $info->alkohol)) : '-' }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Smoking</td>
+                                <td><strong>{{ optional($info)->smoke ? ucwords(str_replace('_', ' ', $info->smoke)) : '-' }}</strong></td>
+                            </tr>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
+
+        {{-- Matching Preferences --}}
         <div class="card mb-3">
             <div class="card-body">
-                <h5>{{ _lang('Plan Information') }}</h5>
-                <p><b>Plan:</b> {{ optional($user->subscription)->name }}</p>
-                <p><b>Expire At:</b> {{ $user->expire_at ?? '-' }}</p>
+                <h6 class="mb-3">{{ _lang('Matching Preferences') }}</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><span class="text-muted">Search Preference:</span> <strong>{{ is_array(optional($info)->search_preference) ? implode(', ', $info->search_preference) : (optional($info)->search_preference ?? '-') }}</strong></p>
+                        <p><span class="text-muted">Preferred Age:</span> <strong>{{ optional($info)->preffered_age ?? '-' }}</strong></p>
+                        <p><span class="text-muted">Search Radius:</span> <strong>{{ optional($info)->search_radius ?? '-' }} KM</strong></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><span class="text-muted">Zodiac Matters:</span> <strong>{{ optional($info)->is_zodiac_sign_matter ? 'Yes' : 'No' }}</strong></p>
+                        <p><span class="text-muted">Food Pref Matters:</span> <strong>{{ optional($info)->is_food_preference_matter ? 'Yes' : 'No' }}</strong></p>
+                    </div>
+                </div>
             </div>
         </div>
-        <!-- Interests -->
+
+        {{-- Subscription --}}
         <div class="card mb-3">
             <div class="card-body">
-                <h5>{{ _lang('Interest') }}</h5>
-                @php
-                    $interests = optional($user->user_information)->interests_details;
-                @endphp
+                <h6 class="mb-3">{{ _lang('Subscription & Plan') }}</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><span class="text-muted">Plan:</span> <strong>{{ optional($user->subscription)->name ?? 'Free' }}</strong></p>
+                        <p><span class="text-muted">Expires:</span> <strong>{{ $user->expired_at ?? '-' }}</strong></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><span class="text-muted">VIP:</span> <strong>{{ $user->is_vip ? 'Yes' : 'No' }}</strong></p>
+                        <p><span class="text-muted">VIP Expires:</span> <strong>{{ $user->vip_expire ?? '-' }}</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Relation Goals --}}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="mb-2">{{ _lang('Relation Goals') }}</h6>
+                @php $goals = optional($info)->relation_goals_details; @endphp
+                @if(is_iterable($goals) && count($goals))
+                    @foreach($goals as $goal)
+                        <span class="badge badge-light mr-1 mb-1" style="font-size:0.9em;padding:6px 12px;">{{ $goal->title }}</span>
+                    @endforeach
+                @else
+                    <span class="text-muted">-</span>
+                @endif
+            </div>
+        </div>
+
+        {{-- Interests --}}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="mb-2">{{ _lang('Interests') }}</h6>
+                @php $interests = optional($info)->interests_details; @endphp
                 @if(is_iterable($interests) && count($interests))
                     @foreach($interests as $interest)
-                        <span class="d-inline-block text-center mx-2">
-                            <span style="font-size:2em;"><img src="{{ asset($interest->image) }}" class="img-lg img-thumbnail rounded-circle mb-2"></span><br>
-                            {{ $interest->title }}
+                        <span class="d-inline-block text-center mx-2 mb-2">
+                            <img src="{{ asset($interest->image) }}" class="img-thumbnail rounded-circle" style="width:50px;height:50px;object-fit:cover;"><br>
+                            <small>{{ $interest->title }}</small>
                         </span>
                     @endforeach
                 @else
-                    -
+                    <span class="text-muted">-</span>
                 @endif
             </div>
         </div>
-        <!-- Languages -->
+
+        {{-- Languages --}}
         <div class="card mb-3">
             <div class="card-body">
-                <h5>{{ _lang('Languages Known') }}</h5>
-                @php
-                    $languages = optional($user->user_information)->languages_details;
-                @endphp
+                <h6 class="mb-2">{{ _lang('Languages Known') }}</h6>
+                @php $languages = optional($info)->languages_details; @endphp
                 @if(is_iterable($languages) && count($languages))
                     @foreach($languages as $language)
-
-                    
-                        <span class="d-inline-block text-center mx-2">
-                            <span style="font-size:2em;"><img src="{{ asset($language->image) }}" class="img-lg img-thumbnail rounded-circle mb-2"></span><br>
-                            {{ $language->title }}
+                        <span class="d-inline-block text-center mx-2 mb-2">
+                            <img src="{{ asset($language->image) }}" class="img-thumbnail rounded-circle" style="width:50px;height:50px;object-fit:cover;"><br>
+                            <small>{{ $language->title }}</small>
                         </span>
                     @endforeach
                 @else
-                    -
+                    <span class="text-muted">-</span>
                 @endif
-               
             </div>
         </div>
     </div>
 </div>
 @endsection
-

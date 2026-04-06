@@ -110,8 +110,14 @@ class UserController extends Controller
                     return $user->created_at ? $user->created_at->format('M d, Y') : '-';
                 })
                 ->addColumn('country', function ($user) {
-                    $info = optional($user->user_information);
-                    return $info->country_code ?? '-';
+                    $code = optional($user->user_information)->country_code;
+                    if (!$code) return '-';
+                    $code = strtoupper(trim($code));
+                    // Convert country code to flag emoji
+                    $flag = collect(str_split($code))->map(function ($c) {
+                        return mb_chr(ord($c) - ord('A') + 0x1F1E6);
+                    })->implode('');
+                    return $flag . ' ' . $code;
                 })
                 ->editColumn('status', function ($user) {
                     if ($user->status == 1) {
@@ -121,6 +127,27 @@ class UserController extends Controller
                     } else {
                         return status(_lang('In-Active'), 'danger');
                     }
+                })
+                ->addColumn('plan', function ($user) {
+                    $now = now();
+                    // VIP check
+                    if ($user->is_vip && $user->vip_expire && \Carbon\Carbon::parse($user->vip_expire)->isFuture()) {
+                        return '<span class="badge" style="background:#9b59b6;color:#fff;"><i class="fas fa-gem"></i> VIP</span>';
+                    }
+                    // Subscription check
+                    if ($user->subscription_id && $user->subscription_id > 0) {
+                        $expired = $user->expired_at && \Carbon\Carbon::parse($user->expired_at)->isPast();
+                        $subName = optional($user->subscription)->name ?? 'Subscriber';
+                        $subLower = strtolower($subName);
+                        if ($expired) {
+                            return '<span class="badge badge-secondary"><i class="fas fa-clock"></i> ' . e($subName) . ' (Expired)</span>';
+                        }
+                        if (str_contains($subLower, 'gold')) {
+                            return '<span class="badge" style="background:#f59e0b;color:#fff;"><i class="fas fa-crown"></i> Gold</span>';
+                        }
+                        return '<span class="badge badge-primary"><i class="fas fa-star"></i> ' . e($subName) . '</span>';
+                    }
+                    return '<span class="badge badge-light">Free</span>';
                 })
                 ->addColumn('action', function($user){
                     return '<div class="dropdown">
@@ -138,7 +165,7 @@ class UserController extends Controller
                                 </div>
                             </div>';
                 })
-                ->rawColumns(['action', 'status', 'image', 'is_verified'])
+                ->rawColumns(['action', 'status', 'image', 'is_verified', 'plan'])
                 ->make(true);
         }
 

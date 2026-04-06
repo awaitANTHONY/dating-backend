@@ -116,6 +116,7 @@
         					<th>{{ _lang('Name') }}</th>
         					<th>{{ _lang('Email') }}</th>
         					<th>{{ _lang('Country') }}</th>
+        					<th>{{ _lang('Plan') }}</th>
         					<th>{{ _lang('Verified') }}</th>
         					<th>{{ _lang('Joined') }}</th>
         					<th class="text-center">{{ _lang('Status') }}</th>
@@ -155,6 +156,7 @@
         	{ data : "name", name : "name", className : "name" },
         	{ data : "email", name : "email", className : "email" },
         	{ data : "country", name : "country", className : "country" },
+        	{ data : "plan", name : "plan", className : "text-center" },
         	{ data : "is_verified", name : "is_verified", className : "text-center" },
         	{ data : "created_at", name : "created_at", className : "created_at" },
         	{ data : "status", name : "status", className : "status text-center" },

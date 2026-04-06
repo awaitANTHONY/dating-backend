@@ -15,7 +15,7 @@ class ReportController extends Controller
      */
     public function index(Request $request)
     {
-        $reports = Report::with(['reporter:id,name,email', 'reportedUser:id,name,email'])
+        $reports = Report::with(['reporter:id,name,email,image', 'reportedUser:id,name,email,image,status'])
             ->orderBy('id', 'DESC');
 
         // Optional status filter
@@ -26,10 +26,18 @@ class ReportController extends Controller
         if ($request->ajax()) {
             return DataTables::of($reports)
                 ->addColumn('reporter_name', function ($report) {
-                    return $report->reporter ? $report->reporter->name : 'Deleted User';
+                    if (!$report->reporter) return 'Deleted User';
+                    $img = '<img src="' . asset($report->reporter->image) . '" class="img-sm img-thumbnail rounded-circle mr-2" style="width:30px;height:30px;object-fit:cover;">';
+                    return $img . e($report->reporter->name);
                 })
                 ->addColumn('reported_user_name', function ($report) {
-                    return $report->reportedUser ? $report->reportedUser->name : 'Deleted User';
+                    if (!$report->reportedUser) return 'Deleted User';
+                    $img = '<img src="' . asset($report->reportedUser->image) . '" class="img-sm img-thumbnail rounded-circle mr-2" style="width:30px;height:30px;object-fit:cover;">';
+                    $name = e($report->reportedUser->name);
+                    if ($report->reportedUser->status == 4) {
+                        $name .= ' <span class="badge badge-danger ml-1">Banned</span>';
+                    }
+                    return $img . $name;
                 })
                 ->addColumn('report_count', function ($report) {
                     return Report::where('reported_user_id', $report->reported_user_id)->count();
@@ -44,7 +52,7 @@ class ReportController extends Controller
                     return '<span class="badge badge-' . $badge . '">' . ucfirst($report->status) . '</span>';
                 })
                 ->editColumn('created_at', function ($report) {
-                    return $report->created_at->format('Y-m-d H:i');
+                    return $report->created_at->format('M d, Y g:ia');
                 })
                 ->addColumn('action', function ($report) {
                     $action = '<div class="dropdown">
@@ -58,26 +66,44 @@ class ReportController extends Controller
                                 </a>';
                     if ($report->status === 'pending') {
                         $action .= '<a href="' . route('reports.update-status', [$report->id, 'reviewed']) . '" class="dropdown-item">
-                                        <i class="fas fa-check"></i>
+                                        <i class="fas fa-check text-success"></i>
                                         ' . _lang('Mark Reviewed') . '
                                     </a>';
                         $action .= '<a href="' . route('reports.update-status', [$report->id, 'dismissed']) . '" class="dropdown-item">
-                                        <i class="fas fa-times"></i>
+                                        <i class="fas fa-times text-secondary"></i>
                                         ' . _lang('Dismiss') . '
+                                    </a>';
+                    }
+                    // Ban / Unban reported user
+                    if ($report->reportedUser) {
+                        if ($report->reportedUser->status == 4) {
+                            $action .= '<a href="' . route('users.unban', $report->reported_user_id) . '" class="dropdown-item">
+                                            <i class="fas fa-unlock text-success"></i>
+                                            ' . _lang('Unban User') . '
+                                        </a>';
+                        } else {
+                            $action .= '<a href="' . route('users.ban', $report->reported_user_id) . '" class="dropdown-item">
+                                            <i class="fas fa-ban text-danger"></i>
+                                            ' . _lang('Ban User') . '
+                                        </a>';
+                        }
+                        $action .= '<a href="' . route('users.show', $report->reported_user_id) . '" class="dropdown-item">
+                                        <i class="fas fa-user text-info"></i>
+                                        ' . _lang('View Profile') . '
                                     </a>';
                     }
                     $action .= '<form action="' . route('reports.destroy', $report->id) . '" method="post" class="ajax-delete">'
                                 . csrf_field()
                                 . method_field('DELETE')
                                 . '<button type="button" class="btn-remove dropdown-item">
-                                        <i class="fas fa-trash-alt"></i>
-                                        ' . _lang('Delete') . '
+                                        <i class="fas fa-trash-alt text-danger"></i>
+                                        ' . _lang('Delete Report') . '
                                     </button>
                                 </form>';
                     $action .= '</div></div>';
                     return $action;
                 })
-                ->rawColumns(['action', 'status'])
+                ->rawColumns(['action', 'status', 'reporter_name', 'reported_user_name'])
                 ->make(true);
         }
 
@@ -89,7 +115,7 @@ class ReportController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $report = Report::with(['reporter:id,name,email', 'reportedUser:id,name,email'])->findOrFail($id);
+        $report = Report::with(['reporter', 'reporter.user_information', 'reportedUser', 'reportedUser.user_information'])->findOrFail($id);
 
         // Get all reports against the same reported user
         $allReports = Report::where('reported_user_id', $report->reported_user_id)
