@@ -89,6 +89,13 @@
 </li>
 
 <li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('verification-requests') }}">
+		<i class="fa fa-id-card u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Verification Requests') }}</span>
+	</a>
+</li>
+
+<li class="u-sidebar-nav-menu__item">
 	<a class="u-sidebar-nav-menu__link" href="{{ url('mood_suggestions') }}">
 		<i class="fa fa-smile u-sidebar-nav-menu__item-icon"></i>
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Mood Suggestions') }}</span>

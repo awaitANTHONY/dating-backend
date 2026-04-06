@@ -113,6 +113,12 @@ Route::group(['middleware' => ['install']], function () {
         // Coin Reward & Direct Connect Settings
         Route::any('coin_reward_settings', [Controllers\SettingController::class, 'coin_rewards'])->name('coin_reward_settings');
 
+        // Verification Requests
+        Route::get('verification-requests', [Controllers\VerificationRequestController::class, 'index'])->name('verification-requests.index');
+        Route::get('verification-requests/{id}', [Controllers\VerificationRequestController::class, 'show'])->name('verification-requests.show');
+        Route::get('verification-requests/{id}/approve', [Controllers\VerificationRequestController::class, 'approve'])->name('verification-requests.approve');
+        Route::post('verification-requests/{id}/reject', [Controllers\VerificationRequestController::class, 'reject'])->name('verification-requests.reject');
+
     // Fake User Generator
     Route::get('fake-user-generator', [App\Http\Controllers\FakeUserGeneratorController::class, 'index'])->name('fake-user-generator.index');
     Route::post('fake-user-generator/generate', [App\Http\Controllers\FakeUserGeneratorController::class, 'generate'])->name('fake-user-generator.generate');

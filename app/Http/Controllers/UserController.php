@@ -25,12 +25,72 @@ class UserController extends Controller
         if ($request->ajax()) {
             $search_by = $request->search_by;
             $search = $request->search;
-            
-            $users = User::select(['id', 'name', 'email', 'image', 'status', 'created_at'])
+
+            $users = User::select(['id', 'name', 'email', 'image', 'status', 'created_at', 'subscription_id', 'is_vip', 'vip_expire', 'expired_at'])
                         ->where('user_type', 'user');
-            
+
+            // Text search
             if (!empty($search_by) && !empty($search)) {
                 $users->where($search_by, 'LIKE', '%' . $search . '%');
+            }
+
+            // Status filter
+            if ($request->filled('filter_status')) {
+                $users->where('status', $request->filter_status);
+            }
+
+            // Subscription filter
+            if ($request->filled('subscription')) {
+                if ($request->subscription === 'free') {
+                    $users->where(function ($q) {
+                        $q->where('subscription_id', 0)->orWhereNull('subscription_id');
+                    })->where(function ($q) {
+                        $q->where('is_vip', false)->orWhereNull('is_vip');
+                    });
+                } elseif ($request->subscription === 'subscribed') {
+                    $users->where('subscription_id', '>', 0);
+                } elseif ($request->subscription === 'vip') {
+                    $users->where('is_vip', true)->where('vip_expire', '>', now());
+                }
+            }
+
+            // Gender filter (join user_information)
+            if ($request->filled('gender')) {
+                $users->whereHas('user_information', function ($q) use ($request) {
+                    $q->where('gender', $request->gender);
+                });
+            }
+
+            // Verified filter
+            if ($request->filled('verified')) {
+                $users->whereHas('user_information', function ($q) use ($request) {
+                    if ($request->verified == '1') {
+                        $q->where('is_verified', true);
+                    } else {
+                        $q->where(function ($sub) {
+                            $sub->where('is_verified', false)->orWhereNull('is_verified');
+                        });
+                    }
+                });
+            }
+
+            // Country filter
+            if ($request->filled('country')) {
+                $users->whereHas('user_information', function ($q) use ($request) {
+                    $q->where('country_code', 'LIKE', '%' . $request->country . '%');
+                });
+            }
+
+            // Age filter (based on date_of_birth)
+            if ($request->filled('age_min') || $request->filled('age_max')) {
+                $users->whereHas('user_information', function ($q) use ($request) {
+                    if ($request->filled('age_max')) {
+                        $q->where('date_of_birth', '>=', now()->subYears((int)$request->age_max + 1)->addDay());
+                    }
+                    if ($request->filled('age_min')) {
+                        $q->where('date_of_birth', '<=', now()->subYears((int)$request->age_min));
+                    }
+                });
             }
 
             $users = $users->orderBy('id', 'DESC');
