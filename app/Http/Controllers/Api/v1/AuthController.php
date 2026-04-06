@@ -85,8 +85,11 @@ class AuthController extends Controller
 
         $user->save();
 
+        // Detect and store country from IP (non-blocking)
+        $this->detectAndStoreCountry($user, $request->ip());
+
         $tokenResult = $user->createToken($request->device_token)->plainTextToken;
-        
+
         $user->is_vip = (bool) $user->isVipActive();
         
         // Create Firebase custom token for non-email providers (email providers get it after verification)
@@ -214,6 +217,9 @@ class AuthController extends Controller
         $user->last_activity = now(); // Update last activity on signin
 
         $user->save();
+
+        // Detect and store country from IP (non-blocking)
+        $this->detectAndStoreCountry($user, $request->ip());
 
         $user->is_profile_completed = $user->user_information ? true : false;
         $user->is_vip = (bool) $user->isVipActive();
@@ -1129,5 +1135,40 @@ class AuthController extends Controller
         ];
 
         return $messages[$reason] ?? 'The image could not be approved. Please try a different photo.';
+    }
+
+    /**
+     * Detect user's country from IP address and store in user_information.
+     */
+    private function detectAndStoreCountry(User $user, ?string $ip): void
+    {
+        try {
+            // Skip for local/private IPs
+            if (!$ip || in_array($ip, ['127.0.0.1', '::1']) || str_starts_with($ip, '10.') || str_starts_with($ip, '192.168.')) {
+                return;
+            }
+
+            $response = @file_get_contents("http://ip-api.com/json/{$ip}?fields=status,countryCode", false, stream_context_create([
+                'http' => ['timeout' => 3]
+            ]));
+
+            if (!$response) return;
+
+            $data = json_decode($response, true);
+            if (!$data || ($data['status'] ?? '') !== 'success' || empty($data['countryCode'])) return;
+
+            $countryCode = strtoupper($data['countryCode']);
+
+            // Update user_information if it exists and country_code is empty
+            $info = $user->user_information;
+            if ($info) {
+                if (empty($info->country_code) || strlen($info->country_code) !== 2) {
+                    $info->country_code = $countryCode;
+                    $info->save();
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silently fail — country detection is non-critical
+        }
     }
 }

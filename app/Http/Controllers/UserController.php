@@ -113,11 +113,14 @@ class UserController extends Controller
                     $code = optional($user->user_information)->country_code;
                     if (!$code) return '-';
                     $code = strtoupper(trim($code));
-                    // Convert country code to flag emoji
-                    $flag = collect(str_split($code))->map(function ($c) {
-                        return mb_chr(ord($c) - ord('A') + 0x1F1E6);
-                    })->implode('');
-                    return $flag . ' ' . $code;
+                    // Only convert to flag emoji if exactly 2 alpha characters (ISO country code)
+                    if (strlen($code) === 2 && ctype_alpha($code)) {
+                        $flag = collect(str_split($code))->map(function ($c) {
+                            return mb_chr(ord($c) - ord('A') + 0x1F1E6);
+                        })->implode('');
+                        return $flag . ' ' . $code;
+                    }
+                    return $code;
                 })
                 ->editColumn('status', function ($user) {
                     if ($user->status == 1) {
