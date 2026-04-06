@@ -107,7 +107,7 @@ class UserController extends Controller
                     return '<span class="badge badge-secondary">No</span>';
                 })
                 ->editColumn('created_at', function ($user) {
-                    return $user->created_at ? $user->created_at->format('M d, Y') : '-';
+                    return $user->created_at ? $user->created_at->format('M d, Y g:ia') : '-';
                 })
                 ->addColumn('country', function ($user) {
                     $code = optional($user->user_information)->country_code;
