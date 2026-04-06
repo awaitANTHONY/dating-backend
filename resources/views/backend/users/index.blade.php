@@ -54,10 +54,13 @@
 				<table class="table table-bordered" id="data-table1">
 					<thead>
 						<tr>
-							
+
 							<th>{{ _lang('Image') }}</th>
         					<th>{{ _lang('Name') }}</th>
         					<th>{{ _lang('Email') }}</th>
+        					<th>{{ _lang('Country') }}</th>
+        					<th>{{ _lang('Verified') }}</th>
+        					<th>{{ _lang('Joined') }}</th>
         					<th class="text-center">{{ _lang('Status') }}</th>
 
 							<th class="text-center">{{ _lang('Action') }}</th>
@@ -84,13 +87,16 @@
 			}
 		},
 		"columns" : [
-			
+
 			{ data : "image", name : "image", className : "image" },
         	{ data : "name", name : "name", className : "name" },
         	{ data : "email", name : "email", className : "email" },
+        	{ data : "country", name : "country", className : "country" },
+        	{ data : "is_verified", name : "is_verified", className : "text-center" },
+        	{ data : "created_at", name : "created_at", className : "created_at" },
         	{ data : "status", name : "status", className : "status text-center" },
 			{ data : "action", name : "action", orderable : false, searchable : false, className : "text-center" }
-			
+
 		],
 		responsive: true,
 		"bStateSave": true,

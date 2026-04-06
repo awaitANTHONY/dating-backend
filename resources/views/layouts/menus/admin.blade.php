@@ -89,6 +89,20 @@
 </li>
 
 <li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('mood_suggestions') }}">
+		<i class="fa fa-smile u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Mood Suggestions') }}</span>
+	</a>
+</li>
+
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('contact_platforms') }}">
+		<i class="fa fa-address-book u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Contact Platforms') }}</span>
+	</a>
+</li>
+
+<li class="u-sidebar-nav-menu__item">
 	<a class="u-sidebar-nav-menu__link" href="{{ url('faqs') }}">
 		<i class="fa fa-question-circle u-sidebar-nav-menu__item-icon"></i>
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('FAQs') }}</span>
@@ -151,6 +165,12 @@
 			<a class="u-sidebar-nav-menu__link" href="{{ url('general_settings') }}">
 				<span class="u-sidebar-nav-menu__item-icon fa fa-angle-right"></span>
 				<span class="u-sidebar-nav-menu__item-title">{{ _lang('General Settings') }}</span>
+			</a>
+		</li>
+		<li class="u-sidebar-nav-menu__item">
+			<a class="u-sidebar-nav-menu__link" href="{{ url('coin_reward_settings') }}">
+				<span class="u-sidebar-nav-menu__item-icon fa fa-angle-right"></span>
+				<span class="u-sidebar-nav-menu__item-title">{{ _lang('Coin & DC Settings') }}</span>
 			</a>
 		</li>
 		<li class="u-sidebar-nav-menu__item">

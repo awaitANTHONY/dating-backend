@@ -103,6 +103,16 @@ Route::group(['middleware' => ['install']], function () {
         Route::get('reports/{id}/{status}', [Controllers\ReportController::class, 'updateStatus'])->name('reports.update-status')->where('status', 'reviewed|dismissed');
         Route::post('reports/bulk-update', [Controllers\ReportController::class, 'bulkUpdateStatus'])->name('reports.bulk-update');
         Route::resource('reports', Controllers\ReportController::class)->only(['index', 'show', 'destroy']);
+
+        // Mood Suggestions CRUD
+        Route::resource('mood_suggestions', Controllers\MoodSuggestionController::class);
+
+        // Contact Platforms CRUD
+        Route::resource('contact_platforms', Controllers\ContactPlatformController::class);
+
+        // Coin Reward & Direct Connect Settings
+        Route::any('coin_reward_settings', [Controllers\SettingController::class, 'coin_rewards'])->name('coin_reward_settings');
+
     // Fake User Generator
     Route::get('fake-user-generator', [App\Http\Controllers\FakeUserGeneratorController::class, 'index'])->name('fake-user-generator.index');
     Route::post('fake-user-generator/generate', [App\Http\Controllers\FakeUserGeneratorController::class, 'generate'])->name('fake-user-generator.generate');

@@ -50,6 +50,14 @@ class SettingController extends Controller
     }
 
     /**
+     * Coin reward & Direct Connect settings page.
+     */
+    public function coin_rewards(Request $request)
+    {
+        return view('backend.settings.coin_rewards');
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request

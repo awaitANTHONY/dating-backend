@@ -26,7 +26,7 @@ class UserController extends Controller
             $search_by = $request->search_by;
             $search = $request->search;
             
-            $users = User::select(['id', 'name', 'email', 'image', 'status'])
+            $users = User::select(['id', 'name', 'email', 'image', 'status', 'created_at'])
                         ->where('user_type', 'user');
             
             if (!empty($search_by) && !empty($search)) {
@@ -38,6 +38,20 @@ class UserController extends Controller
             return DataTables::of($users)
                 ->editColumn('image', function ($user) {
                     return '<img class="img-sm img-thumbnail" src="' . asset($user->image) . '">';
+                })
+                ->addColumn('is_verified', function ($user) {
+                    $verified = optional($user->user_information)->is_verified;
+                    if ($verified) {
+                        return '<span class="badge badge-success"><i class="fas fa-check-circle"></i> Verified</span>';
+                    }
+                    return '<span class="badge badge-secondary">No</span>';
+                })
+                ->editColumn('created_at', function ($user) {
+                    return $user->created_at ? $user->created_at->format('M d, Y') : '-';
+                })
+                ->addColumn('country', function ($user) {
+                    $info = optional($user->user_information);
+                    return $info->country_code ?? '-';
                 })
                 ->editColumn('status', function ($user) {
                     if ($user->status == 1) {
@@ -64,7 +78,7 @@ class UserController extends Controller
                                 </div>
                             </div>';
                 })
-                ->rawColumns(['action', 'status', 'image'])
+                ->rawColumns(['action', 'status', 'image', 'is_verified'])
                 ->make(true);
         }
 
