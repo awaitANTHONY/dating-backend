@@ -319,6 +319,13 @@ class UserController extends Controller
     {
         $user = User::find($id);
 
+        if (!$user) {
+            if ($request->ajax()) {
+                return response()->json(['result' => 'error', 'message' => 'User not found.']);
+            }
+            return redirect()->route('users.index')->with('error', 'User not found or has been deleted.');
+        }
+
         if (!$request->ajax()) {
             return view('backend.users.show', compact('user'));
         } else {
@@ -335,6 +342,13 @@ class UserController extends Controller
     public function edit(Request $request, $id)
     {
         $user = User::find($id);
+
+        if (!$user) {
+            if ($request->ajax()) {
+                return response()->json(['result' => 'error', 'message' => 'User not found.']);
+            }
+            return redirect()->route('users.index')->with('error', 'User not found or has been deleted.');
+        }
 
         if (!$request->ajax()) {
             return view('backend.users.edit', compact('user'));
@@ -482,6 +496,14 @@ class UserController extends Controller
     public function destroy(Request $request, $id)
     {
         $user = User::find($id);
+
+        if (!$user) {
+            if ($request->ajax()) {
+                return response()->json(['result' => 'error', 'message' => 'User not found.']);
+            }
+            return redirect()->route('users.index')->with('error', 'User not found or already deleted.');
+        }
+
         $userInformation = UserInformation::where('user_id', $user->id)->first();
         if ($userInformation) {
             $userInformation->delete();
@@ -489,7 +511,7 @@ class UserController extends Controller
         $user->delete();
 
         if (!$request->ajax()) {
-            return back()->with('success', _lang('Information has been deleted'));
+            return redirect()->route('users.index')->with('success', _lang('Information has been deleted'));
         } else {
             return response()->json(['result' => 'success', 'message' => _lang('Information has been deleted sucessfully')]);
         }
