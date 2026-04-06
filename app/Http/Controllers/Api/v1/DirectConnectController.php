@@ -149,12 +149,32 @@ class DirectConnectController extends Controller
             'last_active' => $user->updated_at ? $user->updated_at->diffForHumans() : null,
         ];
 
-        // If already connected, include the actual contacts
+        // If already connected, include the actual contacts (with values)
         if ($existingRequest) {
             $contacts = UserContact::where('user_id', $id)
                 ->where('status', true)
                 ->with('platform')
                 ->get();
+            $data['contacts'] = $contacts;
+        } elseif ($hasContacts) {
+            // Not connected yet — return platform names only (no values)
+            // so the Flutter UI can show which platforms are available to request
+            $contacts = UserContact::where('user_id', $id)
+                ->where('status', true)
+                ->with('platform')
+                ->get()
+                ->map(function ($c) {
+                    return [
+                        'id' => $c->id,
+                        'contact_platform_id' => $c->contact_platform_id,
+                        'platform' => $c->platform ? [
+                            'id' => $c->platform->id,
+                            'name' => $c->platform->name,
+                            'icon' => $c->platform->icon ?? '',
+                        ] : null,
+                        // No 'value' field — hidden until approved
+                    ];
+                });
             $data['contacts'] = $contacts;
         }
 
@@ -492,18 +512,34 @@ class DirectConnectController extends Controller
 
     private function getSubscriptionTier(User $user): ?string
     {
-        // Must have a real subscription_id and not be expired
-        if (!$user->subscription_id || $user->subscription_id == 0) return null;
-        if ($user->expired_at && \Carbon\Carbon::parse($user->expired_at)->isPast()) return null;
+        // 1. Check local DB first (fast path)
+        if ($user->subscription_id && $user->subscription_id != 0) {
+            // Only reject if expired_at is set AND in the past
+            if (!$user->expired_at || !\Carbon\Carbon::parse($user->expired_at)->isPast()) {
+                $subName = strtolower($user->subscription->name ?? '');
+                $productId = strtolower($user->subscription->product_id ?? '');
 
-        $subName = strtolower($user->subscription->name ?? '');
-        $productId = strtolower($user->subscription->product_id ?? '');
+                if (str_contains($subName, 'gold') || str_contains($productId, 'gold')) return 'gold';
+                if (str_contains($subName, 'premium') || str_contains($productId, 'premium')) return 'premium';
 
-        if (str_contains($subName, 'gold') || str_contains($productId, 'gold')) return 'gold';
-        if (str_contains($subName, 'premium') || str_contains($productId, 'premium')) return 'premium';
+                // Any active subscription is at least premium
+                return 'premium';
+            }
+        }
 
-        // Any active subscription is at least premium
-        return 'premium';
+        // 2. Fallback: check RevenueCat entitlements directly
+        //    Handles cases where local DB is out of sync (e.g. webhook delay)
+        try {
+            $goldEnt = $this->revenueCat->getActiveEntitlement((string) $user->id, 'gold_access');
+            if ($goldEnt) return 'gold';
+
+            $premiumEnt = $this->revenueCat->getActiveEntitlement((string) $user->id, 'premium_access');
+            if ($premiumEnt) return 'premium';
+        } catch (\Exception $e) {
+            Log::warning('DirectConnect: RevenueCat tier check failed', ['user' => $user->id, 'error' => $e->getMessage()]);
+        }
+
+        return null;
     }
 
     private function getFreeRequestsRemaining(User $user): int
