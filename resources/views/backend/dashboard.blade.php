@@ -152,11 +152,14 @@
 						<strong>{{ number_format($expiredSubscribers) }}</strong>
 					</div>
 					@endif
-					{{-- Free --}}
-					<div class="d-flex justify-content-between align-items-center">
-						<span><span class="d-inline-block rounded-circle mr-2" style="width:10px;height:10px;background:#e9ecef;"></span>Free</span>
-						<strong>{{ number_format($freeUsers) }}</strong>
-					</div>
+				</div>
+
+				{{-- Free users summary (outside chart) --}}
+				<hr class="my-2">
+				<div class="d-flex justify-content-between align-items-center text-muted">
+					<span><i class="fas fa-user mr-1"></i> Free Users</span>
+					<strong>{{ number_format($freeUsers) }}</strong>
+				</div>
 				</div>
 			</div>
 		</div>
@@ -402,7 +405,7 @@ new Chart(ctx, {
 	}
 });
 
-// Subscription doughnut chart
+// Subscription doughnut chart (paid tiers only)
 var subCtx = document.getElementById('subChart').getContext('2d');
 var subLabels = ['VIP'];
 var subData = [{{ $vipUsers }}];
@@ -412,9 +415,11 @@ subLabels.push({!! json_encode($sub->name) !!});
 subData.push({{ $sub->count }});
 subColors.push({!! json_encode(str_contains(strtolower($sub->name), 'gold') ? '#f59e0b' : '#2972fa') !!});
 @endforeach
-subLabels.push('Free');
-subData.push({{ $freeUsers }});
-subColors.push('#e9ecef');
+@if($expiredSubscribers > 0)
+subLabels.push('Expired');
+subData.push({{ $expiredSubscribers }});
+subColors.push('#adb5bd');
+@endif
 
 new Chart(subCtx, {
 	type: 'doughnut',
