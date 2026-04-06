@@ -39,6 +39,9 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
     //SubscriptionController
     Route::get('subscriptions', [Controllers\Api\v1\SubscriptionController::class, 'subscriptions']);
 
+    // Mood Suggestions (public)
+    Route::get('mood-suggestions', [Controllers\Api\v1\MoodSuggestionController::class, 'index']);
+
 
 
     //Auth Controller
@@ -139,6 +142,29 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::get('coin-packages', [Controllers\Api\v1\DirectConnectController::class, 'coinPackages']);
         Route::post('coins/purchase', [Controllers\Api\v1\DirectConnectController::class, 'purchaseCoins']);
         Route::get('coins/balance', [Controllers\Api\v1\DirectConnectController::class, 'coinBalance']);
+
+        // Coin Rewards
+        Route::get('coin-rewards/status', [Controllers\Api\v1\CoinRewardController::class, 'status']);
+        Route::post('coin-rewards/claim', [Controllers\Api\v1\CoinRewardController::class, 'claim']);
+
+        // Admin API routes
+        Route::prefix('admin')->group(function () {
+            // Coin Reward Settings
+            Route::get('coin-reward-settings', [Controllers\Api\v1\Admin\CoinRewardSettingsController::class, 'index']);
+            Route::put('coin-reward-settings', [Controllers\Api\v1\Admin\CoinRewardSettingsController::class, 'update']);
+
+            // Mood Suggestions CRUD
+            Route::get('mood-suggestions', [Controllers\Api\v1\MoodSuggestionController::class, 'adminIndex']);
+            Route::post('mood-suggestions', [Controllers\Api\v1\MoodSuggestionController::class, 'store']);
+            Route::put('mood-suggestions/{moodSuggestion}', [Controllers\Api\v1\MoodSuggestionController::class, 'update']);
+            Route::delete('mood-suggestions/{moodSuggestion}', [Controllers\Api\v1\MoodSuggestionController::class, 'destroy']);
+
+            // Contact Platforms CRUD
+            Route::get('contact-platforms', [Controllers\Api\v1\Admin\ContactPlatformController::class, 'index']);
+            Route::post('contact-platforms', [Controllers\Api\v1\Admin\ContactPlatformController::class, 'store']);
+            Route::put('contact-platforms/{contactPlatform}', [Controllers\Api\v1\Admin\ContactPlatformController::class, 'update']);
+            Route::delete('contact-platforms/{contactPlatform}', [Controllers\Api\v1\Admin\ContactPlatformController::class, 'destroy']);
+        });
     });
 });
 

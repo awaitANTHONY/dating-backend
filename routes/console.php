@@ -56,3 +56,15 @@ Schedule::command('direct-connect:expire')
     ->onFailure(function () {
         \Log::error('Direct Connect expire check failed');
     });
+
+// Grant daily free coins to active subscribers (Premium, Gold, VIP)
+Schedule::command('coins:grant-daily-subscriber')
+    ->dailyAt('00:05')
+    ->name('grant-daily-subscriber-coins')
+    ->description('Grant daily free coins to subscribers based on their tier')
+    ->onSuccess(function () {
+        \Log::info('Daily subscriber coin grant completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Daily subscriber coin grant failed');
+    });

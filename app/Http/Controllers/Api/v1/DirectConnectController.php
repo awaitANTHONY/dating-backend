@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\v1;
 use App\Http\Controllers\Controller;
 use App\Models\ContactPlatform;
 use App\Models\UserContact;
-use App\Models\ContactRequest;
+use App\Models\DirectConnectRequest as ContactRequest;
 use App\Models\CoinTransaction;
 use App\Models\Package;
 use App\Models\User;
@@ -262,8 +262,8 @@ class DirectConnectController extends Controller
                 'requester_id' => $user->id,
                 'owner_id' => $ownerId,
                 'status' => 'pending',
-                'coins_spent' => $cost,
-                'expires_at' => now()->addDays(7),
+                'coin_cost' => $cost,
+                'expires_at' => now()->addHours(48),
             ]);
 
             DB::commit();
@@ -276,7 +276,7 @@ class DirectConnectController extends Controller
                 'message' => 'Request sent! The user will be notified.',
                 'data' => [
                     'request_id' => $contactRequest->id,
-                    'coins_spent' => $cost,
+                    'coin_cost' => $cost,
                     'balance' => (int) $user->coin_balance,
                     'free_remaining' => max(0, $freeRemaining - ($cost === 0 ? 1 : 0)),
                 ],
@@ -316,6 +316,7 @@ class DirectConnectController extends Controller
         if ($action === 'approve') {
             $contactRequest->status = 'approved';
             $contactRequest->responded_at = now();
+            $contactRequest->approved_expires_at = now()->addHours(48);
             $contactRequest->save();
 
             // Get owner's contacts to include in notification
@@ -357,13 +358,18 @@ class DirectConnectController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        // For approved requests, include the owner's contacts
+        // For approved requests, include the owner's contacts only if within 48h window
         $requests->getCollection()->transform(function ($req) {
             if ($req->status === 'approved') {
-                $req->contacts = UserContact::where('user_id', $req->owner_id)
-                    ->where('status', true)
-                    ->with('platform')
-                    ->get();
+                if ($req->approved_expires_at && now()->greaterThan($req->approved_expires_at)) {
+                    $req->status = 'contact_expired';
+                    $req->contacts = [];
+                } else {
+                    $req->contacts = UserContact::where('user_id', $req->owner_id)
+                        ->where('status', true)
+                        ->with('platform')
+                        ->get();
+                }
             }
             return $req;
         });
@@ -378,6 +384,10 @@ class DirectConnectController extends Controller
         $user = $request->user();
         $requests = ContactRequest::where('owner_id', $user->id)
             ->where('status', 'pending')
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                      ->orWhere('expires_at', '>', now());
+            })
             ->with(['requester:id,name,image,updated_at'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
@@ -548,7 +558,7 @@ class DirectConnectController extends Controller
         if ($dailyLimit === 0) return 0;
 
         $todayCount = ContactRequest::where('requester_id', $user->id)
-            ->where('coins_spent', 0)
+            ->where('coin_cost', 0)
             ->whereDate('created_at', today())
             ->count();
 
