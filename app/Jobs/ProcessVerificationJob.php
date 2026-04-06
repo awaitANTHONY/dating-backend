@@ -100,6 +100,11 @@ class ProcessVerificationJob implements ShouldQueue
                 return;
             }
 
+            if (count($profilePhotos) < 2) {
+                $this->failVerification($verificationRequest, 'You need at least 2 profile photos to verify. Please add more photos showing your face and try again.');
+                return;
+            }
+
             // Analyze verification photo
             $result = $verificationService->analyzeImage(
                 $verificationRequest->image,

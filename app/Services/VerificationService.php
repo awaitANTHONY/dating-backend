@@ -566,7 +566,20 @@ BE RELAXED: Dating app users have various photo styles. Only reject if clearly d
                 ];
             }
 
-            // All comparable photos match (skipped photos are OK)
+            // Reject if ALL photos were skipped (no face found in any profile photo)
+            $totalPhotos = count($profilePhotoUrls);
+            $skippedCount = count($skippedPhotos);
+            if ($skippedCount >= $totalPhotos) {
+                return [
+                    'success' => false,
+                    'reason' => 'We couldn\'t find a clear face in any of your profile photos. Please ensure at least one profile photo clearly shows your face, then try again.',
+                    'confidence' => 0.0,
+                    'unmatched_photos' => [],
+                    'details' => $data
+                ];
+            }
+
+            // All comparable photos match (skipped photos are OK if at least one matched)
             $skippedCount = count($skippedPhotos);
             $successReason = $skippedCount > 0 
                 ? "Face matches profile photos ($skippedCount gallery-style photos without clear face were skipped)"
