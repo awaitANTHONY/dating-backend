@@ -119,9 +119,14 @@ if (!function_exists('send_notification')) {
                     "body"=> $message,
                 ],
                 "apns" => [
+                    "headers" => [
+                        "apns-priority" => "10",
+                        "apns-push-type" => "alert"
+                    ],
                     "payload" => [
                         "aps" => [
-                            "mutable-content" => 1
+                            "mutable-content" => 1,
+                            "sound" => "default"
                         ]
                     ],
                     "fcm_options" => [
@@ -132,6 +137,8 @@ if (!function_exists('send_notification')) {
                     "priority" => "HIGH",
                     "notification" => [
                         "default_sound" => true,
+                        "default_vibrate_timings" => true,
+                        "channel_id" => "high_importance_channel",
                         "image" => $image
                     ]
                 ]
