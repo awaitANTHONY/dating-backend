@@ -120,10 +120,13 @@ Route::group(['middleware' => ['install']], function () {
         Route::post('verification-requests/{id}/reject', [Controllers\VerificationRequestController::class, 'reject'])->name('verification-requests.reject');
 
         // Verification Queue (confidence-based manual review)
+        Route::get('verification-queue/stats', [Controllers\VerificationQueueController::class, 'stats'])->name('verification-queue.stats');
         Route::resource('verification-queue', Controllers\VerificationQueueController::class)->only(['index', 'show']);
         Route::post('verification-queue/{verificationQueue}/approve', [Controllers\VerificationQueueController::class, 'approve'])->name('verification-queue.approve');
         Route::post('verification-queue/{verificationQueue}/reject', [Controllers\VerificationQueueController::class, 'reject'])->name('verification-queue.reject');
-        Route::get('verification-queue/stats', [Controllers\VerificationQueueController::class, 'stats'])->name('verification-queue.stats');
+
+        // Bio Templates
+        Route::resource('bio_templates', Controllers\BioTemplateWebController::class);
 
     // Fake User Generator
     Route::get('fake-user-generator', [App\Http\Controllers\FakeUserGeneratorController::class, 'index'])->name('fake-user-generator.index');

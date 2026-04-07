@@ -94,11 +94,27 @@
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Verification Requests') }}</span>
 	</a>
 </li>
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('verification-queue') }}">
+		<i class="fa fa-shield-alt u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Verification Queue') }}</span>
+		@php $pendingCount = \App\Models\VerificationQueue::where('status','pending')->count(); @endphp
+		@if($pendingCount > 0)
+		<span class="badge badge-warning ml-1">{{ $pendingCount }}</span>
+		@endif
+	</a>
+</li>
 
 <li class="u-sidebar-nav-menu__item">
 	<a class="u-sidebar-nav-menu__link" href="{{ url('mood_suggestions') }}">
 		<i class="fa fa-smile u-sidebar-nav-menu__item-icon"></i>
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Mood Suggestions') }}</span>
+	</a>
+</li>
+<li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ url('bio_templates') }}">
+		<i class="fa fa-quote-left u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Bio Templates') }}</span>
 	</a>
 </li>
 
