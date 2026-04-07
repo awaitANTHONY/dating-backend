@@ -108,6 +108,7 @@ class NotificationController extends Controller
 
         $additional_data = [
             'action_url' => $notification->action_url,
+            'firebase_topic' => 'broadcast',
         ];
 
         send_notification('topic', $notification->title, $notification->message, $image, $additional_data);
