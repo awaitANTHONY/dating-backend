@@ -119,6 +119,12 @@ Route::group(['middleware' => ['install']], function () {
         Route::get('verification-requests/{id}/approve', [Controllers\VerificationRequestController::class, 'approve'])->name('verification-requests.approve');
         Route::post('verification-requests/{id}/reject', [Controllers\VerificationRequestController::class, 'reject'])->name('verification-requests.reject');
 
+        // Verification Queue (confidence-based manual review)
+        Route::resource('verification-queue', Controllers\VerificationQueueController::class)->only(['index', 'show']);
+        Route::post('verification-queue/{verificationQueue}/approve', [Controllers\VerificationQueueController::class, 'approve'])->name('verification-queue.approve');
+        Route::post('verification-queue/{verificationQueue}/reject', [Controllers\VerificationQueueController::class, 'reject'])->name('verification-queue.reject');
+        Route::get('verification-queue/stats', [Controllers\VerificationQueueController::class, 'stats'])->name('verification-queue.stats');
+
     // Fake User Generator
     Route::get('fake-user-generator', [App\Http\Controllers\FakeUserGeneratorController::class, 'index'])->name('fake-user-generator.index');
     Route::post('fake-user-generator/generate', [App\Http\Controllers\FakeUserGeneratorController::class, 'generate'])->name('fake-user-generator.generate');

@@ -109,6 +109,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the verification queue entry for this user.
+     */
+    public function verificationQueue()
+    {
+        return $this->hasOne(VerificationQueue::class);
+    }
+
+    /**
      * Users that this user has blocked
      */
     public function blockedUsers()
