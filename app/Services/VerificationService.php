@@ -10,11 +10,12 @@ use Exception;
 class VerificationService
 {
     private string $openaiApiKey;
-    private string $model = 'gpt-4o';
+    private string $model;
 
     public function __construct()
     {
         $this->openaiApiKey = config('services.openai.api_key');
+        $this->model = config('services.openai.verification_model', 'gpt-4o-mini');
 
         if (empty($this->openaiApiKey)) {
             throw new Exception('OPENAI_API_KEY is not configured. Add it to your .env file.');

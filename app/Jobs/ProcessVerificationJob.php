@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\VerificationRequest;
+use App\Models\VerificationQueue;
 use App\Models\User;
 use App\Services\VerificationService;
 use Illuminate\Bus\Queueable;
@@ -111,31 +112,87 @@ class ProcessVerificationJob implements ShouldQueue
                 $profilePhotos
             );
 
-            // Update verification request and user based on result
+            // Extract confidence score
+            $confidence = $result['confidence'] ?? 0.0;
+            $autoApproveThreshold = config('verification.confidence_thresholds.auto_approve', 0.95);
+            $manualReviewThreshold = config('verification.confidence_thresholds.manual_review', 0.85);
+
             DB::beginTransaction();
 
+            // Update verification request with AI response
             $verificationRequest->update([
-                'status' => $result['status'],
                 'reason' => $result['reason'],
                 'ai_response' => $result
             ]);
 
-            $user->update([
-                'verification_status' => $result['status'],
-                'verified_at' => $result['status'] === 'approved' ? now() : null
-            ]);
+            // Route based on confidence level
+            if ($confidence >= $autoApproveThreshold) {
+                // ✅ High confidence: Auto-approve immediately
+                $verificationRequest->update(['status' => 'approved']);
 
-            // Update user_information.is_verified field
-            if ($user->user_information) {
-                $user->user_information->update([
-                    'is_verified' => $result['status'] === 'approved'
+                $user->update([
+                    'verification_status' => 'approved',
+                    'verified_at' => now()
                 ]);
+
+                if ($user->user_information) {
+                    $user->user_information->update(['is_verified' => true]);
+                }
+
+                DB::commit();
+
+                Log::info('Verification auto-approved (high confidence)', [
+                    'user_id' => $user->id,
+                    'confidence' => $confidence
+                ]);
+
+                $this->sendVerificationNotification($user, 'approved', $result['reason']);
+
+            } elseif ($confidence >= $manualReviewThreshold && $confidence < $autoApproveThreshold) {
+                // ⚠️ Medium confidence: Queue for manual admin review
+                VerificationQueue::create([
+                    'user_id' => $user->id,
+                    'selfie_image' => $verificationRequest->image,
+                    'status' => 'pending',
+                    'ai_confidence' => $confidence,
+                    'ai_response' => $result,
+                    'reason' => $result['reason']
+                ]);
+
+                $verificationRequest->update(['status' => 'pending_admin_review']);
+
+                DB::commit();
+
+                Log::info('Verification queued for manual review', [
+                    'user_id' => $user->id,
+                    'confidence' => $confidence
+                ]);
+
+                // Notify admin that there's a verification pending review
+                // TODO: Send admin notification about pending verification queue item
+
+            } else {
+                // ❌ Low confidence: Auto-reject
+                $verificationRequest->update(['status' => 'rejected']);
+
+                $user->update([
+                    'verification_status' => 'rejected',
+                    'verified_at' => null
+                ]);
+
+                if ($user->user_information) {
+                    $user->user_information->update(['is_verified' => false]);
+                }
+
+                DB::commit();
+
+                Log::info('Verification auto-rejected (low confidence)', [
+                    'user_id' => $user->id,
+                    'confidence' => $confidence
+                ]);
+
+                $this->sendVerificationNotification($user, 'rejected', $result['reason']);
             }
-
-            DB::commit();
-
-            // Send notification to user
-            $this->sendVerificationNotification($user, $result['status'], $result['reason']);
 
         } catch (Exception $e) {
             DB::rollBack();
