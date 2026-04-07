@@ -74,8 +74,6 @@ class BackfillCountryCodes extends Command
                     }
 
                     $bar->advance();
-
-                    // Nominatim requires max 1 request per second
                     sleep($sleepSeconds);
                 }
             });

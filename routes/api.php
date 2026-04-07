@@ -42,6 +42,9 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
     // Mood Suggestions (public)
     Route::get('mood-suggestions', [Controllers\Api\v1\MoodSuggestionController::class, 'index']);
 
+    // Bio Templates (public)
+    Route::get('bio-templates', [Controllers\Api\v1\BioTemplateController::class, 'index']);
+
 
 
     //Auth Controller
@@ -155,6 +158,9 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
 
             // Mood Suggestions CRUD
             Route::get('mood-suggestions', [Controllers\Api\v1\MoodSuggestionController::class, 'adminIndex']);
+
+    // Bio Templates (public)
+    Route::get('bio-templates', [Controllers\Api\v1\BioTemplateController::class, 'index']);
             Route::post('mood-suggestions', [Controllers\Api\v1\MoodSuggestionController::class, 'store']);
             Route::put('mood-suggestions/{moodSuggestion}', [Controllers\Api\v1\MoodSuggestionController::class, 'update']);
             Route::delete('mood-suggestions/{moodSuggestion}', [Controllers\Api\v1\MoodSuggestionController::class, 'destroy']);
@@ -164,6 +170,12 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
             Route::post('contact-platforms', [Controllers\Api\v1\Admin\ContactPlatformController::class, 'store']);
             Route::put('contact-platforms/{contactPlatform}', [Controllers\Api\v1\Admin\ContactPlatformController::class, 'update']);
             Route::delete('contact-platforms/{contactPlatform}', [Controllers\Api\v1\Admin\ContactPlatformController::class, 'destroy']);
+
+            // Bio Templates CRUD
+            Route::get('bio-templates', [Controllers\Api\v1\BioTemplateController::class, 'adminIndex']);
+            Route::post('bio-templates', [Controllers\Api\v1\BioTemplateController::class, 'store']);
+            Route::put('bio-templates/{bioTemplate}', [Controllers\Api\v1\BioTemplateController::class, 'update']);
+            Route::delete('bio-templates/{bioTemplate}', [Controllers\Api\v1\BioTemplateController::class, 'destroy']);
         });
     });
 });
