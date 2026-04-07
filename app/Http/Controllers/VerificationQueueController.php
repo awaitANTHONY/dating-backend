@@ -150,7 +150,7 @@ class VerificationQueueController extends Controller
 
             return response()->json([
                 'status' => false,
-                'message' => 'Failed to approve verification: ' . $e->getMessage()
+                'message' => 'Failed to approve verification. Please try again.'
             ], 500);
         }
     }
@@ -221,7 +221,7 @@ class VerificationQueueController extends Controller
 
             return response()->json([
                 'status' => false,
-                'message' => 'Failed to reject verification: ' . $e->getMessage()
+                'message' => 'Failed to reject verification. Please try again.'
             ], 500);
         }
     }

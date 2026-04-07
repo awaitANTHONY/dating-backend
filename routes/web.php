@@ -164,7 +164,7 @@ Route::get('/cache', function(){
         file_put_contents($logPath, '');
     }
     return redirect('dashboard')->with('success', _lang('Cache successfully clear.'));
-});
+})->middleware('auth');
 
 
 
