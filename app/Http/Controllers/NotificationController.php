@@ -110,7 +110,7 @@ class NotificationController extends Controller
             'action_url' => $notification->action_url,
         ];
 
-        send_notification($notification, $additional_data);
+        send_notification('topic', $notification->title, $notification->message, $image, $additional_data);
 
         if (!$request->ajax()) {
             return redirect('notifications')->with('success', _lang('Notification sent!'));
