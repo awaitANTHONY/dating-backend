@@ -114,6 +114,7 @@ class ProcessVerificationJob implements ShouldQueue
 
             // Extract confidence score
             $confidence = $result['confidence'] ?? 0.0;
+            $aiStatus = $result['status'] ?? null;
             $autoApproveThreshold = config('verification.confidence_thresholds.auto_approve', 0.95);
             $manualReviewThreshold = config('verification.confidence_thresholds.manual_review', 0.85);
 
@@ -124,6 +125,11 @@ class ProcessVerificationJob implements ShouldQueue
                 'reason' => $result['reason'],
                 'ai_response' => $result
             ]);
+
+            // If AI explicitly approved and all checks passed, treat as high confidence
+            if ($aiStatus === 'approved' && $confidence >= 0.75) {
+                $confidence = max($confidence, $autoApproveThreshold);
+            }
 
             // Route based on confidence level
             if ($confidence >= $autoApproveThreshold) {
