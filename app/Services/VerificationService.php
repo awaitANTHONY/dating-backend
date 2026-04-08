@@ -84,7 +84,7 @@ class VerificationService
     }
 
     /**
-     * Check liveness and thumbs-up gesture
+     * Check liveness and head-turn gesture
      *
      * @param string $imageUrl
      * @return array
@@ -98,7 +98,7 @@ class VerificationService
   "is_real_person": true/false,
   "single_person": true/false,
   "face_visible": true/false,
-  "thumbs_up_gesture": true/false,
+  "head_turn_gesture": true/false,
   "good_quality": true/false,
   "is_live_photo": true/false,
   "is_document_or_screenshot": true/false,
@@ -131,13 +131,14 @@ REQUIREMENTS TO CHECK:
    - Person\'s full face is clearly visible
    - Nose and mouth are clearly showing
    - Eyes and facial structure visible
-   - Face not covered by hands, masks, or objects (except hand showing gesture)
+   - Face not covered by hands, masks, or objects
    - Not a profile view or partial face
 
-5. THUMBS UP GESTURE - Set "thumbs_up_gesture" = true only if:
-   - Person is making a clear thumbs-up gesture
-   - Thumb pointing upward and clearly visible
-   - This is a REQUIRED gesture
+5. HEAD TURN GESTURE - Set "head_turn_gesture" = true only if:
+   - Person appears to be turning their head slightly left or right
+   - OR person is looking slightly to the side (not perfectly centered)
+   - This is a LIVENESS gesture - be LENIENT. Even a slight head angle counts.
+   - A natural selfie angle counts as a head turn
 
 6. GOOD QUALITY - Set "good_quality" = true only if:
    - Photo is clear, not blurry or pixelated
@@ -191,16 +192,14 @@ Analyze objectively without identifying individuals.
    - Face must be clear, well-lit, not blurry or dark
    - NOSE and MOUTH must be CLEARLY visible (REQUIRED)
    - Eyes, eyebrows, facial structure must be visible
-   - Face should not be covered by hands, masks, scarves (except hand showing thumbs-up)
+   - Face should not be covered by hands, masks, scarves
    - NO face masks, medical masks, bandanas covering nose/mouth
    - Profile views or partial faces = FALSE
 
-5. "thumbs_up_gesture" = TRUE only if person is clearly making a THUMBS-UP gesture
-   - The thumb must be pointing UP and clearly visible
-   - The gesture must be clear and unambiguous
-   - Hand must be in the frame showing thumbs-up
-   - This is MANDATORY for liveness verification
-   - NO other gestures accepted (peace sign, wave, point, etc.)
+5. "head_turn_gesture" = TRUE only if person shows any sign of head turning left or right
+   - Even a SLIGHT head angle or tilt counts as passing
+   - A natural selfie angle (not perfectly straight) counts
+   - Be LENIENT - this is just a liveness check, not a strict pose requirement
 
 6. "good_quality" = TRUE only if photo meets quality standards
    - Not blurry, dark, overexposed, or pixelated
@@ -235,15 +234,15 @@ STRICT REQUIREMENTS - ALL MUST BE TRUE TO PASS:
 ✓ Real person photographed live (not AI, cartoon, screenshot, or saved image)
 ✓ Exactly one person visible
 ✓ Face clearly visible with nose and mouth showing
-✓ Thumbs-up gesture clearly visible
+✓ Head turned slightly left or right (liveness gesture)
 ✓ Good photo quality (clear, well-lit)
 ✓ Fresh selfie taken just now (not screenshot, not professional, not saved)
 ✓ NO screenshots, UI elements, or app interfaces visible
 ✓ NO professional photos, modeling shots, or stock images
 
-REMEMBER: This is IDENTITY VERIFICATION. We need a LIVE SELFIE with THUMBS-UP, not a screenshot or saved photo.
+REMEMBER: This is IDENTITY VERIFICATION. We need a LIVE SELFIE with the person turning their head slightly, not a screenshot or saved photo.
 REJECT all screenshots, saved images from internet, professional photos, and photos with ANY UI elements.
-When in doubt, SET is_document_or_screenshot = TRUE. Be EXTREMELY STRICT.
+When in doubt, SET is_document_or_screenshot = TRUE. Be EXTREMELY STRICT on screenshots but LENIENT on head turn gesture.
 
 Confidence should be 0.8+ for approval, lower if uncertain.';
 
@@ -290,7 +289,7 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
                 'is_real_person' => 'Photo must be of a real person, not AI-generated or illustration',
                 'single_person' => 'Photo must contain exactly one person',
                 'face_visible' => 'Face must be clearly visible with nose and mouth showing',
-                'thumbs_up_gesture' => 'Thumbs-up gesture is required for verification',
+                'head_turn_gesture' => 'Please turn your head slightly left or right for verification',
                 'good_quality' => 'Photo quality is insufficient - please ensure good lighting',
                 'is_live_photo' => 'Photo must be a fresh selfie taken now, not a screenshot or saved image'
             ];
