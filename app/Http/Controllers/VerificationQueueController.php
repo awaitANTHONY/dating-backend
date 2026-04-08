@@ -95,10 +95,10 @@ class VerificationQueueController extends Controller
      */
     public function approve(Request $request, VerificationQueue $verificationQueue)
     {
-        if ($verificationQueue->status !== 'pending') {
+        if (!in_array($verificationQueue->status, ['pending', 'rejected'])) {
             return response()->json([
                 'status' => false,
-                'message' => 'This verification has already been reviewed.'
+                'message' => 'This verification has already been approved.'
             ], 400);
         }
 
@@ -117,7 +117,9 @@ class VerificationQueueController extends Controller
             $user = $verificationQueue->user;
             $user->update([
                 'verification_status' => 'approved',
-                'verified_at' => now()
+                'verified_at' => now(),
+                'verification_attempts' => 0,
+                'verification_cooldown_until' => null,
             ]);
 
             if ($user->user_information) {

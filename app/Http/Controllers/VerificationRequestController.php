@@ -43,6 +43,8 @@ class VerificationRequestController extends Controller
                         return '<span class="badge badge-success">Approved</span>';
                     } elseif ($vr->status === 'rejected') {
                         return '<span class="badge badge-danger">Rejected</span>';
+                    } elseif ($vr->status === 'pending_admin_review') {
+                        return '<span class="badge badge-info">Needs Review</span>';
                     }
                     return '<span class="badge badge-warning">Pending</span>';
                 })
@@ -54,8 +56,10 @@ class VerificationRequestController extends Controller
                     $action .= '<button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-toggle="dropdown">' . _lang('Action') . '</button>';
                     $action .= '<div class="dropdown-menu">';
                     $action .= '<a href="' . url('verification-requests/' . $vr->id) . '" class="dropdown-item ajax-modal" data-title="' . _lang('Review Verification') . '"><i class="fas fa-eye"></i> ' . _lang('Review') . '</a>';
-                    if ($vr->status === 'pending') {
+                    if ($vr->status === 'pending' || $vr->status === 'rejected' || $vr->status === 'pending_admin_review') {
                         $action .= '<a href="' . url('verification-requests/' . $vr->id . '/approve') . '" class="dropdown-item ajax-get-confirm" data-confirm="' . _lang('Approve this verification?') . '"><i class="fas fa-check text-success"></i> ' . _lang('Approve') . '</a>';
+                    }
+                    if ($vr->status === 'pending' || $vr->status === 'pending_admin_review') {
                         $action .= '<a href="' . url('verification-requests/' . $vr->id . '/reject') . '" class="dropdown-item ajax-modal" data-title="' . _lang('Reject Verification') . '"><i class="fas fa-times text-danger"></i> ' . _lang('Reject') . '</a>';
                     }
                     $action .= '</div></div>';
@@ -89,6 +93,8 @@ class VerificationRequestController extends Controller
         if ($user) {
             $user->verification_status = 'approved';
             $user->verified_at = Carbon::now();
+            $user->verification_attempts = 0;
+            $user->verification_cooldown_until = null;
             $user->save();
 
             // Also mark user_information as verified

@@ -64,7 +64,7 @@
 </div>
 @endif
 
-@if($vr->status === 'pending')
+@if($vr->status === 'pending' || $vr->status === 'rejected' || $vr->status === 'pending_admin_review')
 <hr>
 <div class="row mt-3">
     <div class="col-md-6">
@@ -72,6 +72,7 @@
             <i class="fas fa-check mr-1"></i>{{ _lang('Approve') }}
         </a>
     </div>
+    @if($vr->status !== 'rejected')
     <div class="col-md-6">
         <form method="post" class="ajax-submit" action="{{ url('verification-requests/' . $vr->id . '/reject') }}">
             @csrf
@@ -83,5 +84,6 @@
             </button>
         </form>
     </div>
+    @endif
 </div>
 @endif

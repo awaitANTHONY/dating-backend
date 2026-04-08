@@ -84,7 +84,10 @@ class VerificationService
     }
 
     /**
-     * Check liveness and head-turn gesture
+     * Check liveness and photo authenticity
+     *
+     * Note: Head-turn liveness is verified by the mobile app's ML Kit before capture.
+     * This method focuses on photo authenticity, quality, and screenshot detection.
      *
      * @param string $imageUrl
      * @return array
@@ -98,7 +101,6 @@ class VerificationService
   "is_real_person": true/false,
   "single_person": true/false,
   "face_visible": true/false,
-  "head_turn_gesture": true/false,
   "good_quality": true/false,
   "is_live_photo": true/false,
   "is_document_or_screenshot": true/false,
@@ -134,26 +136,22 @@ REQUIREMENTS TO CHECK:
    - Face not covered by hands, masks, or objects
    - Not a profile view or partial face
 
-5. HEAD TURN GESTURE - Set "head_turn_gesture" = true only if:
-   - Person appears to be turning their head slightly left or right
-   - OR person is looking slightly to the side (not perfectly centered)
-   - This is a LIVENESS gesture - be LENIENT. Even a slight head angle counts.
-   - A natural selfie angle counts as a head turn
-
-6. GOOD QUALITY - Set "good_quality" = true only if:
-   - Photo is clear, not blurry or pixelated
-   - Good lighting (not too dark or overexposed)
+5. GOOD QUALITY - Set "good_quality" = true only if:
+   - Photo is clear enough to identify the person (allow slight blur from phone cameras)
+   - Face is visible and recognizable (not pitch dark)
    - Person\'s face is the main subject
-   - Recent and clear photo quality
+   - Be LENIENT with phone camera quality - low-end Android cameras are acceptable
 
-7. LIVE PHOTO - Set "is_live_photo" = true only if:
+6. LIVE PHOTO - Set "is_live_photo" = true only if:
    - Appears to be a fresh selfie taken just now
    - NOT a screenshot or saved image
    - NOT a professional or stock photo
    - Simple background (home, room, outdoor) not studio
 
 ALL REQUIREMENTS MUST BE TRUE TO PASS (except is_document_or_screenshot must be FALSE).
-Set confidence 0.8+ for clear pass, lower if uncertain.
+Set confidence 0.85+ for clear pass, lower if uncertain.
+
+NOTE: Liveness (head turn gesture) has ALREADY been verified by the mobile app before this photo was captured. The user completed a live head-turn challenge on their device. Do NOT check for head position or angles - the photo was taken after the liveness challenge when the user looked back at the camera. Focus ONLY on photo authenticity and quality.
 
 Analyze objectively without identifying individuals.
 
@@ -177,43 +175,38 @@ Analyze objectively without identifying individuals.
    
    REJECT IMMEDIATELY IF ANY UI, APP, OR WEBSITE ELEMENTS VISIBLE!
 
-2. "is_real_person" = TRUE only if this is a REAL PHOTOGRAPH of a REAL HUMAN taken RIGHT NOW
+2. "is_real_person" = TRUE only if this is a REAL PHOTOGRAPH of a REAL HUMAN
    - NOT screenshots from ANY source (social media, apps, websites, browsers)
    - NOT AI-generated, drawings, cartoons, digital art, anime, illustrations
    - NOT photos of photos (screen, printed photo, ID card, magazine, poster)
    - NOT professional photoshoots, stock images, modeling photos
-   - MUST be a FRESH SELFIE taken specifically for verification
+   - Should be a selfie taken for verification
 
 3. "single_person" = TRUE only if EXACTLY ONE person is visible in the photo
    - Reject if multiple people, group photos, or no person visible
    - No other faces in background
 
 4. "face_visible" = TRUE only if you can CLEARLY see the person\'s FULL FACE
-   - Face must be clear, well-lit, not blurry or dark
-   - NOSE and MOUTH must be CLEARLY visible (REQUIRED)
+   - Face must be visible, not heavily blurred or completely dark
+   - NOSE and MOUTH must be visible (REQUIRED)
    - Eyes, eyebrows, facial structure must be visible
    - Face should not be covered by hands, masks, scarves
    - NO face masks, medical masks, bandanas covering nose/mouth
    - Profile views or partial faces = FALSE
 
-5. "head_turn_gesture" = TRUE only if person shows any sign of head turning left or right
-   - Even a SLIGHT head angle or tilt counts as passing
-   - A natural selfie angle (not perfectly straight) counts
-   - Be LENIENT - this is just a liveness check, not a strict pose requirement
+5. "good_quality" = TRUE if photo quality is ACCEPTABLE (be lenient):
+   - Face must be recognizable and identifiable
+   - Allow low-end phone camera quality (slight blur, noise, grain is OK)
+   - Allow imperfect lighting (slightly dark or slightly bright is OK)
+   - Person\'s face should be main subject and close enough to see
+   - Only reject if photo is SO dark, blurry, or tiny that person cannot be identified
 
-6. "good_quality" = TRUE only if photo meets quality standards
-   - Not blurry, dark, overexposed, or pixelated
-   - Person\'s face is main subject, not too distant
-   - Natural or indoor lighting (not pitch dark)
-   - Photo is recent and clear
-   - Not taken through mirrors, windows, or other surfaces
-
-7. "is_live_photo" = TRUE only if this appears to be a FRESH SELFIE taken JUST NOW
+6. "is_live_photo" = TRUE only if this appears to be a FRESH SELFIE
    - NOT a screenshot from social media, dating apps, or any website
    - NOT a professional photo, stock image, or modeling shot
    - NOT a saved photo from camera roll with UI elements
    - NOT a photo of a screen or printed image
-   - Should look like someone JUST took it with their phone camera for verification
+   - Should look like someone took it with their phone camera for verification
    - Simple background (home, room, outdoor) - NOT studio background
 
 EXTREME REJECTION CRITERIA - SET is_document_or_screenshot = TRUE IF ANY:
@@ -231,20 +224,20 @@ EXTREME REJECTION CRITERIA - SET is_document_or_screenshot = TRUE IF ANY:
 ❌ Stock photo watermarks or professional photo service marks
 
 STRICT REQUIREMENTS - ALL MUST BE TRUE TO PASS:
-✓ Real person photographed live (not AI, cartoon, screenshot, or saved image)
+✓ Real person photographed (not AI, cartoon, screenshot, or saved image)
 ✓ Exactly one person visible
 ✓ Face clearly visible with nose and mouth showing
-✓ Head turned slightly left or right (liveness gesture)
-✓ Good photo quality (clear, well-lit)
-✓ Fresh selfie taken just now (not screenshot, not professional, not saved)
+✓ Photo quality acceptable (face recognizable)
+✓ Fresh selfie (not screenshot, not professional, not saved)
 ✓ NO screenshots, UI elements, or app interfaces visible
 ✓ NO professional photos, modeling shots, or stock images
 
-REMEMBER: This is IDENTITY VERIFICATION. We need a LIVE SELFIE with the person turning their head slightly, not a screenshot or saved photo.
+REMEMBER: This is IDENTITY VERIFICATION. The mobile app already verified liveness via a live head-turn challenge before capturing this photo.
+Focus on: Is this a real, fresh selfie of a real person? Is the face clear enough to match against profile photos?
 REJECT all screenshots, saved images from internet, professional photos, and photos with ANY UI elements.
-When in doubt, SET is_document_or_screenshot = TRUE. Be EXTREMELY STRICT on screenshots but LENIENT on head turn gesture.
+When in doubt about screenshots, SET is_document_or_screenshot = TRUE. Be STRICT on screenshots but LENIENT on photo quality (many users have budget phones).
 
-Confidence should be 0.8+ for approval, lower if uncertain.';
+Confidence should be 0.85+ for approval, lower if uncertain.';
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->openaiApiKey,
@@ -283,14 +276,13 @@ Confidence should be 0.8+ for approval, lower if uncertain.';
                 ];
             }
 
-            // Check all requirements
+            // Check all requirements (liveness already verified by mobile app's head-turn challenge)
             $checks = [
                 'is_document_or_screenshot' => 'Screenshot or saved image detected - please take a fresh live selfie',
                 'is_real_person' => 'Photo must be of a real person, not AI-generated or illustration',
                 'single_person' => 'Photo must contain exactly one person',
                 'face_visible' => 'Face must be clearly visible with nose and mouth showing',
-                'head_turn_gesture' => 'Please turn your head slightly left or right for verification',
-                'good_quality' => 'Photo quality is insufficient - please ensure good lighting',
+                'good_quality' => 'Photo quality is insufficient - please ensure good lighting and try again',
                 'is_live_photo' => 'Photo must be a fresh selfie taken now, not a screenshot or saved image'
             ];
 
