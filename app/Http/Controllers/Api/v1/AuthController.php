@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\UserInformation;
 use App\Models\AppModel;
+use App\Models\BannedEmail;
 use Pion\Laravel\ChunkUpload\Exceptions\UploadMissingFileException;
 use Pion\Laravel\ChunkUpload\Handler\AbstractHandler;
 use Pion\Laravel\ChunkUpload\Handler\HandlerFactory;
@@ -56,6 +57,11 @@ class AuthController extends Controller
         $nameValidation = $this->validateContent($request->name);
         if (!$nameValidation['valid']) {
             return response()->json(['status' => false, 'message' => 'Name cannot contain contact information such as phone numbers or social media handles.']);
+        }
+
+        // Block permanently banned emails from re-registering
+        if (BannedEmail::isBanned($request->email)) {
+            return response()->json(['status' => false, 'message' => 'This email address has been banned. Please contact support for assistance.']);
         }
         
         $user = new User();

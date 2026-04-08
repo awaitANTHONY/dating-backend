@@ -40,6 +40,10 @@ class User extends Authenticatable
         'verified_at',
         'last_scanned_at',
         'image_hash',
+        'verification_attempts',
+        'verification_cooldown_until',
+        'is_banned',
+        'ban_reason',
     ];
 
     /**
@@ -69,7 +73,10 @@ class User extends Authenticatable
         'vip_expire' => 'datetime',
         'verified_at' => 'datetime',
         'last_scanned_at' => 'datetime',
+        'verification_cooldown_until' => 'datetime',
         'is_vip' => 'boolean',
+        'is_banned' => 'boolean',
+        'verification_attempts' => 'integer',
     ];
 
     public function getImageAttribute($data)
@@ -196,6 +203,54 @@ class User extends Authenticatable
     public function hasPendingVerification(): bool
     {
         return $this->verification_status === 'pending';
+    }
+
+    /**
+     * Check if user is permanently banned.
+     */
+    public function isBanned(): bool
+    {
+        return (bool) $this->is_banned;
+    }
+
+    /**
+     * Check if user is currently in a verification cooldown.
+     */
+    public function isInVerificationCooldown(): bool
+    {
+        return $this->verification_cooldown_until !== null
+            && $this->verification_cooldown_until->isFuture();
+    }
+
+    /**
+     * Increment verification rejection attempts and apply cooldown/ban when thresholds are hit.
+     * Thresholds (configurable via config/verification.php):
+     *   - After COOLDOWN_AFTER rejections  → set a cooldown period
+     *   - After BAN_AFTER total rejections → permanently ban the account
+     */
+    public function handleVerificationRejection(): void
+    {
+        $attempts = ($this->verification_attempts ?? 0) + 1;
+        $cooldownAfter = config('verification.attempt_limits.cooldown_after', 3);
+        $banAfter      = config('verification.attempt_limits.ban_after', 6);
+        $cooldownDays  = config('verification.attempt_limits.cooldown_days', 7);
+
+        $updates = ['verification_attempts' => $attempts];
+
+        if ($attempts >= $banAfter) {
+            $updates['is_banned']   = true;
+            $updates['ban_reason']  = 'Permanently banned after ' . $attempts . ' failed verification attempts.';
+            $updates['verification_cooldown_until'] = null;
+        } elseif ($attempts >= $cooldownAfter) {
+            $updates['verification_cooldown_until'] = now()->addDays($cooldownDays);
+        }
+
+        $this->update($updates);
+
+        // If banned, also flag the email so they can't re-register
+        if ($attempts >= $banAfter) {
+            \App\Models\BannedEmail::ban($this->email, $this->id, $updates['ban_reason']);
+        }
     }
 
     /**

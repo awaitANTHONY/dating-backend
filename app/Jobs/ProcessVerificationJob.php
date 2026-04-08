@@ -186,9 +186,13 @@ class ProcessVerificationJob implements ShouldQueue
 
                 DB::commit();
 
+                // Increment rejection counter and apply cooldown/ban if thresholds are hit
+                $user->handleVerificationRejection();
+
                 Log::info('Verification auto-rejected (low confidence)', [
                     'user_id' => $user->id,
-                    'confidence' => $confidence
+                    'confidence' => $confidence,
+                    'total_attempts' => $user->fresh()->verification_attempts,
                 ]);
 
                 $this->sendVerificationNotification($user, 'rejected', $result['reason']);
@@ -240,8 +244,21 @@ class ProcessVerificationJob implements ShouldQueue
                 $message = 'Congratulations! Your account is now verified. Enjoy enhanced features and trust from other users.';
                 $image = $user->image ? asset($user->image) : null;
             } elseif ($status === 'rejected') {
+                $freshUser = $user->fresh();
+                $attempts     = $freshUser->verification_attempts ?? 0;
+                $cooldownAfter = config('verification.attempt_limits.cooldown_after', 3);
+                $banAfter      = config('verification.attempt_limits.ban_after', 6);
+
                 $title = '❌ Verification Rejected';
-                $message = 'Your verification was not approved. Reason: ' . $reason . '. Please try again with a new photo.';
+
+                if ($freshUser->isBanned()) {
+                    $message = 'Your account has been disabled after ' . $attempts . ' failed verification attempts. Contact support for help.';
+                } elseif ($freshUser->isInVerificationCooldown()) {
+                    $message = 'Verification rejected. Reason: ' . $reason . '. You must wait ' . $freshUser->verification_cooldown_until->diffForHumans() . ' before trying again.';
+                } else {
+                    $remaining = max(0, $cooldownAfter - $attempts);
+                    $message = 'Verification rejected. Reason: ' . $reason . '. You have ' . $remaining . ' attempt(s) left before a cooldown is applied.';
+                }
             }
 
             if ($title && $message) {
@@ -333,6 +350,9 @@ class ProcessVerificationJob implements ShouldQueue
             }
 
             DB::commit();
+
+            // Count this as a rejection attempt
+            $verificationRequest->user->handleVerificationRejection();
 
             // Send notification for failed verification
             $this->sendVerificationNotification($verificationRequest->user, 'rejected', $reason);

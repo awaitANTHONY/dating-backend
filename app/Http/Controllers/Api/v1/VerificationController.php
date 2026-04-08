@@ -45,6 +45,26 @@ class VerificationController extends Controller
             ], 200);
         }
 
+        // Check if account is permanently banned
+        if ($user->isBanned()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account has been disabled due to repeated fake verification attempts. Please contact support if you believe this is an error.',
+                'code' => 'ACCOUNT_BANNED'
+            ], 200);
+        }
+
+        // Check if user is in a cooldown period
+        if ($user->isInVerificationCooldown()) {
+            $cooldownEnds = $user->verification_cooldown_until->toDateTimeString();
+            return response()->json([
+                'status' => false,
+                'message' => 'You have had too many failed verification attempts. Please try again after ' . $user->verification_cooldown_until->diffForHumans() . ' (' . $cooldownEnds . ').',
+                'code' => 'VERIFICATION_COOLDOWN',
+                'cooldown_until' => $cooldownEnds,
+            ], 200);
+        }
+
         // Check if user is already verified
         // if ($user->isVerified()) {
         //     return response()->json([
@@ -148,6 +168,9 @@ class VerificationController extends Controller
             'verification_status' => $user->verification_status,
             'is_verified' => $user->isVerified(),
             'verified_at' => $user->verified_at ? $user->verified_at->toDateTimeString() : null,
+            'is_banned' => $user->isBanned(),
+            'verification_attempts' => $user->verification_attempts ?? 0,
+            'cooldown_until' => $user->verification_cooldown_until ? $user->verification_cooldown_until->toDateTimeString() : null,
             'request' => [
                 'id' => $verificationRequest->id,
                 'status' => $verificationRequest->status,

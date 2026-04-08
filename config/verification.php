@@ -49,4 +49,23 @@ return [
     |
     */
     'notify_admin_on_queue' => env('VERIFICATION_NOTIFY_ADMIN', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Attempt Limits & Abuse Protection
+    |--------------------------------------------------------------------------
+    |
+    | Controls how many times a user may fail verification before restrictions
+    | are applied. All values are configurable via .env.
+    |
+    | - cooldown_after: Rejections before a cooldown period is imposed
+    | - ban_after:      Total rejections before the account is permanently banned
+    | - cooldown_days:  How many days the cooldown lasts
+    |
+    */
+    'attempt_limits' => [
+        'cooldown_after' => env('VERIFICATION_COOLDOWN_AFTER', 3),
+        'ban_after'      => env('VERIFICATION_BAN_AFTER', 6),
+        'cooldown_days'  => env('VERIFICATION_COOLDOWN_DAYS', 7),
+    ],
 ];
