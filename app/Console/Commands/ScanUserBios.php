@@ -17,11 +17,11 @@ class ScanUserBios extends Command
 
         $flagged = [];
 
-        User::whereHas('userInformation', function ($q) {
+        User::whereHas('user_information', function ($q) {
             $q->whereNotNull('bio')->where('bio', '!=', '');
-        })->with('userInformation')->chunk(500, function ($users) use (&$flagged) {
+        })->with('user_information')->chunk(500, function ($users) use (&$flagged) {
             foreach ($users as $user) {
-                $bio = $user->userInformation->bio ?? '';
+                $bio = $user->user_information->bio ?? '';
                 if (empty($bio)) continue;
 
                 $result = $this->checkContent($bio);
