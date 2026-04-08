@@ -626,8 +626,16 @@ class UserController extends Controller
     public function ban_user(Request $request, $id)
     {
         $user = User::findOrFail($id);
-        $user->status = 4; // Banned status
+        $user->status = 4;
+        $user->is_banned = true;
+        $user->ban_reason = 'Banned by admin.';
         $user->save();
+
+        // Kill all active sessions immediately
+        $user->tokens()->delete();
+
+        // Block email so they can't re-register
+        \App\Models\BannedEmail::ban($user->email, $user->id, 'Banned by admin.');
 
         $message = 'User has been banned successfully!';
 
@@ -644,8 +652,13 @@ class UserController extends Controller
     public function unban_user(Request $request, $id)
     {
         $user = User::findOrFail($id);
-        $user->status = 1; // Active status
+        $user->status = 1;
+        $user->is_banned = false;
+        $user->ban_reason = null;
         $user->save();
+
+        // Also remove from banned_emails so they can log back in
+        \App\Models\BannedEmail::where('email', strtolower(trim($user->email)))->delete();
 
         $message = 'User has been unbanned successfully!';
 

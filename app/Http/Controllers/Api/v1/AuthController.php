@@ -207,6 +207,17 @@ class AuthController extends Controller
             ]);
         }
 
+        // Block banned users (admin ban = status 4, or verification ban = is_banned)
+        if ($user->status == 4 || $user->is_banned) {
+            // Revoke all API tokens so existing sessions also stop working
+            $user->tokens()->delete();
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account has been banned. Please contact support for assistance.',
+                'code' => 'ACCOUNT_BANNED',
+            ]);
+        }
+
         if($user->provider == 'email'){
             if (!\Hash::check($request->password, $user->password) ) {
                 return response()->json([

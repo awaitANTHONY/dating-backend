@@ -28,6 +28,7 @@ use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
             'permission' => \App\Http\Middleware\Permission::class,
             'optional_auth' => \App\Http\Middleware\OptionaAuth::class,
             'force_json' => \App\Http\Middleware\ForceJsonResponse::class,
+            'block_banned' => \App\Http\Middleware\BlockBannedUsers::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
