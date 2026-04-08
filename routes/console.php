@@ -32,9 +32,9 @@ Schedule::command('moods:cleanup')
         \Log::error('Mood cleanup failed');
     });
 
-// Schedule AI image monitoring scan every hour
-Schedule::command('images:scan')
-    ->hourly()
+// Schedule AI image monitoring scan once daily at 2 AM (cost optimization)
+Schedule::command('images:scan --batch=100')
+    ->dailyAt('02:00')
     ->name('scan-user-images')
     ->description('Scan user images for AI moderation (reject bad images)')
     ->withoutOverlapping()

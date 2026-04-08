@@ -26,7 +26,7 @@ class ScanUserImages extends Command
         User::whereNotNull('image')
             ->where(function ($query) {
                 $query->whereNull('last_scanned_at')
-                      ->orWhere('last_scanned_at', '<', now()->subDays(7));
+                      ->orWhere('last_scanned_at', '<', now()->subDays(30));
             })
             ->chunkById(200, function ($users) use (&$delay, &$dispatched, $maxPerRun) {
                 foreach ($users as $user) {
