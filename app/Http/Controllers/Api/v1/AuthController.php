@@ -1056,29 +1056,80 @@ class AuthController extends Controller
      * @param string $mood
      * @return array
      */
-    private function validateContent(string $mood): array
+    private function validateContent(string $content): array
     {
-        $lowerMood = strtolower($mood);
-        
-        // Check for phone number patterns
+        $lowerContent = strtolower($content);
+
+        // === STANDARD PHONE NUMBER PATTERNS ===
         $phonePatterns = [
             '/\d{10,}/',                           // 10+ consecutive digits
             '/\d{3}[-.\s]\d{3}[-.\s]\d{4}/',      // xxx-xxx-xxxx format
             '/\(\d{3}\)\s*\d{3}[-.\s]\d{4}/',     // (xxx) xxx-xxxx format
             '/\+\d{1,3}\s*\d{9,}/',               // International format
             '/\d{3}\s\d{3}\s\d{4}/',              // xxx xxx xxxx format
+            '/0\d{2,3}[-.\s]\d{3,4}[-.\s]\d{3,4}/', // Local 0XX-XXXX-XXXX
         ];
 
         foreach ($phonePatterns as $pattern) {
-            if (preg_match($pattern, $mood)) {
+            if (preg_match($pattern, $content)) {
                 return [
                     'valid' => false,
-                    'message' => 'Phone numbers are not allowed in mood status.'
+                    'message' => 'Phone numbers are not allowed.'
                 ];
             }
         }
 
-        // Check for contact-related keywords
+        // === OBFUSCATED PHONE DETECTION ===
+        // Catches phone numbers hidden in text like "081 emotional 4372 explore 0995"
+        preg_match_all('/\d{3,}/', $content, $matches);
+        $digitGroups = $matches[0] ?? [];
+
+        if (count($digitGroups) >= 2) {
+            // Filter out likely years (1950-2030) which are common in bios
+            $phoneGroups = array_values(array_filter($digitGroups, function ($g) {
+                if (strlen($g) == 4) {
+                    $num = intval($g);
+                    return !($num >= 1950 && $num <= 2030);
+                }
+                return true;
+            }));
+
+            $combined = implode('', $phoneGroups);
+
+            // 2+ non-year digit groups totaling 7+ digits = likely hidden phone number
+            if (count($phoneGroups) >= 2 && strlen($combined) >= 7) {
+                return [
+                    'valid' => false,
+                    'message' => 'Your text appears to contain hidden contact information. Phone numbers are not allowed.'
+                ];
+            }
+        }
+
+        // === SCATTERED SINGLE DIGITS ===
+        // Catches "0 8 1 4 3 7 2 0 9 9 5" spread across text
+        preg_match_all('/(?<!\d)\d(?!\d)/', $content, $singleDigits);
+        if (count($singleDigits[0] ?? []) >= 7) {
+            return [
+                'valid' => false,
+                'message' => 'Your text appears to contain hidden contact information.'
+            ];
+        }
+
+        // === NUMBER WORDS ===
+        // Catches "zero eight one four three seven two"
+        $numberWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+        $numberWordCount = 0;
+        foreach ($numberWords as $word) {
+            $numberWordCount += preg_match_all('/\b' . $word . '\b/', $lowerContent);
+        }
+        if ($numberWordCount >= 7) {
+            return [
+                'valid' => false,
+                'message' => 'Your text appears to contain hidden contact information.'
+            ];
+        }
+
+        // === CONTACT KEYWORDS ===
         $contactKeywords = [
             'whatsapp', 'whats app', 'whatsap', 'watsapp', 'watsap', 'wa number', 'wa me',
             'telegram', 'telegrm', 'tg number', 't.me',
@@ -1094,27 +1145,27 @@ class AuthController extends Controller
         ];
 
         foreach ($contactKeywords as $keyword) {
-            if (strpos($lowerMood, $keyword) !== false) {
+            if (strpos($lowerContent, $keyword) !== false) {
                 return [
                     'valid' => false,
-                    'message' => 'Contact information and social media handles are not allowed in mood status.'
+                    'message' => 'Contact information and social media handles are not allowed.'
                 ];
             }
         }
 
-        // Check for @ mentions (social media handles)
-        if (preg_match('/@[a-zA-Z0-9_]{3,}/', $mood)) {
+        // === SOCIAL MEDIA HANDLES ===
+        if (preg_match('/@[a-zA-Z0-9_]{3,}/', $content)) {
             return [
                 'valid' => false,
-                'message' => 'Social media handles are not allowed in mood status.'
+                'message' => 'Social media handles are not allowed.'
             ];
         }
 
-        // Check for URLs
-        if (preg_match('/https?:\/\/|www\.|\.com|\.net|\.org|\.io/i', $mood)) {
+        // === URLs ===
+        if (preg_match('/https?:\/\/|www\.|\.com|\.net|\.org|\.io/i', $content)) {
             return [
                 'valid' => false,
-                'message' => 'URLs and website links are not allowed in mood status.'
+                'message' => 'URLs and website links are not allowed.'
             ];
         }
 
