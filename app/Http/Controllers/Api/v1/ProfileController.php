@@ -420,7 +420,34 @@ class ProfileController extends Controller
         });
 
         // Get boosted users in same country and prioritize them
+        // Boosted users should appear even if already matched/chatted
         $boostedUserIds = ProfileBoost::getActiveBoostedUsers($currentCountryCode);
+
+        // Fetch boosted users that were excluded by the interaction filter
+        $missingBoostedIds = array_diff($boostedUserIds, $scoredResults->pluck('id')->toArray());
+        if (!empty($missingBoostedIds)) {
+            $missingBoosted = User::with(['user_information'])
+                ->whereIn('id', $missingBoostedIds)
+                ->where('status', 1)
+                ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                })
+                ->whereDoesntHave('blockedUsers', function($q) use ($user) {
+                    $q->where('blocked_user_id', $user->id);
+                })
+                ->get()
+                ->map(function ($u) {
+                    $info = $u->user_information;
+                    $u->is_vip = (bool) $u->isVipActive();
+                    $u->is_boosted = true;
+                    $u->match_score = 0;
+                    $u->distance = null;
+                    $u->compatibility_details = [];
+                    return $u;
+                });
+
+            $scoredResults = $scoredResults->concat($missingBoosted);
+        }
         
         // Separate boosted, VIP, and regular profiles
         $boostedProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
