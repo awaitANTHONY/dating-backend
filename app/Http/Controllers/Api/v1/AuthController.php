@@ -503,7 +503,7 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        $not_allow_keys = ['phone', 'user_type', 'email'];
+        $not_allow_keys = ['phone', 'user_type', 'email', 'image', 'images'];
 
         foreach (json_decode($request->fields) as $key => $value) {
 
