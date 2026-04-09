@@ -51,7 +51,7 @@ class ProfileBoost extends Model
         }
 
         // Get boost duration from the package, default to 30 minutes if not found
-        $boostDuration = $this->boostPackage ? $this->boostPackage->boost_duration : 30;
+        $boostDuration = (int) ($this->boostPackage ? $this->boostPackage->boost_duration : 30);
 
         $this->status = 'active';
         $this->activated_at = now();

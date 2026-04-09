@@ -233,7 +233,7 @@ class User extends Authenticatable
         $attempts = ($this->verification_attempts ?? 0) + 1;
         $cooldownAfter = config('verification.attempt_limits.cooldown_after', 3);
         $banAfter      = config('verification.attempt_limits.ban_after', 6);
-        $cooldownDays  = config('verification.attempt_limits.cooldown_days', 7);
+        $cooldownDays  = (int) config('verification.attempt_limits.cooldown_days', 7);
 
         $updates = ['verification_attempts' => $attempts];
 
