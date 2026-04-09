@@ -720,13 +720,90 @@ class ProfileController extends Controller
             return $profile;
         });
 
-        // Separate VIP and regular profiles for search results
-        $vipProfiles = $transformedResults->filter(function($profile) {
-            return $profile->is_vip;
+        // Get boosted users in same country and prioritize them
+        $currentCountryCode = $userInformation->country_code ?? null;
+        $boostedUserIds = ProfileBoost::getActiveBoostedUsers($currentCountryCode);
+
+        // Fetch boosted users that were excluded by distance/interaction filters
+        $missingBoostedIds = array_diff($boostedUserIds, $transformedResults->pluck('id')->toArray());
+        if (!empty($missingBoostedIds)) {
+            $missingBoosted = User::with(['user_information'])
+                ->whereIn('id', $missingBoostedIds)
+                ->where('status', 1)
+                ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                })
+                ->whereDoesntHave('blockedUsers', function($q) use ($user) {
+                    $q->where('blocked_user_id', $user->id);
+                })
+                ->get()
+                ->map(function ($u) use ($latitude, $longitude) {
+                    $userInfo = $u->user_information;
+                    if (!$userInfo) return null;
+
+                    $distance = $this->calculateDistance(
+                        $latitude, $longitude,
+                        $userInfo->latitude, $userInfo->longitude
+                    );
+
+                    $profile = (object) [
+                        'id' => $u->id,
+                        'name' => $u->name,
+                        'email' => $u->email,
+                        'image' => $u->image,
+                        'images' => $userInfo->images,
+                        'bio' => $userInfo->bio,
+                        'gender' => $userInfo->gender,
+                        'date_of_birth' => $userInfo->date_of_birth,
+                        'age' => $userInfo->age,
+                        'height' => $userInfo->height,
+                        'relation_goals' => $userInfo->relation_goals,
+                        'interests' => $userInfo->interests,
+                        'languages' => $userInfo->languages,
+                        'latitude' => $userInfo->latitude,
+                        'longitude' => $userInfo->longitude,
+                        'religion_id' => $userInfo->religion_id,
+                        'relationship_status_id' => $userInfo->relationship_status_id,
+                        'ethnicity_id' => $userInfo->ethnicity_id,
+                        'education_id' => $userInfo->education_id,
+                        'carrer_field_id' => $userInfo->carrer_field_id,
+                        'alkohol' => $userInfo->alkohol,
+                        'smoke' => $userInfo->smoke,
+                        'preffered_age' => $userInfo->preffered_age,
+                        'is_verified' => $userInfo->is_verified ?? false,
+                        'is_vip' => (bool) $u->isVipActive(),
+                        'is_boosted' => true,
+                        'is_online' => $u->last_activity && $u->last_activity->diffInMinutes(now()) <= 15,
+                        'last_activity' => $u->last_activity,
+                        'created_at' => $u->created_at,
+                        'distance' => $distance,
+                        'mood' => $userInfo->mood,
+                        'address' => $userInfo->address,
+                        'device_token' => $userInfo->device_token,
+                        'relation_goals_details' => $userInfo->relation_goals_details,
+                        'interests_details' => $userInfo->interests_details,
+                        'ethnicity_details' => $userInfo->ethnicity_details,
+                        'languages_details' => $userInfo->languages_details,
+                    ];
+                    $profile->match_score = 0;
+                    $profile->compatibility_details = [];
+                    return $profile;
+                })->filter()->values();
+
+            $transformedResults = $transformedResults->concat($missingBoosted);
+        }
+
+        // Separate boosted, VIP, and regular profiles
+        $boostedProfiles = $transformedResults->filter(function($profile) use ($boostedUserIds) {
+            return in_array($profile->id, $boostedUserIds);
+        })->values();
+
+        $vipProfiles = $transformedResults->filter(function($profile) use ($boostedUserIds) {
+            return !in_array($profile->id, $boostedUserIds) && $profile->is_vip;
         });
 
-        $regularProfiles = $transformedResults->filter(function($profile) {
-            return !$profile->is_vip;
+        $regularProfiles = $transformedResults->filter(function($profile) use ($boostedUserIds) {
+            return !in_array($profile->id, $boostedUserIds) && !$profile->is_vip;
         });
 
         // For search results, sort by distance within each group
@@ -735,8 +812,8 @@ class ProfileController extends Controller
             $regularProfiles = $regularProfiles->sortBy('distance')->values();
         }
 
-        // Combine VIP first, then regular profiles
-        $finalResults = $vipProfiles->concat($regularProfiles)->values();
+        // Combine: boosted first, then VIP, then regular profiles
+        $finalResults = $boostedProfiles->concat($vipProfiles)->concat($regularProfiles)->values();
 
         return response()->json(['status' => true, 'data' => $finalResults]);
     }
