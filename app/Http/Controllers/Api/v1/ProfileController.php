@@ -124,9 +124,9 @@ class ProfileController extends Controller
             });
         }
 
-        // Online tab — only show users active within the last 15 minutes
+        // Online tab — show users active within the last 30 minutes (online + recently active)
         if ($request->has('is_online') && filter_var($request->input('is_online'), FILTER_VALIDATE_BOOLEAN)) {
-            $query->where('last_activity', '>=', now()->subMinutes(15));
+            $query->where('last_activity', '>=', now()->subMinutes(30));
         }
 
         // Apply distance filter if coordinates are available
