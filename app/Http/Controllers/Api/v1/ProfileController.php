@@ -419,8 +419,8 @@ class ProfileController extends Controller
             return $profile;
         });
 
-        // Get boosted users and prioritize them
-        $boostedUserIds = ProfileBoost::getActiveBoostedUsers();
+        // Get boosted users in same country and prioritize them
+        $boostedUserIds = ProfileBoost::getActiveBoostedUsers($currentCountryCode);
         
         // Separate boosted, VIP, and regular profiles
         $boostedProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
@@ -2063,22 +2063,43 @@ class ProfileController extends Controller
         }
 
         if ($filter === 'popular') {
-            // Only show users who have an active boost
-            $boostedIds = ProfileBoost::getActiveBoostedUsers();
+            // Only show users who have an active boost in the same country
+            $countryCode = $userInformation->country_code ?? null;
+            $boostedIds = ProfileBoost::getActiveBoostedUsers($countryCode);
             $query->whereIn('id', $boostedIds);
         }
 
+        // Get country-wide boosted user IDs for merging into results
+        $countryBoostedIds = ProfileBoost::getActiveBoostedUsers($userInformation->country_code ?? null);
+
         // Distance filter using ST_Distance_Sphere for accuracy
-        $query->whereHas('user_information', function ($q) use ($latitude, $longitude, $radius) {
-            $q->whereNotNull('latitude')
-              ->whereNotNull('longitude')
-              ->whereRaw('
-                    ST_Distance_Sphere(
-                        point(longitude, latitude),
-                        point(?, ?)
-                    ) <= ?
-                ', [$longitude, $latitude, $radius * 1000]); // *1000 converts km to metres
-        });
+        // Boosted users from same country bypass the distance filter
+        if (!empty($countryBoostedIds)) {
+            $query->where(function ($q) use ($latitude, $longitude, $radius, $countryBoostedIds) {
+                // Include users within radius OR boosted users from same country
+                $q->whereHas('user_information', function ($sub) use ($latitude, $longitude, $radius) {
+                    $sub->whereNotNull('latitude')
+                        ->whereNotNull('longitude')
+                        ->whereRaw('
+                            ST_Distance_Sphere(
+                                point(longitude, latitude),
+                                point(?, ?)
+                            ) <= ?
+                        ', [$longitude, $latitude, $radius * 1000]);
+                })->orWhereIn('id', $countryBoostedIds);
+            });
+        } else {
+            $query->whereHas('user_information', function ($q) use ($latitude, $longitude, $radius) {
+                $q->whereNotNull('latitude')
+                  ->whereNotNull('longitude')
+                  ->whereRaw('
+                        ST_Distance_Sphere(
+                            point(longitude, latitude),
+                            point(?, ?)
+                        ) <= ?
+                    ', [$longitude, $latitude, $radius * 1000]);
+            });
+        }
 
         // Order by distance ascending so the closest users are returned
         $results = $query

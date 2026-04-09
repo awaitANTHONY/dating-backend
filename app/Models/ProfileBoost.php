@@ -86,16 +86,20 @@ class ProfileBoost extends Model
     }
 
     /**
-     * Get all currently active boosted users
+     * Get all currently active boosted users, optionally filtered by country
      */
-    public static function getActiveBoostedUsers()
+    public static function getActiveBoostedUsers($countryCode = null)
     {
-        return static::where('status', 'active')
-                    ->where('expires_at', '>', now())
-                    ->with('user')
-                    ->get()
-                    ->pluck('user_id')
-                    ->toArray();
+        $query = static::where('status', 'active')
+                    ->where('expires_at', '>', now());
+
+        if ($countryCode) {
+            $query->whereHas('user.user_information', function ($q) use ($countryCode) {
+                $q->where('country_code', $countryCode);
+            });
+        }
+
+        return $query->pluck('user_id')->toArray();
     }
 
     /**
