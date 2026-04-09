@@ -421,80 +421,89 @@ class ProfileController extends Controller
 
         // Get boosted users in same country and prioritize them
         // Boosted users should appear even if already matched/chatted
-        $boostedUserIds = ProfileBoost::getActiveBoostedUsers($currentCountryCode);
+        $boostedUserIds = [];
+        try {
+            $boostedUserIds = ProfileBoost::getActiveBoostedUsers($currentCountryCode);
 
-        // Fetch boosted users that were excluded by the interaction/distance filter
-        $missingBoostedIds = array_diff($boostedUserIds, $scoredResults->pluck('id')->toArray());
-        // Never include self in own recommendations
-        $missingBoostedIds = array_diff($missingBoostedIds, [$user->id]);
-        if (!empty($missingBoostedIds)) {
-            $missingBoosted = User::with(['user_information'])
-                ->whereIn('id', $missingBoostedIds)
-                ->where('status', 1)
-                ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
-                    $q->where('user_id', $user->id);
-                })
-                ->whereDoesntHave('blockedUsers', function($q) use ($user) {
-                    $q->where('blocked_user_id', $user->id);
-                })
-                ->get()
-                ->map(function ($u) use ($currentLat, $currentLng) {
-                    $userInfo = $u->user_information;
-                    if (!$userInfo) return null;
+            // Fetch boosted users that were excluded by the interaction/distance filter
+            $missingBoostedIds = array_diff($boostedUserIds, $scoredResults->pluck('id')->toArray());
+            // Never include self in own recommendations
+            $missingBoostedIds = array_diff($missingBoostedIds, [$user->id]);
+            if (!empty($missingBoostedIds)) {
+                $missingBoosted = User::with(['user_information'])
+                    ->whereIn('id', $missingBoostedIds)
+                    ->where('status', 1)
+                    ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
+                        $q->where('user_id', $user->id);
+                    })
+                    ->whereDoesntHave('blockedUsers', function($q) use ($user) {
+                        $q->where('blocked_user_id', $user->id);
+                    })
+                    ->get()
+                    ->map(function ($u) use ($currentLat, $currentLng) {
+                        $userInfo = $u->user_information;
+                        if (!$userInfo) return null;
 
-                    $distance = $this->calculateDistance(
-                        $currentLat, $currentLng,
-                        $userInfo->latitude, $userInfo->longitude
-                    );
+                        $distance = $this->calculateDistance(
+                            $currentLat, $currentLng,
+                            $userInfo->latitude, $userInfo->longitude
+                        );
 
-                    $profile = (object) [
-                        'id' => $u->id,
-                        'name' => $u->name,
-                        'email' => $u->email,
-                        'image' => $u->image,
-                        'images' => $userInfo->images,
-                        'bio' => $userInfo->bio,
-                        'gender' => $userInfo->gender,
-                        'date_of_birth' => $userInfo->date_of_birth,
-                        'age' => $userInfo->age,
-                        'height' => $userInfo->height,
-                        'relation_goals' => $userInfo->relation_goals,
-                        'interests' => $userInfo->interests,
-                        'languages' => $userInfo->languages,
-                        'latitude' => $userInfo->latitude,
-                        'longitude' => $userInfo->longitude,
-                        'religion_id' => $userInfo->religion_id,
-                        'relationship_status_id' => $userInfo->relationship_status_id,
-                        'ethnicity_id' => $userInfo->ethnicity_id,
-                        'education_id' => $userInfo->education_id,
-                        'carrer_field_id' => $userInfo->carrer_field_id,
-                        'alkohol' => $userInfo->alkohol,
-                        'smoke' => $userInfo->smoke,
-                        'preffered_age' => $userInfo->preffered_age,
-                        'is_zodiac_sign_matter' => $userInfo->is_zodiac_sign_matter,
-                        'is_food_preference_matter' => $userInfo->is_food_preference_matter,
-                        'country_code' => $userInfo->country_code,
-                        'is_verified' => $userInfo->is_verified ?? false,
-                        'is_vip' => (bool) $u->isVipActive(),
-                        'is_boosted' => true,
-                        'is_online' => $u->last_activity && $u->last_activity->diffInMinutes(now()) <= 15,
-                        'last_activity' => $u->last_activity,
-                        'created_at' => $u->created_at,
-                        'distance' => $distance,
-                        'mood' => $userInfo->mood,
-                        'address' => $userInfo->address,
-                        'device_token' => $userInfo->device_token,
-                        'relation_goals_details' => $userInfo->relation_goals_details,
-                        'interests_details' => $userInfo->interests_details,
-                        'ethnicity_details' => $userInfo->ethnicity_details,
-                        'languages_details' => $userInfo->languages_details,
-                    ];
-                    $profile->match_score = 0;
-                    $profile->compatibility_details = [];
-                    return $profile;
-                })->filter()->values();
+                        $profile = (object) [
+                            'id' => $u->id,
+                            'name' => $u->name,
+                            'email' => $u->email,
+                            'image' => $u->image,
+                            'images' => $userInfo->images,
+                            'bio' => $userInfo->bio,
+                            'gender' => $userInfo->gender,
+                            'date_of_birth' => $userInfo->date_of_birth,
+                            'age' => $userInfo->age,
+                            'height' => $userInfo->height,
+                            'relation_goals' => $userInfo->relation_goals,
+                            'interests' => $userInfo->interests,
+                            'languages' => $userInfo->languages,
+                            'latitude' => $userInfo->latitude,
+                            'longitude' => $userInfo->longitude,
+                            'religion_id' => $userInfo->religion_id,
+                            'relationship_status_id' => $userInfo->relationship_status_id,
+                            'ethnicity_id' => $userInfo->ethnicity_id,
+                            'education_id' => $userInfo->education_id,
+                            'carrer_field_id' => $userInfo->carrer_field_id,
+                            'alkohol' => $userInfo->alkohol,
+                            'smoke' => $userInfo->smoke,
+                            'preffered_age' => $userInfo->preffered_age,
+                            'is_zodiac_sign_matter' => $userInfo->is_zodiac_sign_matter,
+                            'is_food_preference_matter' => $userInfo->is_food_preference_matter,
+                            'country_code' => $userInfo->country_code,
+                            'is_verified' => $userInfo->is_verified ?? false,
+                            'is_vip' => (bool) $u->isVipActive(),
+                            'is_boosted' => true,
+                            'is_online' => $u->last_activity ? $u->last_activity->diffInMinutes(now()) <= 15 : false,
+                            'last_activity' => $u->last_activity,
+                            'created_at' => $u->created_at,
+                            'distance' => $distance,
+                            'mood' => $userInfo->mood,
+                            'address' => $userInfo->address,
+                            'device_token' => $userInfo->device_token,
+                            'relation_goals_details' => $userInfo->relation_goals_details,
+                            'interests_details' => $userInfo->interests_details,
+                            'ethnicity_details' => $userInfo->ethnicity_details,
+                            'languages_details' => $userInfo->languages_details,
+                        ];
+                        $profile->match_score = 0;
+                        $profile->compatibility_details = [];
+                        return $profile;
+                    })->filter()->values();
 
-            $scoredResults = $scoredResults->concat($missingBoosted);
+                $scoredResults = $scoredResults->concat($missingBoosted);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Boost logic error in generateRecommendations', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
         }
         
         // Separate boosted, VIP, and regular profiles
@@ -724,77 +733,85 @@ class ProfileController extends Controller
 
         // Get boosted users in same country and prioritize them
         $currentCountryCode = $userInformation->country_code ?? null;
-        $boostedUserIds = ProfileBoost::getActiveBoostedUsers($currentCountryCode);
+        $boostedUserIds = [];
+        try {
+            $boostedUserIds = ProfileBoost::getActiveBoostedUsers($currentCountryCode);
 
-        // Fetch boosted users that were excluded by distance/interaction filters
-        $missingBoostedIds = array_diff($boostedUserIds, $transformedResults->pluck('id')->toArray());
-        // Never include self in own recommendations
-        $missingBoostedIds = array_diff($missingBoostedIds, [$user->id]);
-        if (!empty($missingBoostedIds)) {
-            $missingBoosted = User::with(['user_information'])
-                ->whereIn('id', $missingBoostedIds)
-                ->where('status', 1)
-                ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
-                    $q->where('user_id', $user->id);
-                })
-                ->whereDoesntHave('blockedUsers', function($q) use ($user) {
-                    $q->where('blocked_user_id', $user->id);
-                })
-                ->get()
-                ->map(function ($u) use ($latitude, $longitude) {
-                    $userInfo = $u->user_information;
-                    if (!$userInfo) return null;
+            // Fetch boosted users that were excluded by distance/interaction filters
+            $missingBoostedIds = array_diff($boostedUserIds, $transformedResults->pluck('id')->toArray());
+            // Never include self in own recommendations
+            $missingBoostedIds = array_diff($missingBoostedIds, [$user->id]);
+            if (!empty($missingBoostedIds)) {
+                $missingBoosted = User::with(['user_information'])
+                    ->whereIn('id', $missingBoostedIds)
+                    ->where('status', 1)
+                    ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
+                        $q->where('user_id', $user->id);
+                    })
+                    ->whereDoesntHave('blockedUsers', function($q) use ($user) {
+                        $q->where('blocked_user_id', $user->id);
+                    })
+                    ->get()
+                    ->map(function ($u) use ($latitude, $longitude) {
+                        $userInfo = $u->user_information;
+                        if (!$userInfo) return null;
 
-                    $distance = $this->calculateDistance(
-                        $latitude, $longitude,
-                        $userInfo->latitude, $userInfo->longitude
-                    );
+                        $distance = $this->calculateDistance(
+                            $latitude, $longitude,
+                            $userInfo->latitude, $userInfo->longitude
+                        );
 
-                    $profile = (object) [
-                        'id' => $u->id,
-                        'name' => $u->name,
-                        'email' => $u->email,
-                        'image' => $u->image,
-                        'images' => $userInfo->images,
-                        'bio' => $userInfo->bio,
-                        'gender' => $userInfo->gender,
-                        'date_of_birth' => $userInfo->date_of_birth,
-                        'age' => $userInfo->age,
-                        'height' => $userInfo->height,
-                        'relation_goals' => $userInfo->relation_goals,
-                        'interests' => $userInfo->interests,
-                        'languages' => $userInfo->languages,
-                        'latitude' => $userInfo->latitude,
-                        'longitude' => $userInfo->longitude,
-                        'religion_id' => $userInfo->religion_id,
-                        'relationship_status_id' => $userInfo->relationship_status_id,
-                        'ethnicity_id' => $userInfo->ethnicity_id,
-                        'education_id' => $userInfo->education_id,
-                        'carrer_field_id' => $userInfo->carrer_field_id,
-                        'alkohol' => $userInfo->alkohol,
-                        'smoke' => $userInfo->smoke,
-                        'preffered_age' => $userInfo->preffered_age,
-                        'is_verified' => $userInfo->is_verified ?? false,
-                        'is_vip' => (bool) $u->isVipActive(),
-                        'is_boosted' => true,
-                        'is_online' => $u->last_activity && $u->last_activity->diffInMinutes(now()) <= 15,
-                        'last_activity' => $u->last_activity,
-                        'created_at' => $u->created_at,
-                        'distance' => $distance,
-                        'mood' => $userInfo->mood,
-                        'address' => $userInfo->address,
-                        'device_token' => $userInfo->device_token,
-                        'relation_goals_details' => $userInfo->relation_goals_details,
-                        'interests_details' => $userInfo->interests_details,
-                        'ethnicity_details' => $userInfo->ethnicity_details,
-                        'languages_details' => $userInfo->languages_details,
-                    ];
-                    $profile->match_score = 0;
-                    $profile->compatibility_details = [];
-                    return $profile;
-                })->filter()->values();
+                        $profile = (object) [
+                            'id' => $u->id,
+                            'name' => $u->name,
+                            'email' => $u->email,
+                            'image' => $u->image,
+                            'images' => $userInfo->images,
+                            'bio' => $userInfo->bio,
+                            'gender' => $userInfo->gender,
+                            'date_of_birth' => $userInfo->date_of_birth,
+                            'age' => $userInfo->age,
+                            'height' => $userInfo->height,
+                            'relation_goals' => $userInfo->relation_goals,
+                            'interests' => $userInfo->interests,
+                            'languages' => $userInfo->languages,
+                            'latitude' => $userInfo->latitude,
+                            'longitude' => $userInfo->longitude,
+                            'religion_id' => $userInfo->religion_id,
+                            'relationship_status_id' => $userInfo->relationship_status_id,
+                            'ethnicity_id' => $userInfo->ethnicity_id,
+                            'education_id' => $userInfo->education_id,
+                            'carrer_field_id' => $userInfo->carrer_field_id,
+                            'alkohol' => $userInfo->alkohol,
+                            'smoke' => $userInfo->smoke,
+                            'preffered_age' => $userInfo->preffered_age,
+                            'is_verified' => $userInfo->is_verified ?? false,
+                            'is_vip' => (bool) $u->isVipActive(),
+                            'is_boosted' => true,
+                            'is_online' => $u->last_activity ? $u->last_activity->diffInMinutes(now()) <= 15 : false,
+                            'last_activity' => $u->last_activity,
+                            'created_at' => $u->created_at,
+                            'distance' => $distance,
+                            'mood' => $userInfo->mood,
+                            'address' => $userInfo->address,
+                            'device_token' => $userInfo->device_token,
+                            'relation_goals_details' => $userInfo->relation_goals_details,
+                            'interests_details' => $userInfo->interests_details,
+                            'ethnicity_details' => $userInfo->ethnicity_details,
+                            'languages_details' => $userInfo->languages_details,
+                        ];
+                        $profile->match_score = 0;
+                        $profile->compatibility_details = [];
+                        return $profile;
+                    })->filter()->values();
 
-            $transformedResults = $transformedResults->concat($missingBoosted);
+                $transformedResults = $transformedResults->concat($missingBoosted);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Boost logic error in handleSearchWithFilters', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+            ]);
         }
 
         // Separate boosted, VIP, and regular profiles
