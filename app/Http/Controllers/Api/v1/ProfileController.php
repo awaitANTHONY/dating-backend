@@ -815,18 +815,6 @@ class ProfileController extends Controller
         // Combine: boosted first, then VIP, then regular profiles
         $finalResults = $boostedProfiles->concat($vipProfiles)->concat($regularProfiles)->values();
 
-        \Log::info('handleSearchWithFilters debug', [
-            'user_id' => $user->id,
-            'query_results' => $results->count(),
-            'transformed' => $transformedResults->count(),
-            'boosted_ids' => $boostedUserIds,
-            'missing_boosted' => $missingBoostedIds ?? [],
-            'final_boosted' => $boostedProfiles->count(),
-            'final_vip' => $vipProfiles->count(),
-            'final_regular' => $regularProfiles->count(),
-            'final_total' => $finalResults->count(),
-        ]);
-
         return response()->json(['status' => true, 'data' => $finalResults]);
     }
 
