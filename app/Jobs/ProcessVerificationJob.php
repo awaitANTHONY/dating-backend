@@ -126,8 +126,9 @@ class ProcessVerificationJob implements ShouldQueue
                 'ai_response' => $result
             ]);
 
-            // If AI explicitly approved and all checks passed, treat as high confidence
-            if ($aiStatus === 'approved' && $confidence >= 0.75) {
+            // If AI explicitly approved, trust the decision regardless of confidence score
+            // The AI has already evaluated liveness, face matching, and quality
+            if ($aiStatus === 'approved') {
                 $confidence = max($confidence, $autoApproveThreshold);
             }
 
