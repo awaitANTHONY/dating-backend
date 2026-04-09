@@ -41,6 +41,7 @@ return [
 
     'revenuecat' => [
         'secret_key' => env('REVENUECAT_SECRET_API_KEY'),
+        'webhook_secret' => env('REVENUECAT_WEBHOOK_SECRET'),
     ],
 
 ];

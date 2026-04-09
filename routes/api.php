@@ -15,6 +15,11 @@ use App\Http\Controllers;
 |
 */
 
+// ─── Webhooks (no auth, no X-API-KEY — verified by their own secrets) ────
+Route::prefix('v1/webhooks')->group(function () {
+    Route::post('revenuecat', [Controllers\Api\v1\WebhookController::class, 'revenuecat']);
+});
+
 Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
 {
     //Api Controller
