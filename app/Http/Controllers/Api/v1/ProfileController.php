@@ -492,7 +492,7 @@ class ProfileController extends Controller
                             'languages_details' => $userInfo->languages_details,
                         ];
                         $profile->match_score = 0;
-                        $profile->compatibility_details = [];
+                        $profile->compatibility_details = new \stdClass();
                         return $profile;
                     })->filter()->values();
 
@@ -801,7 +801,7 @@ class ProfileController extends Controller
                             'languages_details' => $userInfo->languages_details,
                         ];
                         $profile->match_score = 0;
-                        $profile->compatibility_details = [];
+                        $profile->compatibility_details = new \stdClass();
                         return $profile;
                     })->filter()->values();
 
