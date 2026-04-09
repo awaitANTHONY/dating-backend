@@ -425,6 +425,8 @@ class ProfileController extends Controller
 
         // Fetch boosted users that were excluded by the interaction/distance filter
         $missingBoostedIds = array_diff($boostedUserIds, $scoredResults->pluck('id')->toArray());
+        // Never include self in own recommendations
+        $missingBoostedIds = array_diff($missingBoostedIds, [$user->id]);
         if (!empty($missingBoostedIds)) {
             $missingBoosted = User::with(['user_information'])
                 ->whereIn('id', $missingBoostedIds)
@@ -726,6 +728,8 @@ class ProfileController extends Controller
 
         // Fetch boosted users that were excluded by distance/interaction filters
         $missingBoostedIds = array_diff($boostedUserIds, $transformedResults->pluck('id')->toArray());
+        // Never include self in own recommendations
+        $missingBoostedIds = array_diff($missingBoostedIds, [$user->id]);
         if (!empty($missingBoostedIds)) {
             $missingBoosted = User::with(['user_information'])
                 ->whereIn('id', $missingBoostedIds)
