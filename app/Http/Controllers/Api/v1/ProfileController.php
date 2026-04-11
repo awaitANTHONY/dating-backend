@@ -130,7 +130,9 @@ class ProfileController extends Controller
         }
 
         // Apply distance filter if coordinates are available
-        if ($currentLat != 0 && $currentLng != 0) {
+        // Skip distance filter for "Just Joined" tab — show new users from same country regardless of distance
+        $isNewestTab = $request->input('sort_by') === 'newest';
+        if ($currentLat != 0 && $currentLng != 0 && !$isNewestTab) {
             $query->whereHas('user_information', function($q) use ($currentLat, $currentLng, $searchRadius) {
                 $q->whereRaw("(
                     6371 * acos(
@@ -556,6 +558,15 @@ class ProfileController extends Controller
             $finalResults = $finalResults->sortBy(function ($profile) {
                 return $profile->distance ?? PHP_INT_MAX;
             })->values();
+        }
+
+        // Just Joined tab — sort by newest first and filter to recent users
+        if ($sortBy === 'newest') {
+            $finalResults = $finalResults->filter(function ($profile) {
+                if (empty($profile->created_at)) return false;
+                $joined = \Carbon\Carbon::parse($profile->created_at);
+                return $joined->greaterThanOrEqualTo(now()->subDays(3));
+            })->sortByDesc('created_at')->values();
         }
 
         return response()->json(['status' => true, 'data' => $finalResults]);
