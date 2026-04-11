@@ -614,6 +614,10 @@ class ProfileController extends Controller
             })
             ->whereDoesntHave('blockedUsers', function($q) use ($user) {
                 $q->where('blocked_user_id', $user->id);
+            })
+            // Exclude users the current user has already swiped on (like/dislike)
+            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
+                $q->where('user_id', $user->id);
             });
 
         // Same country filter (if available)
