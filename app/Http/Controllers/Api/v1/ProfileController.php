@@ -597,7 +597,7 @@ class ProfileController extends Controller
         $radius = $request->input('radius');
 
         $query = User::with(['user_information'])
-            ->where('created_at', '>=', now()->subDays(3))
+            ->where('created_at', '>=', now()->subDays(7))
             ->where('id', '!=', $user->id)
             ->where('status', 1)
             ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge) {
