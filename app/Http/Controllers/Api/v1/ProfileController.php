@@ -658,12 +658,18 @@ class ProfileController extends Controller
                 'country_code' => $info->country_code,
                 'distance' => round($distance, 1),
                 'is_verified' => (bool) ($info->is_verified ?? false),
-                'is_vip' => (bool) ($u->is_vip ?? false),
-                'is_online' => (bool) ($u->is_online ?? false),
-                'is_boosted' => (bool) ($u->is_boosted ?? false),
-                'device_token' => $u->device_token ?? '--',
+                'is_vip' => (bool) $u->isVipActive(),
+                'is_online' => $u->last_activity && $u->last_activity->diffInMinutes(now()) <= 15,
+                'is_boosted' => (bool) $u->isBoosted(),
+                'device_token' => $info->device_token ?? $u->device_token ?? '--',
                 'last_activity' => $u->last_activity,
                 'created_at' => $u->created_at,
+
+                // Detailed attributes from UserInformation model accessors
+                'relation_goals_details' => $info->relation_goals_details,
+                'interests_details' => $info->interests_details,
+                'ethnicity_details' => $info->ethnicity_details,
+                'languages_details' => $info->languages_details,
             ];
         })->filter()->values();
 
