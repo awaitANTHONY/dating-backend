@@ -577,6 +577,11 @@ class ProfileController extends Controller
      */
     private function hasSearchFilters(Request $request)
     {
+        // Tab-specific filters handled by generateRecommendations — not a "search"
+        if ($request->has('is_verified') || $request->has('is_online') || $request->has('same_goal') || $request->has('sort_by')) {
+            return false;
+        }
+
         $searchParams = [
             'q', 'gender', 'interests', 'languages', 'relation_goals',
             'religion_id', 'relationship_status_id', 'ethnicity_id', 
