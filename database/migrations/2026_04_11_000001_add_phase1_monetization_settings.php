@@ -29,7 +29,7 @@ return new class extends Migration
             ['name' => 'dc_free_requests_gold', 'value' => '10'],
 
             // ── Increase coin rewards ───────────────────────────────────────
-            ['name' => 'coin_daily_login', 'value' => '3'],
+            ['name' => 'coin_daily_login', 'value' => '5'],
             ['name' => 'coin_complete_profile', 'value' => '10'],
 
             // ── Daily limits (now server-configurable) ─────────────────────
