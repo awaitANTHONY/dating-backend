@@ -48,7 +48,16 @@ class ProfileController extends Controller
         // Note: is_verified and sort_by are handled inside generateRecommendations
         // so they go through the full scoring pipeline with compatibility_details
         $isSearchRequest = $this->hasSearchFilters($request);
-        
+
+        \Log::info('JUST_JOINED_DEBUG', [
+            'sort_by' => $request->input('sort_by'),
+            'isSearchRequest' => $isSearchRequest,
+            'user_id' => $user->id,
+            'search_preference' => $userInformation->search_preference ?? 'null',
+            'country_code' => $userInformation->country_code ?? 'null',
+            'all_params' => $request->all(),
+        ]);
+
         // For search requests, don't use cache as they are dynamic
         if ($isSearchRequest) {
             return $this->handleSearchWithFilters($request, $user, $userInformation);
@@ -562,11 +571,20 @@ class ProfileController extends Controller
 
         // Just Joined tab — sort by newest first and filter to recent users
         if ($sortBy === 'newest') {
+            \Log::info('JUST_JOINED_DEBUG_BEFORE_FILTER', [
+                'total_results_before_filter' => $finalResults->count(),
+                'sort_by' => $sortBy,
+                'sample_created_at' => $finalResults->take(3)->pluck('created_at')->toArray(),
+                'now_sub3' => now()->subDays(3)->toDateTimeString(),
+            ]);
             $finalResults = $finalResults->filter(function ($profile) {
                 if (empty($profile->created_at)) return false;
                 $joined = \Carbon\Carbon::parse($profile->created_at);
                 return $joined->greaterThanOrEqualTo(now()->subDays(3));
             })->sortByDesc('created_at')->values();
+            \Log::info('JUST_JOINED_DEBUG_AFTER_FILTER', [
+                'total_after_filter' => $finalResults->count(),
+            ]);
         }
 
         return response()->json(['status' => true, 'data' => $finalResults]);
