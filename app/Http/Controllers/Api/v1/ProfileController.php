@@ -56,7 +56,7 @@ class ProfileController extends Controller
 
         // Just Joined tab — dedicated lightweight query (skips recommendation engine)
         if ($request->input('sort_by') === 'newest') {
-            return $this->handleJustJoinedTab($user, $userInformation);
+            return $this->handleJustJoinedTab($user, $userInformation, $request);
         }
 
         // For recommendations, if client sends exclude_ids or tab-specific filters,
@@ -584,19 +584,30 @@ class ProfileController extends Controller
      *   - No distance filter (same country is enough)
      *   - Only users created in the last 3 days
      */
-    private function handleJustJoinedTab($user, $userInformation)
+    private function handleJustJoinedTab($user, $userInformation, $request)
     {
         $searchPreference = $userInformation->search_preference ?? 'male';
         $currentCountryCode = $userInformation->country_code ?? null;
         $currentLat = $userInformation->latitude ?? 0;
         $currentLng = $userInformation->longitude ?? 0;
 
+        // Optional filters from the Just Joined filter sheet
+        $minAge = $request->input('min_age');
+        $maxAge = $request->input('max_age');
+        $radius = $request->input('radius');
+
         $query = User::with(['user_information'])
             ->where('created_at', '>=', now()->subDays(3))
             ->where('id', '!=', $user->id)
             ->where('status', 1)
-            ->whereHas('user_information', function($q) use ($searchPreference) {
+            ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge) {
                 $q->where('gender', $searchPreference);
+                if ($minAge) {
+                    $q->where('age', '>=', (int) $minAge);
+                }
+                if ($maxAge) {
+                    $q->where('age', '<=', (int) $maxAge);
+                }
             })
             ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
                 $q->where('user_id', $user->id);
@@ -672,6 +683,13 @@ class ProfileController extends Controller
                 'languages_details' => $info->languages_details,
             ];
         })->filter()->values();
+
+        // Post-query distance filter (for Gold subscribers who set a radius)
+        if ($radius) {
+            $transformedResults = $transformedResults->filter(function($u) use ($radius) {
+                return isset($u->distance) && $u->distance <= (float) $radius;
+            })->values();
+        }
 
         return response()->json(['status' => true, 'data' => $transformedResults]);
     }
