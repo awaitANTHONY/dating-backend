@@ -63,6 +63,11 @@ class ProfileController extends Controller
             return $this->handleSearchWithFilters($request, $user, $userInformation);
         }
 
+        // Just Joined tab — dedicated lightweight query (skips recommendation engine)
+        if ($request->input('sort_by') === 'newest') {
+            return $this->handleJustJoinedTab($user, $userInformation);
+        }
+
         // For recommendations, if client sends exclude_ids or tab-specific filters,
         // don't use cache (fresh results)
         $excludeIds = $request->input('exclude_ids', []);
@@ -588,6 +593,101 @@ class ProfileController extends Controller
         }
 
         return response()->json(['status' => true, 'data' => $finalResults]);
+    }
+
+    /**
+     * Dedicated handler for the "Just Joined" tab.
+     * Uses a direct query instead of the recommendation engine so that:
+     *   - Already-swiped users still appear (new user discovery)
+     *   - No distance filter (same country is enough)
+     *   - Only users created in the last 3 days
+     */
+    private function handleJustJoinedTab($user, $userInformation)
+    {
+        $searchPreference = $userInformation->search_preference ?? 'male';
+        $currentCountryCode = $userInformation->country_code ?? null;
+        $currentLat = $userInformation->latitude ?? 0;
+        $currentLng = $userInformation->longitude ?? 0;
+
+        $query = User::with(['user_information'])
+            ->where('created_at', '>=', now()->subDays(3))
+            ->where('id', '!=', $user->id)
+            ->where('status', 1)
+            ->whereHas('user_information', function($q) use ($searchPreference) {
+                $q->where('gender', $searchPreference);
+            })
+            ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })
+            ->whereDoesntHave('blockedUsers', function($q) use ($user) {
+                $q->where('blocked_user_id', $user->id);
+            });
+
+        // Same country filter (if available)
+        if ($currentCountryCode) {
+            $query->whereHas('user_information', function($q) use ($currentCountryCode) {
+                $q->where('country_code', $currentCountryCode);
+            });
+        }
+
+        $results = $query->orderBy('created_at', 'desc')->limit(50)->get();
+
+        $transformedResults = $results->map(function($u) use ($currentLat, $currentLng) {
+            $info = $u->user_information;
+            if (!$info) return null;
+
+            $distance = $this->calculateDistance(
+                $currentLat, $currentLng,
+                $info->latitude, $info->longitude
+            );
+
+            return (object) [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'image' => $u->image,
+                'image_thumb' => $u->image_thumb ?? null,
+                'image_medium' => $u->image_medium ?? null,
+                'images' => $info->images,
+                'images_thumbnails' => $info->images_thumbnails ?? null,
+                'images_medium' => $info->images_medium ?? null,
+                'bio' => $info->bio,
+                'mood' => $info->mood ?? null,
+                'gender' => $info->gender,
+                'date_of_birth' => $info->date_of_birth,
+                'age' => $info->age,
+                'height' => $info->height,
+                'address' => $info->address ?? null,
+                'relation_goals' => $info->relation_goals,
+                'interests' => $info->interests,
+                'languages' => $info->languages,
+                'latitude' => $info->latitude,
+                'longitude' => $info->longitude,
+                'religion_id' => $info->religion_id,
+                'relationship_status_id' => $info->relationship_status_id,
+                'ethnicity_id' => $info->ethnicity_id,
+                'education_id' => $info->education_id,
+                'carrer_field_id' => $info->carrer_field_id,
+                'alkohol' => $info->alkohol,
+                'smoke' => $info->smoke,
+                'preffered_age' => $info->preffered_age,
+                'is_zodiac_sign_matter' => $info->is_zodiac_sign_matter,
+                'is_food_preference_matter' => $info->is_food_preference_matter,
+                'country_code' => $info->country_code,
+                'distance' => round($distance, 1),
+                'is_verified' => (bool) ($info->is_verified ?? false),
+                'is_vip' => (bool) ($u->is_vip ?? false),
+                'is_online' => (bool) ($u->is_online ?? false),
+                'is_boosted' => (bool) ($u->is_boosted ?? false),
+                'device_token' => $u->device_token ?? '--',
+                'last_activity' => $u->last_activity,
+                'created_at' => $u->created_at,
+            ];
+        })->filter()->values();
+
+        \Log::info('JUST_JOINED_RESULT', ['count' => $transformedResults->count()]);
+
+        return response()->json(['status' => true, 'data' => $transformedResults]);
     }
 
     /**
