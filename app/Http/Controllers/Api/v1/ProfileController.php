@@ -620,34 +620,14 @@ class ProfileController extends Controller
                 $q->where('user_id', $user->id);
             });
 
-        // Prefer same country, but fall back to all countries if pool is too small
-        $queryWithCountry = clone $query;
+        // Same country filter
         if ($currentCountryCode) {
-            $queryWithCountry->whereHas('user_information', function($q) use ($currentCountryCode) {
-                $q->where('country_code', $currentCountryCode);
-            });
-        }
-        $countryCount = $queryWithCountry->count();
-
-        if ($countryCount >= 10 && $currentCountryCode) {
-            // Enough same-country users — use the country-filtered query
             $query->whereHas('user_information', function($q) use ($currentCountryCode) {
                 $q->where('country_code', $currentCountryCode);
             });
-            $results = $query->orderBy('created_at', 'desc')->limit(50)->get();
-        } else {
-            // Too few same-country users — show all, sorted by distance (nearest first)
-            $results = $query->limit(100)->get();
-
-            // Sort by distance so nearby users appear first
-            $results = $results->map(function($u) use ($currentLat, $currentLng) {
-                $info = $u->user_information;
-                $u->_sort_distance = $info
-                    ? $this->calculateDistance($currentLat, $currentLng, $info->latitude, $info->longitude)
-                    : 99999;
-                return $u;
-            })->sortBy('_sort_distance')->take(50)->values();
         }
+
+        $results = $query->orderBy('created_at', 'desc')->limit(50)->get();
 
         $transformedResults = $results->map(function($u) use ($currentLat, $currentLng) {
             $info = $u->user_information;
