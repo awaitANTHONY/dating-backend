@@ -596,54 +596,6 @@ class ProfileController extends Controller
         $maxAge = $request->input('max_age');
         $radius = $request->input('radius');
 
-        // ── DEBUG: count at each filter stage ───────────────────────────
-        $dbgBase = User::where('created_at', '>=', now()->subDays(3))
-            ->where('id', '!=', $user->id)
-            ->where('status', 1)
-            ->count();
-
-        $dbgGender = User::where('created_at', '>=', now()->subDays(3))
-            ->where('id', '!=', $user->id)
-            ->where('status', 1)
-            ->whereHas('user_information', function($q) use ($searchPreference) {
-                $q->where('gender', $searchPreference);
-            })->count();
-
-        $dbgCountry = User::where('created_at', '>=', now()->subDays(3))
-            ->where('id', '!=', $user->id)
-            ->where('status', 1)
-            ->whereHas('user_information', function($q) use ($searchPreference, $currentCountryCode) {
-                $q->where('gender', $searchPreference);
-                if ($currentCountryCode) $q->where('country_code', $currentCountryCode);
-            })->count();
-
-        $dbgInteractions = \DB::table('user_interactions')
-            ->where('user_id', $user->id)
-            ->count();
-
-        $dbgAfterExclude = User::where('created_at', '>=', now()->subDays(3))
-            ->where('id', '!=', $user->id)
-            ->where('status', 1)
-            ->whereHas('user_information', function($q) use ($searchPreference, $currentCountryCode) {
-                $q->where('gender', $searchPreference);
-                if ($currentCountryCode) $q->where('country_code', $currentCountryCode);
-            })
-            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
-                $q->where('user_id', $user->id);
-            })->count();
-
-        \Log::info("JUST_JOINED_DEBUG", [
-            'user_id' => $user->id,
-            'search_pref' => $searchPreference,
-            'country' => $currentCountryCode,
-            'base_3day_active' => $dbgBase,
-            'after_gender' => $dbgGender,
-            'after_country' => $dbgCountry,
-            'total_interactions_by_user' => $dbgInteractions,
-            'after_exclude_swiped' => $dbgAfterExclude,
-        ]);
-        // ── END DEBUG ───────────────────────────────────────────────────
-
         $query = User::with(['user_information'])
             ->where('created_at', '>=', now()->subDays(3))
             ->where('id', '!=', $user->id)
@@ -668,14 +620,34 @@ class ProfileController extends Controller
                 $q->where('user_id', $user->id);
             });
 
-        // Same country filter (if available)
+        // Prefer same country, but fall back to all countries if pool is too small
+        $queryWithCountry = clone $query;
         if ($currentCountryCode) {
-            $query->whereHas('user_information', function($q) use ($currentCountryCode) {
+            $queryWithCountry->whereHas('user_information', function($q) use ($currentCountryCode) {
                 $q->where('country_code', $currentCountryCode);
             });
         }
+        $countryCount = $queryWithCountry->count();
 
-        $results = $query->orderBy('created_at', 'desc')->limit(50)->get();
+        if ($countryCount >= 10 && $currentCountryCode) {
+            // Enough same-country users — use the country-filtered query
+            $query->whereHas('user_information', function($q) use ($currentCountryCode) {
+                $q->where('country_code', $currentCountryCode);
+            });
+            $results = $query->orderBy('created_at', 'desc')->limit(50)->get();
+        } else {
+            // Too few same-country users — show all, sorted by distance (nearest first)
+            $results = $query->limit(100)->get();
+
+            // Sort by distance so nearby users appear first
+            $results = $results->map(function($u) use ($currentLat, $currentLng) {
+                $info = $u->user_information;
+                $u->_sort_distance = $info
+                    ? $this->calculateDistance($currentLat, $currentLng, $info->latitude, $info->longitude)
+                    : 99999;
+                return $u;
+            })->sortBy('_sort_distance')->take(50)->values();
+        }
 
         $transformedResults = $results->map(function($u) use ($currentLat, $currentLng) {
             $info = $u->user_information;
