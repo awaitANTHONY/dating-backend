@@ -596,8 +596,56 @@ class ProfileController extends Controller
         $maxAge = $request->input('max_age');
         $radius = $request->input('radius');
 
+        // ── DEBUG: count at each filter stage ───────────────────────────
+        $dbgBase = User::where('created_at', '>=', now()->subDays(3))
+            ->where('id', '!=', $user->id)
+            ->where('status', 1)
+            ->count();
+
+        $dbgGender = User::where('created_at', '>=', now()->subDays(3))
+            ->where('id', '!=', $user->id)
+            ->where('status', 1)
+            ->whereHas('user_information', function($q) use ($searchPreference) {
+                $q->where('gender', $searchPreference);
+            })->count();
+
+        $dbgCountry = User::where('created_at', '>=', now()->subDays(3))
+            ->where('id', '!=', $user->id)
+            ->where('status', 1)
+            ->whereHas('user_information', function($q) use ($searchPreference, $currentCountryCode) {
+                $q->where('gender', $searchPreference);
+                if ($currentCountryCode) $q->where('country_code', $currentCountryCode);
+            })->count();
+
+        $dbgInteractions = \DB::table('user_interactions')
+            ->where('user_id', $user->id)
+            ->count();
+
+        $dbgAfterExclude = User::where('created_at', '>=', now()->subDays(3))
+            ->where('id', '!=', $user->id)
+            ->where('status', 1)
+            ->whereHas('user_information', function($q) use ($searchPreference, $currentCountryCode) {
+                $q->where('gender', $searchPreference);
+                if ($currentCountryCode) $q->where('country_code', $currentCountryCode);
+            })
+            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            })->count();
+
+        \Log::info("JUST_JOINED_DEBUG", [
+            'user_id' => $user->id,
+            'search_pref' => $searchPreference,
+            'country' => $currentCountryCode,
+            'base_3day_active' => $dbgBase,
+            'after_gender' => $dbgGender,
+            'after_country' => $dbgCountry,
+            'total_interactions_by_user' => $dbgInteractions,
+            'after_exclude_swiped' => $dbgAfterExclude,
+        ]);
+        // ── END DEBUG ───────────────────────────────────────────────────
+
         $query = User::with(['user_information'])
-            ->where('created_at', '>=', now()->subDays(7))
+            ->where('created_at', '>=', now()->subDays(3))
             ->where('id', '!=', $user->id)
             ->where('status', 1)
             ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge) {
