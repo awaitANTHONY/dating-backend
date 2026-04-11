@@ -314,6 +314,44 @@ class DirectConnectController extends Controller
         $action = $request->action;
 
         if ($action === 'approve') {
+            // ── Check daily approval limit ──────────────────────────────────
+            $approvalLimit = $this->getDailyApprovalLimit($user);
+            $todayApprovals = ContactRequest::where('owner_id', $user->id)
+                ->where('status', 'approved')
+                ->whereDate('responded_at', today())
+                ->count();
+
+            if ($todayApprovals >= $approvalLimit) {
+                $coinCost = (int) get_option('dc_approval_coin_cost', '3');
+                $balance = (int) $user->coin_balance;
+
+                if ($balance < $coinCost) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => "You've reached your daily approval limit ({$approvalLimit}). Use {$coinCost} coins for extra approvals or upgrade your plan.",
+                        'data' => [
+                            'limit_reached' => true,
+                            'daily_limit' => $approvalLimit,
+                            'today_approvals' => $todayApprovals,
+                            'coin_cost' => $coinCost,
+                            'balance' => $balance,
+                        ],
+                    ]);
+                }
+
+                // Deduct coins for extra approval
+                $user->coin_balance = $balance - $coinCost;
+                $user->save();
+
+                CoinTransaction::create([
+                    'user_id' => $user->id,
+                    'amount' => $coinCost,
+                    'status' => 'Debit',
+                    'description' => 'Extra contact approval',
+                    'reference_type' => 'approval',
+                ]);
+            }
+
             $contactRequest->status = 'approved';
             $contactRequest->responded_at = now();
             $contactRequest->approved_expires_at = now()->addHours(48);
@@ -382,6 +420,10 @@ class DirectConnectController extends Controller
     public function receivedRequests(Request $request)
     {
         $user = $request->user();
+        $ownerInfo = $user->userInformation;
+        $ownerLat = $ownerInfo->latitude ?? null;
+        $ownerLng = $ownerInfo->longitude ?? null;
+
         $requests = ContactRequest::where('owner_id', $user->id)
             ->where('status', 'pending')
             ->where(function ($query) {
@@ -392,7 +434,41 @@ class DirectConnectController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return response()->json(['status' => true, 'data' => $requests]);
+        // Enrich each request with requester's distance
+        if ($ownerLat && $ownerLng) {
+            $requests->getCollection()->transform(function ($req) use ($ownerLat, $ownerLng) {
+                $requesterInfo = \App\Models\UserInformation::where('user_id', $req->requester_id)->first();
+                if ($requesterInfo && $requesterInfo->latitude && $requesterInfo->longitude) {
+                    $req->requester_distance_km = round($this->haversineDistance(
+                        (float) $ownerLat, (float) $ownerLng,
+                        (float) $requesterInfo->latitude, (float) $requesterInfo->longitude
+                    ), 1);
+                    $req->requester_city = $requesterInfo->address ?? null;
+                } else {
+                    $req->requester_distance_km = null;
+                    $req->requester_city = null;
+                }
+                return $req;
+            });
+        }
+
+        // Include approval stats
+        $approvalLimit = $this->getDailyApprovalLimit($user);
+        $todayApprovals = ContactRequest::where('owner_id', $user->id)
+            ->where('status', 'approved')
+            ->whereDate('responded_at', today())
+            ->count();
+
+        return response()->json([
+            'status' => true,
+            'data' => $requests,
+            'approval_info' => [
+                'daily_limit' => $approvalLimit,
+                'today_approvals' => $todayApprovals,
+                'remaining' => max(0, $approvalLimit - $todayApprovals),
+                'extra_coin_cost' => (int) get_option('dc_approval_coin_cost', '3'),
+            ],
+        ]);
     }
 
     // ─── Coin Packages ───────────────────────────────────────────────────────
@@ -498,11 +574,22 @@ class DirectConnectController extends Controller
         $user = $request->user();
         $freeRemaining = $this->getFreeRequestsRemaining($user);
 
+        // Approval limit info
+        $approvalLimit = $this->getDailyApprovalLimit($user);
+        $todayApprovals = ContactRequest::where('owner_id', $user->id)
+            ->where('status', 'approved')
+            ->whereDate('responded_at', today())
+            ->count();
+
         return response()->json([
             'status' => true,
             'data' => [
                 'balance' => (int) $user->coin_balance,
                 'free_requests_remaining' => $freeRemaining,
+                'daily_approval_limit' => $approvalLimit,
+                'today_approvals' => $todayApprovals,
+                'approvals_remaining' => max(0, $approvalLimit - $todayApprovals),
+                'extra_approval_coin_cost' => (int) get_option('dc_approval_coin_cost', '3'),
             ],
         ]);
     }
@@ -581,6 +668,29 @@ class DirectConnectController extends Controller
         return $user->isVipActive()
             ? (int) get_option('dc_coin_cost_vip', '3')
             : (int) get_option('dc_coin_cost_default', '5');
+    }
+
+    private function getDailyApprovalLimit(User $user): int
+    {
+        if ($user->isVipActive()) return (int) get_option('dc_approval_limit_vip', '999');
+
+        $tier = $this->getSubscriptionTier($user);
+        if ($tier === 'gold') return (int) get_option('dc_approval_limit_gold', '25');
+        if ($tier === 'premium') return (int) get_option('dc_approval_limit_premium', '10');
+
+        return (int) get_option('dc_approval_limit_free', '3');
+    }
+
+    private function haversineDistance(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $earthRadius = 6371; // km
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon / 2) * sin($dLon / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        return $earthRadius * $c;
     }
 
     private function notifyOwner(ContactRequest $contactRequest, User $requester)

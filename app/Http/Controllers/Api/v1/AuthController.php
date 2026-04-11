@@ -1058,6 +1058,12 @@ class AuthController extends Controller
      */
     private function validateContent(string $content): array
     {
+        // Allow admin to temporarily disable content filtering via settings
+        $allowContactInBio = get_option('allow_contact_in_bio', '0');
+        if ($allowContactInBio === '1') {
+            return ['valid' => true, 'message' => ''];
+        }
+
         $lowerContent = strtolower($content);
 
         // === STANDARD PHONE NUMBER PATTERNS ===
