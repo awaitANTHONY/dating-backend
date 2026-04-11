@@ -620,10 +620,14 @@ class ProfileController extends Controller
                 $q->where('user_id', $user->id);
             });
 
-        // Same country filter
+        // Same country filter — also include users who haven't set country yet
         if ($currentCountryCode) {
             $query->whereHas('user_information', function($q) use ($currentCountryCode) {
-                $q->where('country_code', $currentCountryCode);
+                $q->where(function($sub) use ($currentCountryCode) {
+                    $sub->where('country_code', $currentCountryCode)
+                        ->orWhereNull('country_code')
+                        ->orWhere('country_code', '');
+                });
             });
         }
 
