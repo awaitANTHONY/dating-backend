@@ -88,13 +88,24 @@ class ProfileController extends Controller
         $currentLat = $userInformation->latitude ?? 0;
         $currentLng = $userInformation->longitude ?? 0;
         $searchRadius = $userInformation->search_radius ?? 50;
+        if ($request->has('radius')) {
+            $searchRadius = (int) $request->input('radius');
+        }
         $searchPreference = $userInformation->search_preference ?? 'male';
         $currentCountryCode = $userInformation->country_code ?? null;
+        $minAge = $request->input('min_age');
+        $maxAge = $request->input('max_age');
 
         // Build query for recommendations with smart matching
         $query = User::with(['user_information'])
-            ->whereHas('user_information', function($q) use ($searchPreference) {
+            ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge) {
                 $q->where('gender', $searchPreference);
+                if ($minAge) {
+                    $q->where('age', '>=', (int) $minAge);
+                }
+                if ($maxAge) {
+                    $q->where('age', '<=', (int) $maxAge);
+                }
             })
             ->where('id', '!=', $user->id)
             ->where('status', 1)
@@ -104,9 +115,16 @@ class ProfileController extends Controller
             ->whereDoesntHave('blockedUsers', function($q) use ($user) {
                 $q->where('blocked_user_id', $user->id);
             })
-            // Exclude users the current user has already interacted with
+            // Exclude users the current user has liked (permanent — already matched)
             ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
-                $q->where('user_id', $user->id);
+                $q->where('user_id', $user->id)
+                  ->where('action', 'like');
+            })
+            // Exclude users the current user has disliked/passed (30-day cooldown, then resurface)
+            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->whereIn('action', ['dislike', 'pass'])
+                  ->where('created_at', '>=', now()->subDays(30));
             });
 
         // Filter by same country to prevent cross-country matching
@@ -615,9 +633,16 @@ class ProfileController extends Controller
             ->whereDoesntHave('blockedUsers', function($q) use ($user) {
                 $q->where('blocked_user_id', $user->id);
             })
-            // Exclude users the current user has already swiped on (like/dislike)
+            // Exclude users the current user has liked (permanent — already matched)
             ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
-                $q->where('user_id', $user->id);
+                $q->where('user_id', $user->id)
+                  ->where('action', 'like');
+            })
+            // Exclude users the current user has disliked/passed (30-day cooldown)
+            ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->whereIn('action', ['dislike', 'pass'])
+                  ->where('created_at', '>=', now()->subDays(30));
             });
 
         // Same country filter — also include users who haven't set country yet
