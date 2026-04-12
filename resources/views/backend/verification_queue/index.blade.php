@@ -22,7 +22,7 @@
     }
     #review-popup .photo-grid { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
     #review-popup .photo-grid img { width:100px; height:100px; object-fit:cover; border-radius:6px; cursor:pointer; border:2px solid #ddd; }
-    #review-popup .selfie-img { max-height:220px; max-width:100%; object-fit:contain; border-radius:6px; border:2px solid #ddd; }
+    #review-popup .selfie-img { max-height:220px; max-width:100%; object-fit:contain; border-radius:6px; border:2px solid #ddd; cursor:pointer; }
     #review-popup .close-btn { background:none; border:none; font-size:24px; cursor:pointer; color:#666; }
     #review-popup .close-btn:hover { color:#000; }
     #review-popup .info-row { display:flex; gap:15px; flex-wrap:wrap; margin-top:12px; }
@@ -107,7 +107,7 @@
                     </div>
                     <div class="col-5 text-center">
                         <small class="text-muted d-block mb-2">Selfie</small>
-                        <img id="popup-selfie" src="" class="selfie-img">
+                        <img id="popup-selfie" src="" class="selfie-img" onclick="window.open(this.src,'_blank')">
                     </div>
                 </div>
 
