@@ -51,16 +51,16 @@
 </div>
 
 <!-- ── Review Detail Modal ─────────────────────────────────────────── -->
-<div class="modal fade" id="reviewModal" tabindex="-1" role="dialog" aria-labelledby="reviewModalLabel">
+<div class="modal fade" id="reviewModal" tabindex="-1" role="dialog" aria-labelledby="reviewModalLabel" style="z-index:1060;">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header bg-light">
                 <h5 class="modal-title" id="reviewModalLabel">
                     <i class="fas fa-user-check mr-2"></i>Review Verification
                 </h5>
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             </div>
-            <div class="modal-body" id="modal-body">
+            <div class="modal-body" id="modal-body" style="overflow-y:auto;max-height:70vh;">
                 <!-- Content loaded via AJAX -->
                 <div class="text-center py-4" id="modal-loading">
                     <div class="spinner-border text-primary"></div>
@@ -134,20 +134,15 @@
                         <textarea id="reject-reason" class="form-control" rows="2" placeholder="Your verification photo did not pass review. Please try again with a clear selfie showing your face."></textarea>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="row mt-4">
-                        <div class="col-6">
-                            <button class="btn btn-success btn-lg btn-block" id="modal-approve-btn">
-                                <i class="fas fa-check mr-1"></i> Approve Verification
-                            </button>
-                        </div>
-                        <div class="col-6">
-                            <button class="btn btn-danger btn-lg btn-block" id="modal-reject-btn">
-                                <i class="fas fa-times mr-1"></i> Reject Verification
-                            </button>
-                        </div>
-                    </div>
                 </div>
+            </div>
+            <div class="modal-footer" style="display:flex;justify-content:center;gap:10px;">
+                <button type="button" class="btn btn-success btn-lg" id="modal-approve-btn" style="min-width:200px;">
+                    <i class="fas fa-check mr-1"></i> Approve Verification
+                </button>
+                <button type="button" class="btn btn-danger btn-lg" id="modal-reject-btn" style="min-width:200px;">
+                    <i class="fas fa-times mr-1"></i> Reject Verification
+                </button>
             </div>
         </div>
     </div>
@@ -355,7 +350,9 @@ $(document).ready(function() {
     });
 
     // ── Modal Approve ─────────────────────────────────────────────
-    $('#modal-approve-btn').on('click', function() {
+    $(document).on('click', '#modal-approve-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         if (!currentReviewId) return;
         var btn = $(this);
         btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Approving...');
@@ -387,7 +384,9 @@ $(document).ready(function() {
     });
 
     // ── Modal Reject ──────────────────────────────────────────────
-    $('#modal-reject-btn').on('click', function() {
+    $(document).on('click', '#modal-reject-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         var section = $('#reject-reason-section');
         if (section.is(':hidden')) {
             // First click: show reason input
