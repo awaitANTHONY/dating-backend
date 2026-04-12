@@ -20,7 +20,7 @@ class VerificationQueueController extends Controller
         if ($request->ajax()) {
             $query = VerificationRequest::with(['user.user_information'])
                 ->where('status', 'review')
-                ->orderBy('created_at', 'ASC');
+                ->orderBy('created_at', 'DESC');
 
             return DataTables::eloquent($query)
                 ->addColumn('user_name', function ($req) {
