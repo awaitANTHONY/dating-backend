@@ -82,7 +82,7 @@ class VerificationQueueController extends Controller
                         <button class="btn btn-danger btn-reject" data-id="' . $req->id . '" title="Reject">
                             <i class="fas fa-times"></i>
                         </button>
-                        <a href="' . url('verification-queue/' . $req->id) . '" class="btn btn-info" title="Review Detail">
+                        <a href="' . url('verification-queue/' . $req->id) . '" class="btn btn-info btn-detail" title="Review Detail">
                             <i class="fas fa-eye"></i>
                         </a>
                     </div>';
@@ -96,7 +96,7 @@ class VerificationQueueController extends Controller
     }
 
     /**
-     * Show full-page review detail for a verification request.
+     * Get verification detail (JSON for popup).
      */
     public function show($id)
     {
@@ -106,7 +106,7 @@ class VerificationQueueController extends Controller
         $info = $user ? $user->user_information : null;
         $ai   = $req->ai_response ?? [];
 
-        // Build profile photos array
+        // Profile photos
         $profilePhotos = [];
         if ($user && $user->image && !str_contains($user->image, 'default/profile.png')) {
             $profilePhotos[] = asset($user->image);
@@ -120,31 +120,23 @@ class VerificationQueueController extends Controller
             }
         }
 
-        // Extract face matching details
-        $faceDetails = [];
-        if (isset($ai['face_matching']['details']) && is_array($ai['face_matching']['details'])) {
-            foreach ($ai['face_matching']['details'] as $detail) {
-                $faceDetails[] = [
-                    'photo'      => isset($detail['photo']) ? asset($detail['photo']) : null,
-                    'result'     => $detail['result'] ?? 'unknown',
-                    'similarity' => $detail['similarity'] ?? null,
-                    'reason'     => $detail['reason'] ?? null,
-                ];
-            }
-        }
+        $highestMatch = $ai['face_matching']['highest_match'] ?? null;
+        $matched = $ai['face_matching']['matched'] ?? 0;
+        $total = $matched + ($ai['face_matching']['unmatched'] ?? 0) + ($ai['face_matching']['skipped'] ?? 0);
 
-        $data = [
-            'req'           => $req,
-            'user'          => $user,
-            'info'          => $info,
-            'profilePhotos' => $profilePhotos,
-            'faceDetails'   => $faceDetails,
-            'highestMatch'  => $ai['face_matching']['highest_match'] ?? null,
-            'matchedCount'  => $ai['face_matching']['matched'] ?? 0,
-            'totalCompared' => (($ai['face_matching']['matched'] ?? 0) + ($ai['face_matching']['unmatched'] ?? 0) + ($ai['face_matching']['skipped'] ?? 0)),
-        ];
-
-        return view('backend.verification_queue.show', $data);
+        return response()->json([
+            'id'             => $req->id,
+            'user_name'      => $user ? $user->name : 'Unknown',
+            'gender'         => ucfirst($info->gender ?? '-'),
+            'age'            => ($info && $info->date_of_birth) ? \Carbon\Carbon::parse($info->date_of_birth)->age : null,
+            'country'        => $info->country_code ?? '-',
+            'selfie_url'     => asset($req->image),
+            'profile_photos' => $profilePhotos,
+            'reason'         => $req->reason,
+            'highest_match'  => $highestMatch,
+            'matched_count'  => $matched . '/' . $total,
+            'waiting'        => $req->created_at ? $req->created_at->diffForHumans() : '-',
+        ]);
     }
 
     /**
