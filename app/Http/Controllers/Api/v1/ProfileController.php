@@ -645,15 +645,17 @@ class ProfileController extends Controller
                   ->where('created_at', '>=', now()->subDays(30));
             });
 
-        // Same country filter — also include users who haven't set country yet
+        // Strict country filter: only show users whose country_code exactly matches
+        // the viewer's country.  Users with NULL / empty country_code are excluded —
+        // they have not had their location resolved yet and must NOT leak into other
+        // countries' feeds (the orWhereNull pattern was the source of the bug).
         if ($currentCountryCode) {
             $query->whereHas('user_information', function($q) use ($currentCountryCode) {
-                $q->where(function($sub) use ($currentCountryCode) {
-                    $sub->where('country_code', $currentCountryCode)
-                        ->orWhereNull('country_code')
-                        ->orWhere('country_code', '');
-                });
+                $q->where('country_code', $currentCountryCode);
             });
+        } else {
+            // Viewer's own country is unknown — show nothing rather than a global feed.
+            return response()->json(['status' => true, 'data' => []]);
         }
 
         $results = $query->orderBy('created_at', 'desc')->limit(50)->get();

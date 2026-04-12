@@ -459,7 +459,15 @@ class AuthController extends Controller
         $userInformation->save();
 
         \DB::commit();
-        
+
+        // If country_code is still empty after the save, try to detect it from the
+        // request IP now that user_information definitely exists.  This handles new
+        // users whose country was not captured at signup (user_information didn't
+        // exist yet when detectAndStoreCountry ran during signup).
+        if (empty($userInformation->country_code)) {
+            $this->detectAndStoreCountry($user, $request->ip());
+        }
+
         // Update user's last activity when profile information is updated
         $user->last_activity = now();
         $user->save();
@@ -1214,29 +1222,43 @@ class AuthController extends Controller
     private function detectAndStoreCountry(User $user, ?string $ip): void
     {
         try {
-            // Skip for local/private IPs
-            if (!$ip || in_array($ip, ['127.0.0.1', '::1']) || str_starts_with($ip, '10.') || str_starts_with($ip, '192.168.')) {
+            // Skip for local / private IPs
+            if (!$ip || in_array($ip, ['127.0.0.1', '::1'])
+                || str_starts_with($ip, '10.')
+                || str_starts_with($ip, '192.168.')
+                || str_starts_with($ip, '172.')) {
                 return;
             }
 
-            $response = @file_get_contents("http://ip-api.com/json/{$ip}?fields=status,countryCode", false, stream_context_create([
-                'http' => ['timeout' => 3]
-            ]));
+            $countryCode = null;
 
-            if (!$response) return;
-
-            $data = json_decode($response, true);
-            if (!$data || ($data['status'] ?? '') !== 'success' || empty($data['countryCode'])) return;
-
-            $countryCode = strtoupper($data['countryCode']);
-
-            // Update user_information if it exists and country_code is empty
-            $info = $user->user_information;
-            if ($info) {
-                if (empty($info->country_code) || strlen($info->country_code) !== 2) {
-                    $info->country_code = $countryCode;
-                    $info->save();
+            // --- Primary: ip-api.com (HTTPS) ---
+            $ctx = stream_context_create(['http' => ['timeout' => 3]]);
+            $raw = @file_get_contents("https://ip-api.com/json/{$ip}?fields=status,countryCode", false, $ctx);
+            if ($raw) {
+                $data = json_decode($raw, true);
+                if (!empty($data['countryCode']) && ($data['status'] ?? '') === 'success') {
+                    $countryCode = strtoupper($data['countryCode']);
                 }
+            }
+
+            // --- Fallback: ipinfo.io ---
+            if (!$countryCode) {
+                $raw2 = @file_get_contents("https://ipinfo.io/{$ip}/country", false,
+                    stream_context_create(['http' => ['timeout' => 3]]));
+                $cc = trim((string) $raw2);
+                if (strlen($cc) === 2 && ctype_alpha($cc)) {
+                    $countryCode = strtoupper($cc);
+                }
+            }
+
+            if (!$countryCode) return;
+
+            // Refresh relation so we always work with the latest row
+            $info = $user->fresh()->user_information;
+            if ($info && (empty($info->country_code) || strlen($info->country_code) !== 2)) {
+                $info->country_code = $countryCode;
+                $info->save();
             }
         } catch (\Throwable $e) {
             // Silently fail — country detection is non-critical
