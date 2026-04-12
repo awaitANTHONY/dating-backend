@@ -1,142 +1,153 @@
 @extends('layouts.app')
+
 @section('content')
 <div class="row">
-    <div class="col-md-12 breadcrumb-box">
-        <h4 class="card-title">{{ _lang('Verification Queue') }}</h4>
-    </div>
-
-    {{-- Stats Cards --}}
-    <div class="col-md-12 mb-3">
-        <div class="row" id="stats-row">
-            <div class="col-md-2 col-6 mb-2">
-                <div class="card bg-warning text-white">
-                    <div class="card-body p-3 text-center">
-                        <h5 class="mb-0" id="stat-pending">-</h5>
-                        <small>{{ _lang('Pending') }}</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2 col-6 mb-2">
-                <div class="card bg-success text-white">
-                    <div class="card-body p-3 text-center">
-                        <h5 class="mb-0" id="stat-approved">-</h5>
-                        <small>{{ _lang('Approved') }}</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2 col-6 mb-2">
-                <div class="card bg-danger text-white">
-                    <div class="card-body p-3 text-center">
-                        <h5 class="mb-0" id="stat-rejected">-</h5>
-                        <small>{{ _lang('Rejected') }}</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2 col-6 mb-2">
-                <div class="card bg-info text-white">
-                    <div class="card-body p-3 text-center">
-                        <h5 class="mb-0" id="stat-avg-confidence">-</h5>
-                        <small>{{ _lang('Avg Confidence') }}</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Filters --}}
-    <div class="col-md-12 mb-3">
+    <div class="col-lg-12">
         <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="header-title mb-0">
+                    <i class="fas fa-user-check mr-2"></i>Verification Review Queue
+                    <span id="queue-count" class="badge badge-warning ml-2" style="font-size:14px;">{{ $reviewCount }}</span>
+                </h4>
+                <div>
+                    <button class="btn btn-success btn-sm" id="btn-bulk-approve" style="display:none;">
+                        <i class="fas fa-check-double"></i> Approve Selected (<span id="selected-count">0</span>)
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="btn-refresh">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="control-label">{{ _lang('Filter by Status') }}</label>
-                            <select class="form-control select2" name="filter_status" id="filter-status">
-                                <option value="">{{ _lang('All') }}</option>
-                                <option value="pending" selected>{{ _lang('Pending') }}</option>
-                                <option value="approved">{{ _lang('Approved') }}</option>
-                                <option value="rejected">{{ _lang('Rejected') }}</option>
-                                <option value="auto_approved">{{ _lang('Auto-Approved') }}</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label class="control-label">{{ _lang('Min Confidence') }}</label>
-                            <input type="number" class="form-control" id="filter-confidence-min" min="0" max="100" step="5" placeholder="0%">
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-group">
-                            <label class="control-label">{{ _lang('Max Confidence') }}</label>
-                            <input type="number" class="form-control" id="filter-confidence-max" min="0" max="100" step="5" placeholder="100%">
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group mt-4">
-                            <button class="btn btn-primary btn-sm" id="btn-filter">{{ _lang('Filter') }}</button>
-                            <button class="btn btn-info btn-sm" id="btn-reset">{{ _lang('Reset') }}</button>
-                        </div>
-                    </div>
+                @if($reviewCount == 0)
+                <div id="empty-state" class="text-center py-5">
+                    <i class="fas fa-check-circle text-success" style="font-size:48px;"></i>
+                    <h5 class="mt-3 text-muted">All clear! No pending reviews.</h5>
                 </div>
-            </div>
-        </div>
-    </div>
+                @endif
 
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-body p-0 p-md-3">
-                <div class="table-responsive">
-                <table class="table table-bordered mb-0" id="data-table">
-                    <thead>
-                        <tr>
-                            <th>{{ _lang('User') }}</th>
-                            <th>{{ _lang('AI Confidence') }}</th>
-                            <th>{{ _lang('Status') }}</th>
-                            <th>{{ _lang('Date') }}</th>
-                            <th class="text-center">{{ _lang('Action') }}</th>
-                        </tr>
-                    </thead>
-                </table>
+                <div class="table-responsive" id="table-wrapper" @if($reviewCount == 0) style="display:none;" @endif>
+                    <table class="table table-hover" id="verification-queue-table">
+                        <thead>
+                            <tr>
+                                <th style="width:30px;"><input type="checkbox" id="select-all"></th>
+                                <th>Profile</th>
+                                <th>Selfie</th>
+                                <th>Name</th>
+                                <th>Gender</th>
+                                <th>Age</th>
+                                <th>Country</th>
+                                <th>Face Match</th>
+                                <th>Matched</th>
+                                <th>Waiting</th>
+                                <th style="width:150px;">Action</th>
+                            </tr>
+                        </thead>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-{{-- View Detail Modal --}}
-<div class="modal fade" id="viewModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+<!-- ── Review Detail Modal ─────────────────────────────────────────── -->
+<div class="modal fade" id="reviewModal" tabindex="-1" role="dialog" aria-labelledby="reviewModalLabel">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{{ _lang('Verification Details') }}</h5>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="reviewModalLabel">
+                    <i class="fas fa-user-check mr-2"></i>Review Verification
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
-            <div class="modal-body" id="viewModalBody">
-                <div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Reject Reason Modal --}}
-<div class="modal fade" id="rejectModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">{{ _lang('Reject Verification') }}</h5>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="reject-id">
-                <div class="form-group">
-                    <label>{{ _lang('Rejection Reason') }}</label>
-                    <textarea class="form-control" id="reject-reason" rows="3" maxlength="500" required placeholder="{{ _lang('Enter reason for rejection...') }}"></textarea>
+            <div class="modal-body" id="modal-body">
+                <!-- Content loaded via AJAX -->
+                <div class="text-center py-4" id="modal-loading">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-2 text-muted">Loading verification data...</p>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">{{ _lang('Cancel') }}</button>
-                <button type="button" class="btn btn-danger btn-sm" id="btn-confirm-reject">{{ _lang('Reject') }}</button>
+                <div id="modal-content" style="display:none;">
+                    <!-- Photo Comparison -->
+                    <div class="row mb-4">
+                        <div class="col-md-5 text-center">
+                            <h6 class="text-muted mb-2"><i class="fas fa-user mr-1"></i> Profile Photos</h6>
+                            <div id="profile-photos-grid" class="d-flex flex-wrap justify-content-center gap-2" style="gap:8px;">
+                                <!-- Profile photos loaded here -->
+                            </div>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-center justify-content-center">
+                            <div class="text-center">
+                                <i class="fas fa-arrows-alt-h text-muted" style="font-size:28px;"></i>
+                                <div class="mt-2">
+                                    <span id="modal-face-score" class="badge" style="font-size:18px;">-</span>
+                                </div>
+                                <small class="text-muted">Face Match</small>
+                            </div>
+                        </div>
+                        <div class="col-md-5 text-center">
+                            <h6 class="text-muted mb-2"><i class="fas fa-camera mr-1"></i> Verification Selfie</h6>
+                            <img id="modal-selfie" src="" class="img-thumbnail" style="max-height:300px;max-width:100%;object-fit:contain;">
+                        </div>
+                    </div>
+
+                    <!-- User Info -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><td class="text-muted" style="width:100px;">User:</td><td><strong id="modal-name"></strong></td></tr>
+                                <tr><td class="text-muted">Email:</td><td id="modal-email"></td></tr>
+                                <tr><td class="text-muted">Gender:</td><td id="modal-gender"></td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><td class="text-muted" style="width:100px;">Age:</td><td id="modal-age"></td></tr>
+                                <tr><td class="text-muted">Country:</td><td id="modal-country"></td></tr>
+                                <tr><td class="text-muted">Joined:</td><td id="modal-joined"></td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Face Matching Details Table -->
+                    <div id="face-details-section" style="display:none;">
+                        <h6 class="text-muted mb-2"><i class="fas fa-chart-bar mr-1"></i> AWS Face Matching Details</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered" id="face-details-table">
+                                <thead class="thead-light">
+                                    <tr><th>Photo</th><th>Result</th><th>Similarity</th><th>Notes</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Review Reason -->
+                    <div class="alert alert-warning mt-3 mb-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        <strong>Reason for Review:</strong>
+                        <span id="modal-reason"></span>
+                    </div>
+
+                    <!-- Rejection Reason Input (hidden by default) -->
+                    <div id="reject-reason-section" style="display:none;" class="mb-3">
+                        <label for="reject-reason" class="font-weight-bold text-danger">Rejection Reason:</label>
+                        <textarea id="reject-reason" class="form-control" rows="2" placeholder="Your verification photo did not pass review. Please try again with a clear selfie showing your face."></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="row mt-4">
+                        <div class="col-6">
+                            <button class="btn btn-success btn-lg btn-block" id="modal-approve-btn">
+                                <i class="fas fa-check mr-1"></i> Approve Verification
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-danger btn-lg btn-block" id="modal-reject-btn">
+                                <i class="fas fa-times mr-1"></i> Reject Verification
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -145,174 +156,331 @@
 
 @section('js-script')
 <script>
-// Load stats
-function loadStats() {
-    $.get(_url + '/verification-queue/stats', function(res) {
-        if (res.status) {
-            $('#stat-pending').text(res.data.pending);
-            $('#stat-approved').text(res.data.approved);
-            $('#stat-rejected').text(res.data.rejected);
-            $('#stat-avg-confidence').text(res.data.avg_confidence);
-        }
-    });
-}
-loadStats();
+$(document).ready(function() {
+    var csrf = $('meta[name="csrf-token"]').attr('content');
+    var currentReviewId = null;
 
-// DataTable
-var table = $('#data-table').DataTable({
-    processing: true,
-    serverSide: true,
-    ajax: {
-        url: _url + "/verification-queue",
-        data: function(d) {
-            d.status = $('#filter-status').val();
-            var minVal = $('#filter-confidence-min').val();
-            var maxVal = $('#filter-confidence-max').val();
-            if (minVal) d.confidence_min = minVal / 100;
-            if (maxVal) d.confidence_max = maxVal / 100;
-        }
-    },
-    columns: [
-        { data: "user_name", name: "user_name" },
-        { data: "confidence_percent", name: "ai_confidence" },
-        { data: "status_badge", name: "status", orderable: false, searchable: false },
-        { data: "created_at", name: "created_at" },
-        { data: "action", name: "action", orderable: false, searchable: false, className: "text-center" }
-    ],
-    responsive: true,
-    bStateSave: true,
-    bAutoWidth: false,
-    order: [[3, 'desc']]
-});
-
-// Filter
-$('#btn-filter').on('click', function() { table.ajax.reload(); });
-$('#btn-reset').on('click', function() {
-    $('#filter-status').val('').trigger('change');
-    $('#filter-confidence-min').val('');
-    $('#filter-confidence-max').val('');
-    table.ajax.reload();
-});
-
-// View detail
-$(document).on('click', '.view-btn', function() {
-    var id = $(this).data('id');
-    $('#viewModalBody').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>');
-    $('#viewModal').modal('show');
-    $.get(_url + '/verification-queue/' + id, function(res) {
-        if (res.status) {
-            var d = res.data;
-            var html = '<div class="row">';
-            html += '<div class="col-md-5 text-center">';
-            html += '<h6>{{ _lang("Profile Photo") }}</h6>';
-            if (d.user.image) html += '<img src="' + d.user.image + '" class="img-thumbnail" style="max-width:200px;max-height:200px;object-fit:cover;">';
-            else html += '<p class="text-muted">{{ _lang("No profile photo") }}</p>';
-            html += '</div>';
-            html += '<div class="col-md-2 text-center d-flex align-items-center justify-content-center"><i class="fas fa-arrows-alt-h fa-2x text-muted"></i></div>';
-            html += '<div class="col-md-5 text-center">';
-            html += '<h6>{{ _lang("Verification Selfie") }}</h6>';
-            if (d.selfie_image) html += '<a href="' + d.selfie_image + '" target="_blank"><img src="' + d.selfie_image + '" class="img-thumbnail" style="max-width:200px;max-height:200px;object-fit:cover;"></a>';
-            else html += '<p class="text-muted">{{ _lang("No selfie") }}</p>';
-            html += '</div></div><hr>';
-
-            html += '<div class="row mt-3"><div class="col-md-6">';
-            html += '<table class="table table-sm table-borderless">';
-            html += '<tr><td><strong>{{ _lang("User") }}:</strong></td><td>' + (d.user.name || '-') + '</td></tr>';
-            html += '<tr><td><strong>{{ _lang("Email") }}:</strong></td><td>' + (d.user.email || '-') + '</td></tr>';
-            html += '<tr><td><strong>{{ _lang("AI Confidence") }}:</strong></td><td><span class="badge badge-info">' + d.ai_confidence + '</span></td></tr>';
-            html += '</table></div>';
-
-            html += '<div class="col-md-6"><table class="table table-sm table-borderless">';
-            html += '<tr><td><strong>{{ _lang("Status") }}:</strong></td><td>' + d.status + '</td></tr>';
-            html += '<tr><td><strong>{{ _lang("Submitted") }}:</strong></td><td>' + d.created_at + '</td></tr>';
-            if (d.approved_by) html += '<tr><td><strong>{{ _lang("Reviewed By") }}:</strong></td><td>' + d.approved_by + '</td></tr>';
-            if (d.approved_at) html += '<tr><td><strong>{{ _lang("Reviewed At") }}:</strong></td><td>' + d.approved_at + '</td></tr>';
-            if (d.reason) html += '<tr><td><strong>{{ _lang("Reason") }}:</strong></td><td>' + d.reason + '</td></tr>';
-            if (d.notes) html += '<tr><td><strong>{{ _lang("Admin Notes") }}:</strong></td><td>' + d.notes + '</td></tr>';
-            html += '</table></div></div>';
-
-            if (d.ai_response) {
-                html += '<div class="mt-3"><h6>{{ _lang("AI Analysis") }}</h6>';
-                html += '<div class="bg-light p-3 rounded" style="max-height:200px;overflow-y:auto;">';
-                html += '<pre class="mb-0" style="white-space:pre-wrap;font-size:12px;">' + JSON.stringify(d.ai_response, null, 2) + '</pre>';
-                html += '</div></div>';
-            }
-
-            if (d.status === 'pending') {
-                html += '<hr><div class="row mt-3"><div class="col-md-6">';
-                html += '<button class="btn btn-success btn-block approve-btn" data-id="' + d.id + '"><i class="fas fa-check mr-1"></i>{{ _lang("Approve") }}</button>';
-                html += '</div><div class="col-md-6">';
-                html += '<button class="btn btn-danger btn-block reject-btn" data-id="' + d.id + '"><i class="fas fa-times mr-1"></i>{{ _lang("Reject") }}</button>';
-                html += '</div></div>';
-            }
-
-            $('#viewModalBody').html(html);
-        }
-    });
-});
-
-// Approve
-$(document).on('click', '.approve-btn', function() {
-    var id = $(this).data('id');
-    var btn = $(this);
-    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-    $.ajax({
-        url: _url + '/verification-queue/' + id + '/approve',
-        method: 'POST',
-        data: { _token: $('meta[name="csrf-token"]').attr('content') },
-        success: function(res) {
-            if (res.status) {
-                Swal.fire('Success', res.message, 'success');
-                table.ajax.reload(null, false);
-                loadStats();
-                $('#viewModal').modal('hide');
-            } else {
-                Swal.fire('Error', res.message, 'error');
-            }
-            btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i>{{ _lang("Approve") }}');
+    // ── DataTable ──────────────────────────────────────────────────
+    var table = $('#verification-queue-table').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: '{{ url("verification-queue") }}',
+            type: 'GET'
         },
-        error: function(xhr) {
-            Swal.fire('Error', xhr.responseJSON?.message || 'Something went wrong', 'error');
-            btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i>{{ _lang("Approve") }}');
-        }
+        order: [[9, 'asc']], // Waiting (oldest first)
+        pageLength: 25,
+        columns: [
+            {
+                data: null, orderable: false, searchable: false,
+                render: function(data) {
+                    return '<input type="checkbox" class="row-select" value="' + data.id + '">';
+                }
+            },
+            { data: 'user_image', name: 'user_image', orderable: false, searchable: false },
+            { data: 'selfie', name: 'selfie', orderable: false, searchable: false },
+            { data: 'user_name', name: 'user.name' },
+            { data: 'gender', name: 'gender', orderable: false, searchable: false },
+            { data: 'age', name: 'age', orderable: false, searchable: false },
+            { data: 'country', name: 'country', orderable: false, searchable: false },
+            { data: 'face_score', name: 'face_score', orderable: false, searchable: false },
+            { data: 'matched_count', name: 'matched_count', orderable: false, searchable: false },
+            { data: 'waiting', name: 'waiting', orderable: false, searchable: false },
+            { data: 'action', name: 'action', orderable: false, searchable: false },
+        ],
+        language: { emptyTable: "No verifications awaiting review." }
     });
-});
 
-// Reject - open modal
-$(document).on('click', '.reject-btn', function() {
-    var id = $(this).data('id');
-    $('#reject-id').val(id);
-    $('#reject-reason').val('');
-    $('#rejectModal').modal('show');
-});
+    // ── Select All ────────────────────────────────────────────────
+    $('#select-all').on('change', function() {
+        $('.row-select').prop('checked', this.checked);
+        updateBulkButton();
+    });
 
-// Confirm reject
-$('#btn-confirm-reject').on('click', function() {
-    var id = $('#reject-id').val();
-    var reason = $('#reject-reason').val();
-    if (!reason) { Swal.fire('Error', '{{ _lang("Please enter a rejection reason") }}', 'error'); return; }
+    $(document).on('change', '.row-select', function() {
+        updateBulkButton();
+    });
 
-    var btn = $(this);
-    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-    $.ajax({
-        url: _url + '/verification-queue/' + id + '/reject',
-        method: 'POST',
-        data: { _token: $('meta[name="csrf-token"]').attr('content'), reason: reason },
-        success: function(res) {
-            if (res.status) {
-                Swal.fire('Success', res.message, 'success');
-                table.ajax.reload(null, false);
-                loadStats();
-                $('#rejectModal').modal('hide');
-                $('#viewModal').modal('hide');
-            } else {
-                Swal.fire('Error', res.message, 'error');
+    function updateBulkButton() {
+        var count = $('.row-select:checked').length;
+        $('#selected-count').text(count);
+        $('#btn-bulk-approve').toggle(count > 0);
+    }
+
+    // ── Inline Approve ────────────────────────────────────────────
+    $(document).on('click', '.btn-approve', function() {
+        var id = $(this).data('id');
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: '/verification-queue/' + id + '/approve',
+            type: 'POST',
+            data: { _token: csrf },
+            success: function(res) {
+                if (res.result === 'success') {
+                    toastr.success(res.message);
+                    table.ajax.reload(null, false);
+                    $('#queue-count').text(res.remaining);
+                    if (res.remaining == 0) {
+                        $('#table-wrapper').hide();
+                        $('#empty-state').show();
+                    }
+                } else {
+                    toastr.error(res.message);
+                    btn.prop('disabled', false).html('<i class="fas fa-check"></i>');
+                }
+            },
+            error: function() {
+                toastr.error('Request failed.');
+                btn.prop('disabled', false).html('<i class="fas fa-check"></i>');
             }
-            btn.prop('disabled', false).text('{{ _lang("Reject") }}');
-        },
-        error: function(xhr) {
-            Swal.fire('Error', xhr.responseJSON?.message || 'Something went wrong', 'error');
-            btn.prop('disabled', false).text('{{ _lang("Reject") }}');
+        });
+    });
+
+    // ── Inline Reject ─────────────────────────────────────────────
+    $(document).on('click', '.btn-reject', function() {
+        var id = $(this).data('id');
+        var btn = $(this);
+
+        if (!confirm('Reject this verification? The user will be notified.')) return;
+
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: '/verification-queue/' + id + '/reject',
+            type: 'POST',
+            data: { _token: csrf },
+            success: function(res) {
+                if (res.result === 'success') {
+                    toastr.warning(res.message);
+                    table.ajax.reload(null, false);
+                    $('#queue-count').text(res.remaining);
+                    if (res.remaining == 0) {
+                        $('#table-wrapper').hide();
+                        $('#empty-state').show();
+                    }
+                } else {
+                    toastr.error(res.message);
+                    btn.prop('disabled', false).html('<i class="fas fa-times"></i>');
+                }
+            },
+            error: function() {
+                toastr.error('Request failed.');
+                btn.prop('disabled', false).html('<i class="fas fa-times"></i>');
+            }
+        });
+    });
+
+    // ── Detail Modal ──────────────────────────────────────────────
+    $(document).on('click', '.btn-detail', function() {
+        var id = $(this).data('id');
+        currentReviewId = id;
+        $('#modal-loading').show();
+        $('#modal-content').hide();
+        $('#reject-reason-section').hide();
+        $('#reviewModal').modal('show');
+
+        $.get('/verification-queue/' + id, function(data) {
+            // Selfie
+            $('#modal-selfie').attr('src', data.selfie_url);
+
+            // Profile photos grid
+            var grid = $('#profile-photos-grid');
+            grid.empty();
+            if (data.profile_photos && data.profile_photos.length > 0) {
+                data.profile_photos.forEach(function(url) {
+                    grid.append(
+                        '<img src="' + url + '" class="img-thumbnail" ' +
+                        'style="width:120px;height:120px;object-fit:cover;cursor:pointer;" ' +
+                        'onclick="window.open(this.src, \'_blank\')">'
+                    );
+                });
+            } else {
+                grid.html('<p class="text-muted">No profile photos available</p>');
+            }
+
+            // Face match score badge
+            var scoreEl = $('#modal-face-score');
+            if (data.highest_match !== null && data.highest_match !== undefined) {
+                var score = parseFloat(data.highest_match);
+                var color = score >= 80 ? 'success' : (score >= 60 ? 'warning' : 'danger');
+                scoreEl.text(score.toFixed(1) + '%').removeClass().addClass('badge badge-' + color);
+            } else {
+                scoreEl.text('N/A').removeClass().addClass('badge badge-secondary');
+            }
+
+            // User info
+            $('#modal-name').text(data.user_name);
+            $('#modal-email').text(data.user_email);
+            $('#modal-gender').text(data.gender);
+            $('#modal-age').text(data.age || '-');
+            $('#modal-country').text(data.country);
+            $('#modal-joined').text(data.joined);
+            $('#modal-reason').text(data.reason);
+
+            // Face matching details table
+            var tbody = $('#face-details-table tbody');
+            tbody.empty();
+            if (data.face_details && data.face_details.length > 0) {
+                $('#face-details-section').show();
+                data.face_details.forEach(function(d) {
+                    var photoCell = d.photo
+                        ? '<img src="' + d.photo + '" style="width:40px;height:40px;object-fit:cover;" class="img-thumbnail">'
+                        : '-';
+                    var resultBadge = '';
+                    if (d.result === 'matched') {
+                        resultBadge = '<span class="badge badge-success">Matched</span>';
+                    } else if (d.result === 'unmatched') {
+                        resultBadge = '<span class="badge badge-danger">Unmatched</span>';
+                    } else {
+                        resultBadge = '<span class="badge badge-secondary">' + d.result + '</span>';
+                    }
+                    var simCell = d.similarity !== null && d.similarity !== undefined
+                        ? d.similarity + '%'
+                        : '-';
+                    tbody.append(
+                        '<tr><td>' + photoCell + '</td><td>' + resultBadge + '</td><td>' + simCell + '</td><td>' + (d.reason || '-') + '</td></tr>'
+                    );
+                });
+            } else {
+                $('#face-details-section').hide();
+            }
+
+            $('#modal-loading').hide();
+            $('#modal-content').show();
+        }).fail(function() {
+            $('#modal-loading').html('<div class="alert alert-danger">Failed to load verification details.</div>');
+        });
+    });
+
+    // ── Modal Approve ─────────────────────────────────────────────
+    $('#modal-approve-btn').on('click', function() {
+        if (!currentReviewId) return;
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Approving...');
+
+        $.ajax({
+            url: '/verification-queue/' + currentReviewId + '/approve',
+            type: 'POST',
+            data: { _token: csrf },
+            success: function(res) {
+                if (res.result === 'success') {
+                    toastr.success(res.message);
+                    $('#reviewModal').modal('hide');
+                    table.ajax.reload(null, false);
+                    $('#queue-count').text(res.remaining);
+                    if (res.remaining == 0) {
+                        $('#table-wrapper').hide();
+                        $('#empty-state').show();
+                    }
+                } else {
+                    toastr.error(res.message);
+                }
+                btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i> Approve Verification');
+            },
+            error: function() {
+                toastr.error('Request failed.');
+                btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i> Approve Verification');
+            }
+        });
+    });
+
+    // ── Modal Reject ──────────────────────────────────────────────
+    $('#modal-reject-btn').on('click', function() {
+        var section = $('#reject-reason-section');
+        if (section.is(':hidden')) {
+            // First click: show reason input
+            section.slideDown();
+            $(this).html('<i class="fas fa-times mr-1"></i> Confirm Reject');
+            return;
+        }
+
+        // Second click: submit rejection
+        if (!currentReviewId) return;
+        var btn = $(this);
+        var reason = $('#reject-reason').val().trim() || 'Your verification photo did not pass review. Please try again with a clear selfie showing your face.';
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Rejecting...');
+
+        $.ajax({
+            url: '/verification-queue/' + currentReviewId + '/reject',
+            type: 'POST',
+            data: { _token: csrf, reason: reason },
+            success: function(res) {
+                if (res.result === 'success') {
+                    toastr.warning(res.message);
+                    $('#reviewModal').modal('hide');
+                    table.ajax.reload(null, false);
+                    $('#queue-count').text(res.remaining);
+                    if (res.remaining == 0) {
+                        $('#table-wrapper').hide();
+                        $('#empty-state').show();
+                    }
+                } else {
+                    toastr.error(res.message);
+                }
+                btn.prop('disabled', false).html('<i class="fas fa-times mr-1"></i> Reject Verification');
+                section.slideUp();
+                $('#reject-reason').val('');
+            },
+            error: function() {
+                toastr.error('Request failed.');
+                btn.prop('disabled', false).html('<i class="fas fa-times mr-1"></i> Reject Verification');
+            }
+        });
+    });
+
+    // ── Bulk Approve ──────────────────────────────────────────────
+    $('#btn-bulk-approve').on('click', function() {
+        var ids = [];
+        $('.row-select:checked').each(function() { ids.push($(this).val()); });
+        if (ids.length === 0) return;
+
+        if (!confirm('Approve ' + ids.length + ' verification(s)?')) return;
+
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+        $.ajax({
+            url: '/verification-queue/bulk-approve',
+            type: 'POST',
+            data: { _token: csrf, ids: ids },
+            success: function(res) {
+                if (res.result === 'success') {
+                    toastr.success(res.message);
+                    table.ajax.reload(null, false);
+                    $('#queue-count').text(res.remaining);
+                    $('#select-all').prop('checked', false);
+                    updateBulkButton();
+                    if (res.remaining == 0) {
+                        $('#table-wrapper').hide();
+                        $('#empty-state').show();
+                    }
+                } else {
+                    toastr.error(res.message);
+                }
+                btn.prop('disabled', false).html('<i class="fas fa-check-double"></i> Approve Selected (<span id="selected-count">0</span>)');
+            },
+            error: function() {
+                toastr.error('Bulk approve failed.');
+                btn.prop('disabled', false).html('<i class="fas fa-check-double"></i> Approve Selected');
+            }
+        });
+    });
+
+    // ── Refresh ───────────────────────────────────────────────────
+    $('#btn-refresh').on('click', function() {
+        table.ajax.reload(null, false);
+        $.get('{{ url("verification-queue") }}', { _: Date.now() }, function() {}).fail(function(){});
+    });
+
+    // ── Keyboard Shortcuts ────────────────────────────────────────
+    $(document).on('keydown', function(e) {
+        if ($('#reviewModal').hasClass('show') && currentReviewId) {
+            if (e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                $('#modal-approve-btn').click();
+            }
         }
     });
 });

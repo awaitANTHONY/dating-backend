@@ -2,644 +2,500 @@
 
 namespace App\Services;
 
+use Aws\Rekognition\RekognitionClient;
+use Aws\Exception\AwsException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Exception;
 
 class VerificationService
 {
-    private string $openaiApiKey;
-    private string $model;
+    private RekognitionClient $rekognitionClient;
 
     public function __construct()
     {
-        $this->openaiApiKey = config('services.openai.api_key');
-        $this->model = config('services.openai.verification_model', 'gpt-4o-mini');
-
-        if (empty($this->openaiApiKey)) {
-            throw new Exception('OPENAI_API_KEY is not configured. Add it to your .env file.');
-        }
+        $this->rekognitionClient = new RekognitionClient([
+            'region'      => config('services.aws.region', 'us-east-1'),
+            'version'     => 'latest',
+            'credentials' => [
+                'key'    => config('services.aws.key'),
+                'secret' => config('services.aws.secret'),
+            ],
+        ]);
     }
 
     /**
-     * Analyze verification image against profile photos
+     * Analyze a verification selfie against the user's profile photos.
      *
-     * @param string $image Storage path to verification photo
-     * @param array $profilePhotos Array of profile photo paths
-     * @return array ['status' => 'approved|rejected', 'reason' => string, 'confidence' => float, ...]
+     * Step 1: GPT-4o liveness/quality check on the selfie.
+     * Step 2: AWS Rekognition CompareFaces against each profile photo.
+     *
+     * @param  string  $image          Relative path to the verification selfie
+     * @param  array   $profilePhotos  Array of profile photo paths or URLs
+     * @return array{status: string, reason: string, confidence: float, liveness: array, face_matching: array, unmatched_photos: array}
      */
     public function analyzeImage(string $image, array $profilePhotos): array
     {
-        try {
-            // Validate verification photo exists
-            $imagePath = base_path($image);
-            if (!file_exists($imagePath)) {
-                return $this->rejectVerification('Verification photo not found', 0.0);
-            }
+        Log::info('[VerificationService] Starting verification', [
+            'image'         => $image,
+            'profile_count' => count($profilePhotos),
+        ]);
 
-            // Get public URL for verification photo
-            $verificationPhotoFullUrl = asset($image);
+        // --- Step 1: GPT-4o Liveness Check ---
+        $livenessResult = $this->checkLiveness($image);
 
-            // Step 1: Check verification photo quality and liveness
-            $livenessCheck = $this->checkLivenessAndGesture($verificationPhotoFullUrl);
-
-            if (!$livenessCheck['success']) {
-                return $this->rejectVerification($livenessCheck['reason'], $livenessCheck['confidence']);
-            }
-
-            // Step 2: Face matching with profile photos
-            $faceMatchResult = $this->performFaceMatching(
-                $verificationPhotoFullUrl,
-                $profilePhotos
-            );
-
-            if (!$faceMatchResult['success']) {
-                return [
-                    'status' => 'rejected',
-                    'reason' => $faceMatchResult['reason'],
-                    'confidence' => $faceMatchResult['confidence'],
-                    'liveness_check' => $livenessCheck,
-                    'face_match' => $faceMatchResult
-                ];
-            }
-
-            // All checks passed - approve verification
+        if ($livenessResult['status'] === 'rejected') {
             return [
-                'status' => 'approved',
-                'reason' => 'Verification successful',
-                'confidence' => min($livenessCheck['confidence'], $faceMatchResult['confidence']),
-                'liveness_check' => $livenessCheck,
-                'face_match' => $faceMatchResult
+                'status'           => 'rejected',
+                'reason'           => $livenessResult['reason'],
+                'confidence'       => $livenessResult['confidence'],
+                'liveness'         => $livenessResult,
+                'face_matching'    => [],
+                'unmatched_photos' => [],
             ];
-
-        } catch (Exception $e) {
-            Log::error('Verification analysis error', [
-                'verification_photo' => $image,
-                'error' => $e->getMessage()
-            ]);
-
-            return $this->rejectVerification('Verification processing error: ' . $e->getMessage(), 0.0);
         }
+
+        $isReview = ($livenessResult['status'] === 'review');
+
+        // --- Step 2: AWS Rekognition Face Matching ---
+        // Runs even when liveness is 'review' (AI unavailable) so admin gets similarity scores
+        $matchResult = $this->performFaceMatching($image, $profilePhotos);
+
+        if ($isReview) {
+            // AI liveness was unavailable — queue for manual admin review
+            // Include face matching data so admin can make an informed decision
+            return [
+                'status'           => 'review',
+                'reason'           => $livenessResult['reason'],
+                'confidence'       => $livenessResult['confidence'],
+                'liveness'         => $livenessResult,
+                'face_matching'    => $matchResult,
+                'unmatched_photos' => $matchResult['unmatched_photos'] ?? [],
+            ];
+        }
+
+        if ($matchResult['status'] === 'rejected') {
+            return [
+                'status'           => 'rejected',
+                'reason'           => $matchResult['reason'],
+                'confidence'       => $matchResult['confidence'],
+                'liveness'         => $livenessResult,
+                'face_matching'    => $matchResult,
+                'unmatched_photos' => $matchResult['unmatched_photos'] ?? [],
+            ];
+        }
+
+        // --- Both checks passed ---
+        $overallConfidence = round(
+            ($livenessResult['confidence'] + $matchResult['confidence']) / 2,
+            2
+        );
+
+        return [
+            'status'           => 'approved',
+            'reason'           => 'Verification passed: live selfie confirmed and face matched with profile photos.',
+            'confidence'       => $overallConfidence,
+            'liveness'         => $livenessResult,
+            'face_matching'    => $matchResult,
+            'unmatched_photos' => $matchResult['unmatched_photos'] ?? [],
+        ];
     }
 
     /**
-     * Check liveness and photo authenticity
-     *
-     * Note: Head-turn liveness is verified by the mobile app's ML Kit before capture.
-     * This method focuses on photo authenticity, quality, and screenshot detection.
-     *
-     * @param string $imageUrl
-     * @return array
+     * Use GPT-4o Vision to determine if the selfie is a genuine, live photo.
      */
-    private function checkLivenessAndGesture(string $imageUrl): array
+    private function checkLiveness(string $image): array
     {
-        try {
-            $prompt = 'Analyze this photo and determine if it meets specific quality requirements. Respond in JSON format:
+        $imageUrl = asset($image);
+
+        Log::info('[VerificationService] Liveness check', ['url' => $imageUrl]);
+
+        $prompt = <<<'PROMPT'
+You are a strict identity verification system for a dating app. Analyze this selfie and return a JSON object with these exact fields:
 
 {
-  "is_real_person": true/false,
-  "single_person": true/false,
-  "face_visible": true/false,
-  "good_quality": true/false,
-  "is_live_photo": true/false,
-  "is_document_or_screenshot": true/false,
-  "confidence": 0.0-1.0,
-  "notes": "brief explanation"
+  "is_real_person": bool,       // A real human face is present (not a drawing, avatar, or AI-generated)
+  "single_person": bool,        // Exactly one person is in the photo
+  "face_visible": bool,         // Face is clearly visible, not obscured or cut off
+  "good_quality": bool,         // Image is sharp, well-lit, not blurry or too dark
+  "is_live_photo": bool,        // Appears to be a live camera selfie (not a photo of a photo, not taken from a screen)
+  "is_document_or_screenshot": bool, // True if this is a screenshot, scanned document, photo of a screen, or digitally manipulated image
+  "confidence": float,          // Your overall confidence from 0.0 to 1.0
+  "notes": string               // Brief explanation of your assessment
 }
 
-REQUIREMENTS TO CHECK:
+Be strict: reject screenshots, photos of screens, AI-generated images, photos of printed pictures, and images where the face is not clearly visible. Only return the JSON object, nothing else.
+PROMPT;
 
-1. SCREENSHOT/DOCUMENT CHECK - Set "is_document_or_screenshot" = true if you detect:
-   - Screenshots from apps or websites (visible UI, buttons, navigation bars)
-   - Social media watermarks or app logos
-   - Browser elements or phone UI elements
-   - Professional studio photos or modeling shots
-   - Photos of screens, documents, or printed images
-   - Text overlays, hashtags, or captions
-   - Image grids, collages, or multiple photos in one
-
-2. REAL PERSON CHECK - Set "is_real_person" = true only if:
-   - This appears to be a photograph of a real human
-   - NOT AI-generated, cartoon, drawing, or illustration
-   - NOT a photo of a photo or screen
-   - Appears to be a fresh selfie taken with a camera
-
-3. SINGLE PERSON - Set "single_person" = true only if:
-   - Exactly one person visible in photo
-   - No additional people in frame or background
-
-4. FACE VISIBLE - Set "face_visible" = true only if:
-   - Person\'s full face is clearly visible
-   - Nose and mouth are clearly showing
-   - Eyes and facial structure visible
-   - Face not covered by hands, masks, or objects
-   - Not a profile view or partial face
-
-5. GOOD QUALITY - Set "good_quality" = true only if:
-   - Photo is clear enough to identify the person (allow slight blur from phone cameras)
-   - Face is visible and recognizable (not pitch dark)
-   - Person\'s face is the main subject
-   - Be LENIENT with phone camera quality - low-end Android cameras are acceptable
-
-6. LIVE PHOTO - Set "is_live_photo" = true only if:
-   - Appears to be a fresh selfie taken just now
-   - NOT a screenshot or saved image
-   - NOT a professional or stock photo
-   - Simple background (home, room, outdoor) not studio
-
-ALL REQUIREMENTS MUST BE TRUE TO PASS (except is_document_or_screenshot must be FALSE).
-Set confidence 0.85+ for clear pass, lower if uncertain.
-
-NOTE: Liveness (head turn gesture) has ALREADY been verified by the mobile app before this photo was captured. The user completed a live head-turn challenge on their device. Do NOT check for head position or angles - the photo was taken after the liveness challenge when the user looked back at the camera. Focus ONLY on photo authenticity and quality.
-
-Analyze objectively without identifying individuals.
-
-1. "is_document_or_screenshot" = TRUE **IMMEDIATELY** IF YOU SEE ANY OF THESE:
-   ⚠️ SCREENSHOTS FROM ANY APP/WEBSITE (Pinterest, Instagram, Facebook, Twitter, TikTok, Google Images, dating apps, etc.)
-   ⚠️ App UI elements: navigation bars, buttons, back arrows, share buttons, menu icons, status bars, app headers
-   ⚠️ Website elements: URLs, website headers, "Visit" buttons, "Save" buttons, "Share" options, browser elements
-   ⚠️ Social media indicators: usernames, @handles, follower counts, like buttons, comment sections, story indicators
-   ⚠️ Search results: Google Images, Bing Images, Pinterest grids, image search layouts, thumbnail grids
-   ⚠️ Browser elements: address bars, tabs, bookmarks, browser chrome, scroll bars
-   ⚠️ Phone UI: battery indicator, time at top, signal bars, WiFi icon, notifications, system UI
-   ⚠️ Professional photos: studio backgrounds, professional lighting setups, modeling poses, magazine quality
-   ⚠️ Sports photos: team jerseys, uniforms, official player photos, athlete headshots, sports events
-   ⚠️ News/media photos: news site layouts, article headers, captions, watermarks
-   ⚠️ Stock photos: Getty Images, Shutterstock, iStock, Adobe Stock watermarks
-   ⚠️ Documents: IDs, passports, driver licenses, printed photos, photo frames
-   ⚠️ Text overlays: hashtags (#), quotes, memes, motivational text, captions, dates
-   ⚠️ Multiple images: collages, grids, before/after comparisons, split screens
-   ⚠️ Screen photos: photos of computer monitors, TV screens, tablets, other phones
-   ⚠️ Profile screenshots: dating app profiles, social media profiles, contact cards
-   
-   REJECT IMMEDIATELY IF ANY UI, APP, OR WEBSITE ELEMENTS VISIBLE!
-
-2. "is_real_person" = TRUE only if this is a REAL PHOTOGRAPH of a REAL HUMAN
-   - NOT screenshots from ANY source (social media, apps, websites, browsers)
-   - NOT AI-generated, drawings, cartoons, digital art, anime, illustrations
-   - NOT photos of photos (screen, printed photo, ID card, magazine, poster)
-   - NOT professional photoshoots, stock images, modeling photos
-   - Should be a selfie taken for verification
-
-3. "single_person" = TRUE only if EXACTLY ONE person is visible in the photo
-   - Reject if multiple people, group photos, or no person visible
-   - No other faces in background
-
-4. "face_visible" = TRUE only if you can CLEARLY see the person\'s FULL FACE
-   - Face must be visible, not heavily blurred or completely dark
-   - NOSE and MOUTH must be visible (REQUIRED)
-   - Eyes, eyebrows, facial structure must be visible
-   - Face should not be covered by hands, masks, scarves
-   - NO face masks, medical masks, bandanas covering nose/mouth
-   - Profile views or partial faces = FALSE
-
-5. "good_quality" = TRUE if photo quality is ACCEPTABLE (be lenient):
-   - Face must be recognizable and identifiable
-   - Allow low-end phone camera quality (slight blur, noise, grain is OK)
-   - Allow imperfect lighting (slightly dark or slightly bright is OK)
-   - Person\'s face should be main subject and close enough to see
-   - Only reject if photo is SO dark, blurry, or tiny that person cannot be identified
-
-6. "is_live_photo" = TRUE only if this appears to be a FRESH SELFIE
-   - NOT a screenshot from social media, dating apps, or any website
-   - NOT a professional photo, stock image, or modeling shot
-   - NOT a saved photo from camera roll with UI elements
-   - NOT a photo of a screen or printed image
-   - Should look like someone took it with their phone camera for verification
-   - Simple background (home, room, outdoor) - NOT studio background
-
-EXTREME REJECTION CRITERIA - SET is_document_or_screenshot = TRUE IF ANY:
-❌ ANY screenshot from Pinterest, Instagram, Facebook, Google, Twitter, TikTok, dating apps, etc.
-❌ Visible UI elements (buttons, icons, navigation bars, status bars, app headers)
-❌ Visible app branding, website logos, or watermarks
-❌ Professional sports photos, team jerseys, athlete uniforms
-❌ Phone interface elements (battery, time, signal bars, back button, share button)
-❌ "Visit" buttons, "Save" buttons, "Share" options, social media buttons
-❌ Search result layouts, image grids, collages, multiple photos in one
-❌ Any text overlays (hashtags, quotes, captions, dates, watermarks)
-❌ Professional photography: studio backgrounds, modeling poses, magazine-quality lighting
-❌ Browser elements, address bars, tabs, scroll bars
-❌ Photos of screens (computer, TV, tablet, phone)
-❌ Stock photo watermarks or professional photo service marks
-
-STRICT REQUIREMENTS - ALL MUST BE TRUE TO PASS:
-✓ Real person photographed (not AI, cartoon, screenshot, or saved image)
-✓ Exactly one person visible
-✓ Face clearly visible with nose and mouth showing
-✓ Photo quality acceptable (face recognizable)
-✓ Fresh selfie (not screenshot, not professional, not saved)
-✓ NO screenshots, UI elements, or app interfaces visible
-✓ NO professional photos, modeling shots, or stock images
-
-REMEMBER: This is IDENTITY VERIFICATION. The mobile app already verified liveness via a live head-turn challenge before capturing this photo.
-Focus on: Is this a real, fresh selfie of a real person? Is the face clear enough to match against profile photos?
-REJECT all screenshots, saved images from internet, professional photos, and photos with ANY UI elements.
-When in doubt about screenshots, SET is_document_or_screenshot = TRUE. Be STRICT on screenshots but LENIENT on photo quality (many users have budget phones).
-
-Confidence should be 0.85+ for approval, lower if uncertain.';
-
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->openaiApiKey,
-                'Content-Type' => 'application/json',
-            ])->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $this->model,
-                'messages' => [
+        try {
+            $response = Http::timeout(30)->withHeaders([
+                'Authorization' => 'Bearer ' . config('services.openai.api_key'),
+                'Content-Type'  => 'application/json',
+            ])->post('https://api.openai.com/v1/chat/completions', [
+                'model'      => 'gpt-4o',
+                'max_tokens' => 500,
+                'messages'   => [
                     [
-                        'role' => 'user',
+                        'role'    => 'user',
                         'content' => [
-                            ['type' => 'text', 'text' => $prompt],
-                            ['type' => 'image_url', 'image_url' => ['url' => $imageUrl]]
-                        ]
-                    ]
+                            [
+                                'type' => 'text',
+                                'text' => $prompt,
+                            ],
+                            [
+                                'type'      => 'image_url',
+                                'image_url' => [
+                                    'url'    => $imageUrl,
+                                    'detail' => 'high',
+                                ],
+                            ],
+                        ],
+                    ],
                 ],
-                'max_tokens' => 300,
-                'temperature' => 0.1
             ]);
 
             if (!$response->successful()) {
-                return [
-                    'success' => false,
-                    'reason' => 'AI service temporarily unavailable',
-                    'confidence' => 0.0
-                ];
-            }
-
-            $content = $response->json()['choices'][0]['message']['content'] ?? '';
-            $data = $this->extractJsonFromResponse($content);
-
-            if (!$data) {
-                return [
-                    'success' => false,
-                    'reason' => 'Failed to analyze verification photo',
-                    'confidence' => 0.0
-                ];
-            }
-
-            // Check all requirements (liveness already verified by mobile app's head-turn challenge)
-            $checks = [
-                'is_document_or_screenshot' => 'Screenshot or saved image detected - please take a fresh live selfie',
-                'is_real_person' => 'Photo must be of a real person, not AI-generated or illustration',
-                'single_person' => 'Photo must contain exactly one person',
-                'face_visible' => 'Face must be clearly visible with nose and mouth showing',
-                'good_quality' => 'Photo quality is insufficient - please ensure good lighting and try again',
-                'is_live_photo' => 'Photo must be a fresh selfie taken now, not a screenshot or saved image'
-            ];
-
-            // Check is_document_or_screenshot FIRST (critical security check)
-            if (isset($data['is_document_or_screenshot']) && $data['is_document_or_screenshot'] === true) {
-                return [
-                    'success' => false,
-                    'reason' => $checks['is_document_or_screenshot'],
-                    'confidence' => $data['confidence'] ?? 0.0,
-                    'details' => $data
-                ];
-            }
-
-            // Check all other requirements
-            foreach ($checks as $key => $errorMessage) {
-                if ($key === 'is_document_or_screenshot') {
-                    continue; // Already checked above
-                }
-                
-                if (!isset($data[$key]) || $data[$key] !== true) {
-                    return [
-                        'success' => false,
-                        'reason' => $errorMessage,
-                        'confidence' => $data['confidence'] ?? 0.0,
-                        'details' => $data
-                    ];
-                }
-            }
-
-            // All checks passed
-            return [
-                'success' => true,
-                'reason' => 'Liveness check passed',
-                'confidence' => $data['confidence'] ?? 0.8,
-                'details' => $data
-            ];
-
-        } catch (Exception $e) {
-            Log::error('Liveness check error', ['error' => $e->getMessage()]);
-            return [
-                'success' => false,
-                'reason' => 'Liveness verification failed',
-                'confidence' => 0.0
-            ];
-        }
-    }
-
-    /**
-     * Perform face matching between verification and profile photos
-     *
-     * @param string $verificationPhotoUrl
-     * @param array $profilePhotos
-     * @return array
-     */
-    private function performFaceMatching(string $verificationPhotoUrl, array $profilePhotos): array
-    {
-        try {
-            // Convert profile photo paths to URLs
-            $profilePhotoUrls = array_map(function ($path) {
-                // Handle both storage paths and direct URLs
-                if (str_starts_with($path, 'http')) {
-                    return $path;
-                }
-                return asset($path);
-            }, $profilePhotos);
-
-            // Limit to 7 photos to avoid excessive API costs while checking more photos
-            $photoUrlsToCompare = array_slice($profilePhotoUrls, 0, 7);
-
-            // Check all photos in a single API call for efficiency
-            $result = $this->checkMultiplePhotosMatch($verificationPhotoUrl, $photoUrlsToCompare);
-
-            return $result;
-
-        } catch (Exception $e) {
-            Log::error('Face matching error', ['error' => $e->getMessage()]);
-            return [
-                'success' => false,
-                'reason' => 'Face matching failed',
-                'confidence' => 0.0
-            ];
-        }
-    }
-
-    /**
-     * Check if verification photo matches multiple profile photos in one call
-     *
-     * @param string $verificationPhotoUrl
-     * @param array $profilePhotoUrls
-     * @return array
-     */
-    private function checkMultiplePhotosMatch(string $verificationPhotoUrl, array $profilePhotoUrls): array
-    {
-        try {
-            $prompt = 'You are a RELAXED image analysis system for a dating app verification.
-
-Respond in JSON format:
-{
-  "all_photos_match": true/false,
-  "overall_confidence": 0.0-1.0,
-  "reasoning": "brief explanation",
-  "profile_has_screenshot": true/false,
-  "unmatched_photos": [{"photo_number": 1, "reason": "description", "confidence": 0.0-1.0}],
-  "skipped_photos": [{"photo_number": 1, "reason": "no face visible - side/back view"}]
-}
-
-TASK: Compare the verification photo to profile photos. Be RELAXED and understanding.
-
-IMPORTANT - GALLERY PHOTOS ARE ALLOWED:
-Profile photos can be gallery-style images that may NOT show a clear face:
-- Side profiles (face partially visible) = SKIP, do not mark as unmatched
-- Back view photos = SKIP, do not mark as unmatched  
-- Artistic/lifestyle photos without clear face = SKIP, do not mark as unmatched
-- Photos with unusual lighting/filters = STILL TRY TO MATCH
-
-SKIP vs UNMATCH:
-- If a photo shows NO FACE or only partial view (back, side) = add to "skipped_photos", NOT "unmatched_photos"
-- Only add to "unmatched_photos" if you can clearly see a DIFFERENT person\'s face
-
-SCREENSHOT CHECK:
-Set "profile_has_screenshot" = true ONLY for obvious:
-- App UI elements (buttons, status bars, navigation)
-- Memes with text overlays
-- Stock photo watermarks
-Normal photos with filters or colored lighting are NOT screenshots.
-
-MATCHING CRITERIA (when face is visible):
-Compare visual characteristics:
-- Facial structure and proportions
-- Eye, nose, mouth characteristics
-- Skin tone and apparent gender/age
-
-NORMAL VARIATIONS TO ALLOW:
-- Different hairstyles, hair colors
-- Facial hair changes
-- Different makeup, expressions, angles
-- Different lighting (including colored/unusual lighting)
-- Glasses, sunglasses
-- Photo quality differences
-- Appearance changes over time
-
-CONFIDENCE SCALE:
-- 0.7+: Match (same person likely)
-- 0.5-0.69: Uncertain but acceptable
-- Below 0.5: Different person
-
-RELAXED OUTPUT REQUIREMENTS:
-- "all_photos_match" = true if all COMPARABLE photos (with visible faces) appear to match
-- Photos without clear faces should be SKIPPED, not counted as unmatched
-- Only mark as "unmatched" if you see a CLEARLY DIFFERENT person\'s face
-- Be generous - when in doubt, give the benefit of the doubt
-
-BE RELAXED: Dating app users have various photo styles. Only reject if clearly different person.';
-
-
-            // Build image content for prompt
-            $imageContent = [
-                ['type' => 'text', 'text' => $prompt],
-                ['type' => 'text', 'text' => 'VERIFICATION PHOTO (person to verify):'],
-                ['type' => 'image_url', 'image_url' => ['url' => $verificationPhotoUrl]],
-                ['type' => 'text', 'text' => 'PROFILE PHOTOS TO COMPARE (must all match verification photo):']
-            ];
-
-            foreach ($profilePhotoUrls as $index => $profileUrl) {
-                $imageContent[] = [
-                    'type' => 'text',
-                    'text' => 'Profile Photo ' . ($index + 1) . ':'
-                ];
-                $imageContent[] = [
-                    'type' => 'image_url',
-                    'image_url' => ['url' => $profileUrl]
-                ];
-            }
-
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->openaiApiKey,
-                'Content-Type' => 'application/json',
-            ])->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $this->model,
-                'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => $imageContent
-                    ]
-                ],
-                'max_tokens' => 800,
-                'temperature' => 0.1
-            ]);
-
-            if (!$response->successful()) {
-                Log::error('OpenAI API failed', [
+                Log::error('[VerificationService] OpenAI API error', [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body'   => $response->body(),
                 ]);
-                return [
-                    'success' => false,
-                    'reason' => 'Face matching service temporarily unavailable',
-                    'confidence' => 0.0
-                ];
+                return $this->reviewVerification('Liveness check failed: AI service unavailable. Queued for manual review.', 0.0);
             }
 
-            $content = $response->json()['choices'][0]['message']['content'] ?? '';
-            $data = $this->extractJsonFromResponse($content);
+            $content = $response->json('choices.0.message.content', '');
+            $analysis = $this->extractJsonFromResponse($content);
 
-            if (!$data) {
-                Log::error('Failed to parse face match response', [
-                    'raw_content' => $content
-                ]);
-                return [
-                    'success' => false,
-                    'reason' => 'Failed to analyze photos',
-                    'confidence' => 0.0
-                ];
+            if (!$analysis) {
+                Log::error('[VerificationService] Could not parse GPT response', ['content' => $content]);
+                return $this->reviewVerification('Liveness check failed: could not parse AI response. Queued for manual review.', 0.0);
             }
 
-            $allMatch = $data['all_photos_match'] ?? false;
-            $confidence = $data['overall_confidence'] ?? 0.0;
-            $reasoning = $data['reasoning'] ?? 'No reasoning provided';
-            $hasScreenshot = $data['profile_has_screenshot'] ?? false;
-            $unmatchedPhotos = $data['unmatched_photos'] ?? [];
-            $skippedPhotos = $data['skipped_photos'] ?? [];
+            Log::info('[VerificationService] Liveness analysis', $analysis);
 
-            // Critical security check - reject if any profile photo is screenshot/fake
-            if ($hasScreenshot) {
-                return [
-                    'success' => false,
-                    'reason' => 'One or more profile photos appear to be screenshots or downloaded images',
-                    'confidence' => 0.0,
-                    'unmatched_photos' => array_map(function($photo) use ($profilePhotoUrls) {
-                        $index = ($photo['photo_number'] ?? 1) - 1;
-                        return [
-                            'url' => $profilePhotoUrls[$index] ?? '',
-                            'reason' => $photo['reason'] ?? 'Screenshot or downloaded image detected',
-                            'confidence' => $photo['confidence'] ?? 0.0
-                        ];
-                    }, $unmatchedPhotos),
-                    'details' => $data
-                ];
+            // Validate all required fields
+            $isReal       = $analysis['is_real_person'] ?? false;
+            $singlePerson = $analysis['single_person'] ?? false;
+            $faceVisible  = $analysis['face_visible'] ?? false;
+            $goodQuality  = $analysis['good_quality'] ?? false;
+            $isLivePhoto  = $analysis['is_live_photo'] ?? false;
+            $isDocument   = $analysis['is_document_or_screenshot'] ?? true;
+            $confidence   = (float) ($analysis['confidence'] ?? 0.0);
+            $notes        = $analysis['notes'] ?? '';
+
+            // All conditions must pass
+            if ($isDocument) {
+                return $this->rejectVerification('Photo appears to be a screenshot or photo of a screen.', $confidence);
             }
-
-            // RELAXED LOGIC: Only reject if there are ACTUAL unmatched photos (different faces)
-            // Skipped photos (no face visible - side/back views) are OK for gallery-style images
-            
-            // If there are unmatched photos (clearly different people), reject
-            if (!empty($unmatchedPhotos)) {
-                $unmatchedWithUrls = array_map(function($photo) use ($profilePhotoUrls) {
-                    $index = ($photo['photo_number'] ?? 1) - 1;
-                    return [
-                        'url' => $profilePhotoUrls[$index] ?? '',
-                        'reason' => $photo['reason'] ?? 'Face does not match',
-                        'confidence' => $photo['confidence'] ?? 0.0
-                    ];
-                }, $unmatchedPhotos);
-
-                return [
-                    'success' => false,
-                    'reason' => 'Face does not match all profile photos - ' . count($unmatchedWithUrls) . ' photo(s) show a different person',
-                    'confidence' => $confidence,
-                    'unmatched_photos' => $unmatchedWithUrls,
-                    'details' => $data
-                ];
+            if (!$isReal) {
+                return $this->rejectVerification('No real person detected in the photo.', $confidence);
             }
-
-            // RELAXED: Lower confidence threshold from 0.7 to 0.5
-            // And only reject if all_photos_match is explicitly false AND confidence is very low
-            if (!$allMatch && $confidence < 0.5) {
-                return [
-                    'success' => false,
-                    'reason' => 'Confidence too low for verification',
-                    'confidence' => $confidence,
-                    'unmatched_photos' => [],
-                    'details' => $data
-                ];
+            if (!$singlePerson) {
+                return $this->rejectVerification('Photo must contain exactly one person.', $confidence);
             }
-
-            // Reject if ALL photos were skipped (no face found in any profile photo)
-            $totalPhotos = count($profilePhotoUrls);
-            $skippedCount = count($skippedPhotos);
-            if ($skippedCount >= $totalPhotos) {
-                return [
-                    'success' => false,
-                    'reason' => 'We couldn\'t find a clear face in any of your profile photos. Please ensure at least one profile photo clearly shows your face, then try again.',
-                    'confidence' => 0.0,
-                    'unmatched_photos' => [],
-                    'details' => $data
-                ];
+            if (!$faceVisible) {
+                return $this->rejectVerification('Face is not clearly visible in the photo.', $confidence);
             }
-
-            // All comparable photos match (skipped photos are OK if at least one matched)
-            $skippedCount = count($skippedPhotos);
-            $successReason = $skippedCount > 0 
-                ? "Face matches profile photos ($skippedCount gallery-style photos without clear face were skipped)"
-                : 'Face matches all profile photos';
+            if (!$goodQuality) {
+                return $this->rejectVerification('Photo quality is too low. Please use better lighting and hold the camera steady.', $confidence);
+            }
+            if (!$isLivePhoto) {
+                return $this->rejectVerification('Photo does not appear to be a live selfie. Please take a fresh photo with your camera.', $confidence);
+            }
 
             return [
-                'success' => true,
-                'reason' => $successReason,
+                'status'     => 'passed',
+                'reason'     => 'Liveness check passed.',
                 'confidence' => $confidence,
-                'skipped_photos' => $skippedPhotos,
-                'details' => $data
+                'analysis'   => $analysis,
             ];
 
-        } catch (Exception $e) {
-            Log::error('Multiple photo match error', ['error' => $e->getMessage()]);
-            return [
-                'success' => false,
-                'reason' => 'Photo matching failed: ' . $e->getMessage(),
-                'confidence' => 0.0
-            ];
+        } catch (\Exception $e) {
+            Log::error('[VerificationService] Liveness check exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return $this->reviewVerification('Liveness check failed: ' . $e->getMessage() . ' Queued for manual review.', 0.0);
         }
     }
 
     /**
-     * Extract JSON from OpenAI response
-     *
-     * @param string $content
-     * @return array|null
+     * Use AWS Rekognition CompareFaces to match the verification selfie against profile photos.
      */
-    private function extractJsonFromResponse(string $content): ?array
+    private function performFaceMatching(string $image, array $profilePhotos): array
     {
-        $content = trim($content);
+        $selfieBytes = $this->getImageBytes($image);
 
-        // Remove markdown code blocks if present
-        if (str_starts_with($content, '```json')) {
-            $content = substr($content, 7);
-            $content = substr($content, 0, strrpos($content, '```'));
-        } elseif (str_starts_with($content, '```')) {
-            $content = substr($content, 3);
-            $content = substr($content, 0, strrpos($content, '```'));
+        if (!$selfieBytes) {
+            return $this->rejectVerification('Could not read verification selfie image.', 0.0);
         }
 
-        $data = json_decode(trim($content), true);
+        // Limit to 7 profile photos
+        $photosToCheck = array_slice($profilePhotos, 0, 7);
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            Log::error('JSON decode error', [
-                'content' => $content,
-                'error' => json_last_error_msg()
+        $matched         = 0;
+        $skipped         = 0;
+        $unmatched       = 0;
+        $highestMatch    = 0.0;
+        $unmatchedPhotos = [];
+        $details         = [];
+
+        foreach ($photosToCheck as $profilePhoto) {
+            $profileBytes = $this->getImageBytes($profilePhoto);
+
+            if (!$profileBytes) {
+                Log::warning('[VerificationService] Could not read profile photo', ['photo' => $profilePhoto]);
+                $skipped++;
+                $details[] = [
+                    'photo'  => $profilePhoto,
+                    'result' => 'skipped',
+                    'reason' => 'Could not read image file.',
+                ];
+                continue;
+            }
+
+            try {
+                $result = $this->rekognitionClient->compareFaces([
+                    'SourceImage'         => ['Bytes' => $selfieBytes],
+                    'TargetImage'         => ['Bytes' => $profileBytes],
+                    'SimilarityThreshold' => 50.0,
+                ]);
+
+                $faceMatches = $result['FaceMatches'] ?? [];
+
+                if (!empty($faceMatches)) {
+                    $similarity = (float) ($faceMatches[0]['Similarity'] ?? 0.0);
+                    $highestMatch = max($highestMatch, $similarity);
+
+                    if ($similarity >= 70.0) {
+                        $matched++;
+                        $details[] = [
+                            'photo'      => $profilePhoto,
+                            'result'     => 'matched',
+                            'similarity' => round($similarity, 2),
+                        ];
+                    } else {
+                        // Low similarity — face found but doesn't match well
+                        $unmatched++;
+                        $unmatchedPhotos[] = $profilePhoto;
+                        $details[] = [
+                            'photo'      => $profilePhoto,
+                            'result'     => 'unmatched',
+                            'similarity' => round($similarity, 2),
+                            'reason'     => 'Face similarity too low (' . round($similarity, 1) . '%).',
+                        ];
+                    }
+                } else {
+                    // Faces detected but no match at all
+                    $unmatchedFaces = $result['UnmatchedFaces'] ?? [];
+                    if (!empty($unmatchedFaces)) {
+                        $unmatched++;
+                        $unmatchedPhotos[] = $profilePhoto;
+                        $details[] = [
+                            'photo'  => $profilePhoto,
+                            'result' => 'unmatched',
+                            'reason' => 'A different face was detected in this photo.',
+                        ];
+                    } else {
+                        $skipped++;
+                        $details[] = [
+                            'photo'  => $profilePhoto,
+                            'result' => 'skipped',
+                            'reason' => 'No comparable faces found.',
+                        ];
+                    }
+                }
+
+            } catch (AwsException $e) {
+                $errorCode = $e->getAwsErrorCode();
+
+                if ($errorCode === 'InvalidParameterException') {
+                    // No face detected in source or target — skip this photo (likely a landscape/group/object photo)
+                    Log::info('[VerificationService] No face in image, skipping', [
+                        'photo' => $profilePhoto,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $skipped++;
+                    $details[] = [
+                        'photo'  => $profilePhoto,
+                        'result' => 'skipped',
+                        'reason' => 'No face detected in this photo.',
+                    ];
+                } else {
+                    Log::error('[VerificationService] AWS CompareFaces error', [
+                        'photo' => $profilePhoto,
+                        'code'  => $errorCode,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $skipped++;
+                    $details[] = [
+                        'photo'  => $profilePhoto,
+                        'result' => 'skipped',
+                        'reason' => 'Face comparison service error.',
+                    ];
+                }
+            } catch (\Exception $e) {
+                Log::error('[VerificationService] Face matching exception', [
+                    'photo' => $profilePhoto,
+                    'error' => $e->getMessage(),
+                ]);
+                $skipped++;
+                $details[] = [
+                    'photo'  => $profilePhoto,
+                    'result' => 'skipped',
+                    'reason' => 'Unexpected error during comparison.',
+                ];
+            }
+        }
+
+        Log::info('[VerificationService] Face matching summary', [
+            'matched'  => $matched,
+            'skipped'  => $skipped,
+            'unmatched' => $unmatched,
+            'highest'  => $highestMatch,
+        ]);
+
+        // --- Decision Logic ---
+        // 1. Reject if we found a clearly different face AND no matches at all
+        if ($unmatched > 0 && $matched === 0) {
+            return [
+                'status'           => 'rejected',
+                'reason'           => 'Your verification selfie does not match your profile photos. Please ensure your profile photos show your face clearly.',
+                'confidence'       => $highestMatch > 0 ? round($highestMatch, 2) : 0.0,
+                'matched'          => $matched,
+                'skipped'          => $skipped,
+                'unmatched'        => $unmatched,
+                'highest_match'    => round($highestMatch, 2),
+                'details'          => $details,
+                'unmatched_photos' => $unmatchedPhotos,
+            ];
+        }
+
+        // 2. Reject if NO face could be found in ANY profile photo (all skipped)
+        if ($matched === 0 && $skipped > 0) {
+            return [
+                'status'           => 'rejected',
+                'reason'           => 'We couldn\'t find a clear face in any of your profile photos. Please ensure at least one profile photo clearly shows your face, then try again.',
+                'confidence'       => 0.0,
+                'matched'          => $matched,
+                'skipped'          => $skipped,
+                'unmatched'        => $unmatched,
+                'highest_match'    => 0.0,
+                'details'          => $details,
+                'unmatched_photos' => $unmatchedPhotos,
+            ];
+        }
+
+        // 3. At least one face matched — approve
+        $confidence = round($highestMatch, 2);
+
+        return [
+            'status'           => 'passed',
+            'reason'           => "Face matched with {$matched} profile photo(s). Highest similarity: {$highestMatch}%.",
+            'confidence'       => $confidence,
+            'matched'          => $matched,
+            'skipped'          => $skipped,
+            'unmatched'        => $unmatched,
+            'highest_match'    => round($highestMatch, 2),
+            'details'          => $details,
+            'unmatched_photos' => $unmatchedPhotos,
+        ];
+    }
+
+    /**
+     * Read image bytes from a local path or remote URL.
+     */
+    private function getImageBytes(string $path): ?string
+    {
+        try {
+            // Remote URL — convert app URLs to local paths first
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                if (str_contains($path, 'app.inmessage.xyz')) {
+                    $urlPath = parse_url($path, PHP_URL_PATH);
+                    $localPath = base_path(ltrim($urlPath, '/'));
+                    if (file_exists($localPath)) {
+                        $bytes = file_get_contents($localPath);
+                        return ($bytes !== false && strlen($bytes) > 100) ? $bytes : null;
+                    }
+                }
+                $bytes = @file_get_contents($path);
+                return ($bytes !== false && strlen($bytes) > 100) ? $bytes : null;
+            }
+
+            // Local path — resolve with base_path
+            $fullPath = base_path($path);
+
+            if (!file_exists($fullPath)) {
+                // Fallback: try public_path
+                $fullPath = public_path(ltrim($path, '/'));
+            }
+
+            if (!file_exists($fullPath)) {
+                Log::warning('[VerificationService] Image file not found', ['path' => $path]);
+                return null;
+            }
+
+            $bytes = file_get_contents($fullPath);
+            return ($bytes !== false && strlen($bytes) > 100) ? $bytes : null;
+
+        } catch (\Exception $e) {
+            Log::error('[VerificationService] Failed to read image', [
+                'path'  => $path,
+                'error' => $e->getMessage(),
             ]);
             return null;
         }
-
-        return $data;
     }
 
     /**
-     * Create rejection response
-     *
-     * @param string $reason
-     * @param float $confidence
-     * @return array
+     * Extract a JSON object from a potentially markdown-wrapped GPT response.
+     */
+    private function extractJsonFromResponse(string $content): ?array
+    {
+        // Try direct parse first
+        $decoded = json_decode($content, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        // Try extracting from markdown code block
+        if (preg_match('/```(?:json)?\s*(\{[\s\S]*?\})\s*```/', $content, $matches)) {
+            $decoded = json_decode($matches[1], true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        // Try extracting any JSON object
+        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+            $decoded = json_decode($matches[0], true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Build a standardized rejection result.
      */
     private function rejectVerification(string $reason, float $confidence): array
     {
         return [
-            'status' => 'rejected',
-            'reason' => $reason,
-            'confidence' => $confidence
+            'status'     => 'rejected',
+            'reason'     => $reason,
+            'confidence' => $confidence,
+        ];
+    }
+
+    /**
+     * Build a standardized review result (AI unavailable — queue for manual admin review).
+     */
+    private function reviewVerification(string $reason, float $confidence): array
+    {
+        return [
+            'status'     => 'review',
+            'reason'     => $reason,
+            'confidence' => $confidence,
         ];
     }
 }

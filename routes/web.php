@@ -119,11 +119,11 @@ Route::group(['middleware' => ['install']], function () {
         Route::get('verification-requests/{id}/approve', [Controllers\VerificationRequestController::class, 'approve'])->name('verification-requests.approve');
         Route::post('verification-requests/{id}/reject', [Controllers\VerificationRequestController::class, 'reject'])->name('verification-requests.reject');
 
-        // Verification Queue (confidence-based manual review)
-        Route::get('verification-queue/stats', [Controllers\VerificationQueueController::class, 'stats'])->name('verification-queue.stats');
+        // Verification Queue (manual review when AI unavailable)
         Route::resource('verification-queue', Controllers\VerificationQueueController::class)->only(['index', 'show']);
         Route::post('verification-queue/{verificationQueue}/approve', [Controllers\VerificationQueueController::class, 'approve'])->name('verification-queue.approve');
         Route::post('verification-queue/{verificationQueue}/reject', [Controllers\VerificationQueueController::class, 'reject'])->name('verification-queue.reject');
+        Route::post('verification-queue/bulk-approve', [Controllers\VerificationQueueController::class, 'bulkApprove'])->name('verification-queue.bulk-approve');
 
         // Bio Templates
         Route::resource('bio_templates', Controllers\BioTemplateWebController::class);

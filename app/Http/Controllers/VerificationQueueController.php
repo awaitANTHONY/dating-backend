@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\VerificationQueue;
+use App\Models\VerificationRequest;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -12,299 +13,315 @@ use DataTables;
 class VerificationQueueController extends Controller
 {
     /**
-     * Display pending verification queue
+     * Display the verification review queue.
      */
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = VerificationQueue::with('user', 'approvedByAdmin')
-                ->orderBy('created_at', 'desc');
+            $query = VerificationRequest::with(['user.user_information'])
+                ->where('status', 'review')
+                ->orderBy('created_at', 'ASC');
 
-            // Filter by status
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
-
-            // Filter by confidence range
-            if ($request->filled('confidence_min')) {
-                $query->where('ai_confidence', '>=', $request->confidence_min);
-            }
-            if ($request->filled('confidence_max')) {
-                $query->where('ai_confidence', '<=', $request->confidence_max);
-            }
-
-            return DataTables::of($query)
-                ->addColumn('user_name', function ($item) {
-                    return $item->user->name ?? 'Unknown';
+            return DataTables::eloquent($query)
+                ->addColumn('user_name', function ($req) {
+                    return optional($req->user)->name ?? 'Unknown';
                 })
-                ->addColumn('confidence_percent', function ($item) {
-                    return round($item->ai_confidence * 100) . '%';
+                ->addColumn('user_image', function ($req) {
+                    $img = optional($req->user)->image ?? 'default/profile.png';
+                    return '<img class="img-thumbnail" style="width:50px;height:50px;object-fit:cover;" src="' . asset($img) . '">';
                 })
-                ->addColumn('status_badge', function ($item) {
-                    $badges = [
-                        'pending' => '<span class="badge badge-warning">Pending</span>',
-                        'approved' => '<span class="badge badge-success">Approved</span>',
-                        'rejected' => '<span class="badge badge-danger">Rejected</span>',
-                        'auto_approved' => '<span class="badge badge-info">Auto-Approved</span>',
-                    ];
-                    return $badges[$item->status] ?? $item->status;
+                ->addColumn('selfie', function ($req) {
+                    return '<img class="img-thumbnail" style="width:50px;height:50px;object-fit:cover;" src="' . asset($req->image) . '">';
                 })
-                ->addColumn('action', function ($item) {
-                    if ($item->status === 'pending') {
-                        return '<button class="btn btn-sm btn-primary approve-btn" data-id="' . $item->id . '">Approve</button> '
-                            . '<button class="btn btn-sm btn-danger reject-btn" data-id="' . $item->id . '">Reject</button> '
-                            . '<button class="btn btn-sm btn-info view-btn" data-id="' . $item->id . '">View</button>';
+                ->addColumn('gender', function ($req) {
+                    return ucfirst(optional(optional($req->user)->user_information)->gender ?? '-');
+                })
+                ->addColumn('country', function ($req) {
+                    $code = optional(optional($req->user)->user_information)->country_code;
+                    if (!$code) return '-';
+                    $code = strtoupper(trim($code));
+                    if (strlen($code) === 2 && ctype_alpha($code)) {
+                        $flag = collect(str_split($code))->map(function ($c) {
+                            return mb_chr(ord($c) - ord('A') + 0x1F1E6);
+                        })->implode('');
+                        return $flag . ' ' . $code;
                     }
-                    return '<button class="btn btn-sm btn-info view-btn" data-id="' . $item->id . '">View</button>';
+                    return $code;
                 })
-                ->rawColumns(['status_badge', 'action'])
-                ->setRowId(function ($item) {
-                    return "row_" . $item->id;
+                ->addColumn('age', function ($req) {
+                    $dob = optional(optional($req->user)->user_information)->date_of_birth;
+                    if (!$dob) return '-';
+                    return \Carbon\Carbon::parse($dob)->age;
                 })
+                ->addColumn('face_score', function ($req) {
+                    $ai = $req->ai_response;
+                    if (!$ai || !isset($ai['face_matching']['highest_match'])) return '<span class="badge badge-secondary">N/A</span>';
+                    $score = $ai['face_matching']['highest_match'];
+                    $color = $score >= 80 ? 'success' : ($score >= 60 ? 'warning' : 'danger');
+                    return '<span class="badge badge-' . $color . '" style="font-size:13px;">' . round($score, 1) . '%</span>';
+                })
+                ->addColumn('matched_count', function ($req) {
+                    $ai = $req->ai_response;
+                    if (!$ai || !isset($ai['face_matching']['matched'])) return '-';
+                    $total = ($ai['face_matching']['matched'] ?? 0) +
+                             ($ai['face_matching']['unmatched'] ?? 0) +
+                             ($ai['face_matching']['skipped'] ?? 0);
+                    return ($ai['face_matching']['matched'] ?? 0) . '/' . $total;
+                })
+                ->editColumn('created_at', function ($req) {
+                    return $req->created_at ? $req->created_at->format('M d, g:ia') : '-';
+                })
+                ->addColumn('waiting', function ($req) {
+                    return $req->created_at ? $req->created_at->diffForHumans(null, true) : '-';
+                })
+                ->addColumn('action', function ($req) {
+                    return '<div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-success btn-approve" data-id="' . $req->id . '" title="Approve">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-danger btn-reject" data-id="' . $req->id . '" title="Reject">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button class="btn btn-info btn-detail" data-id="' . $req->id . '" title="Review Detail">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>';
+                })
+                ->rawColumns(['user_image', 'selfie', 'face_score', 'action'])
                 ->make(true);
         }
 
-        return view('backend.verification_queue.index');
+        $reviewCount = VerificationRequest::where('status', 'review')->count();
+        return view('backend.verification_queue.index', compact('reviewCount'));
     }
 
     /**
-     * Show verification details
+     * Get detail data for the review modal (AJAX).
      */
-    public function show(VerificationQueue $verificationQueue)
+    public function show($id)
     {
+        $req = VerificationRequest::with(['user.user_information'])->findOrFail($id);
+
+        $user = $req->user;
+        $info = $user ? $user->user_information : null;
+        $ai   = $req->ai_response ?? [];
+
+        // Build profile photos array
+        $profilePhotos = [];
+        if ($user && $user->image && !str_contains($user->image, 'default/profile.png')) {
+            $profilePhotos[] = asset($user->image);
+        }
+        if ($info && $info->images) {
+            $images = is_string($info->images) ? json_decode($info->images, true) : $info->images;
+            if (is_array($images)) {
+                foreach (array_filter($images) as $img) {
+                    $profilePhotos[] = asset($img);
+                }
+            }
+        }
+
+        // Extract face matching details for each profile photo
+        $faceDetails = [];
+        if (isset($ai['face_matching']['details']) && is_array($ai['face_matching']['details'])) {
+            foreach ($ai['face_matching']['details'] as $detail) {
+                $faceDetails[] = [
+                    'photo'      => isset($detail['photo']) ? asset($detail['photo']) : null,
+                    'result'     => $detail['result'] ?? 'unknown',
+                    'similarity' => $detail['similarity'] ?? null,
+                    'reason'     => $detail['reason'] ?? null,
+                ];
+            }
+        }
+
         return response()->json([
-            'status' => true,
-            'data' => [
-                'id' => $verificationQueue->id,
-                'user' => $verificationQueue->user->only(['id', 'name', 'email', 'image']),
-                'selfie_image' =>asset($verificationQueue->selfie_image),
-                'ai_confidence' => round($verificationQueue->ai_confidence * 100) . '%',
-                'ai_response' => $verificationQueue->ai_response,
-                'reason' => $verificationQueue->reason,
-                'status' => $verificationQueue->status,
-                'created_at' => $verificationQueue->created_at->format('Y-m-d H:i:s'),
-                'approved_at' => $verificationQueue->approved_at ? $verificationQueue->approved_at->format('Y-m-d H:i:s') : null,
-                'approved_by' => $verificationQueue->approvedByAdmin?->name,
-                'notes' => $verificationQueue->manual_notes,
-            ]
+            'id'             => $req->id,
+            'user_id'        => $user ? $user->id : null,
+            'user_name'      => $user ? $user->name : 'Unknown',
+            'user_email'     => $user ? $user->email : '-',
+            'gender'         => ucfirst($info->gender ?? '-'),
+            'age'            => ($info && $info->date_of_birth) ? \Carbon\Carbon::parse($info->date_of_birth)->age : null,
+            'country'        => $info->country_code ?? '-',
+            'joined'         => $user && $user->created_at ? $user->created_at->format('M d, Y') : '-',
+            'selfie_url'     => asset($req->image),
+            'profile_photos' => $profilePhotos,
+            'reason'         => $req->reason,
+            'face_matching'  => $ai['face_matching'] ?? null,
+            'face_details'   => $faceDetails,
+            'highest_match'  => $ai['face_matching']['highest_match'] ?? null,
+            'matched_count'  => $ai['face_matching']['matched'] ?? 0,
+            'total_compared' => (($ai['face_matching']['matched'] ?? 0) + ($ai['face_matching']['unmatched'] ?? 0) + ($ai['face_matching']['skipped'] ?? 0)),
+            'liveness'       => $ai['liveness'] ?? null,
+            'created_at'     => $req->created_at ? $req->created_at->format('M d, Y g:ia') : '-',
         ]);
     }
 
     /**
-     * Approve a verification request
+     * Approve a verification request from the queue.
      */
-    public function approve(Request $request, VerificationQueue $verificationQueue)
+    public function approve(Request $request, $id)
     {
-        if (!in_array($verificationQueue->status, ['pending', 'rejected'])) {
+        $req = VerificationRequest::with('user.user_information')->findOrFail($id);
+
+        if ($req->status !== 'review') {
             return response()->json([
-                'status' => false,
-                'message' => 'This verification has already been approved.'
-            ], 400);
+                'result'  => 'error',
+                'message' => 'This request has already been processed.',
+            ]);
         }
 
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
-
-            // Update queue item
-            $verificationQueue->update([
+            $req->update([
                 'status' => 'approved',
-                'approved_by_admin' => auth()->id(),
-                'approved_at' => now(),
-                'manual_notes' => $request->notes ?? null,
+                'reason' => 'Manually approved by admin.',
             ]);
 
-            // Update user verification status
-            $user = $verificationQueue->user;
-            $user->update([
+            $req->user->update([
                 'verification_status' => 'approved',
-                'verified_at' => now(),
-                'verification_attempts' => 0,
-                'verification_cooldown_until' => null,
+                'verified_at'         => now(),
             ]);
 
-            if ($user->user_information) {
-                $user->user_information->update(['is_verified' => true]);
+            if ($req->user->user_information) {
+                $req->user->user_information->update(['is_verified' => true]);
             }
 
             DB::commit();
 
-            Log::info('Verification manually approved', [
-                'verification_queue_id' => $verificationQueue->id,
-                'user_id' => $user->id,
-                'approved_by' => auth()->id()
-            ]);
+            // Send push notification
+            $req->user->refresh();
+            try {
+                $notificationService = app(NotificationService::class);
+                $notificationService->sendVerificationApproved($req->user, 'admin_review');
+            } catch (\Exception $e) {
+                Log::warning('[VerificationQueue] Notification failed', ['error' => $e->getMessage()]);
+            }
 
-            // Send notification to user
-            $this->sendApprovalNotification($user);
+            $remaining = VerificationRequest::where('status', 'review')->count();
 
             return response()->json([
-                'status' => true,
-                'message' => 'Verification approved successfully!'
+                'result'    => 'success',
+                'message'   => 'Verification approved for ' . $req->user->name,
+                'remaining' => $remaining,
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
-
-            Log::error('Failed to approve verification', [
-                'verification_queue_id' => $verificationQueue->id,
-                'error' => $e->getMessage()
+            Log::error('[VerificationQueue] Approve failed', [
+                'id' => $id, 'error' => $e->getMessage(),
             ]);
-
             return response()->json([
-                'status' => false,
-                'message' => 'Failed to approve verification. Please try again.'
-            ], 500);
+                'result'  => 'error',
+                'message' => 'Failed to approve: ' . $e->getMessage(),
+            ]);
         }
     }
 
     /**
-     * Reject a verification request
+     * Reject a verification request from the queue.
      */
-    public function reject(Request $request, VerificationQueue $verificationQueue)
+    public function reject(Request $request, $id)
     {
-        $request->validate([
-            'reason' => 'required|string|max:500'
-        ]);
+        $req = VerificationRequest::with('user.user_information')->findOrFail($id);
 
-        if ($verificationQueue->status !== 'pending') {
+        if ($req->status !== 'review') {
             return response()->json([
-                'status' => false,
-                'message' => 'This verification has already been reviewed.'
-            ], 400);
+                'result'  => 'error',
+                'message' => 'This request has already been processed.',
+            ]);
         }
 
+        $reason = $request->input('reason',
+            'Your verification photo did not pass review. Please try again with a clear selfie showing your face.');
+
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
-
-            // Update queue item
-            $verificationQueue->update([
+            $req->update([
                 'status' => 'rejected',
-                'approved_by_admin' => auth()->id(),
-                'approved_at' => now(),
-                'manual_notes' => $request->reason,
-                'reason' => $request->reason
+                'reason' => $reason,
             ]);
 
-            // Update user verification status
-            $user = $verificationQueue->user;
-            $user->update([
+            $req->user->update([
                 'verification_status' => 'rejected',
-                'verified_at' => null
+                'verified_at'         => null,
             ]);
 
-            if ($user->user_information) {
-                $user->user_information->update(['is_verified' => false]);
+            if ($req->user->user_information) {
+                $req->user->user_information->update(['is_verified' => false]);
             }
 
             DB::commit();
 
-            Log::info('Verification manually rejected', [
-                'verification_queue_id' => $verificationQueue->id,
-                'user_id' => $user->id,
-                'rejected_by' => auth()->id(),
-                'reason' => $request->reason
-            ]);
+            // Send push notification
+            $req->user->refresh();
+            try {
+                $notificationService = app(NotificationService::class);
+                $notificationService->sendVerificationRejected($req->user, 'admin_review');
+            } catch (\Exception $e) {
+                Log::warning('[VerificationQueue] Notification failed', ['error' => $e->getMessage()]);
+            }
 
-            // Send notification to user
-            $this->sendRejectionNotification($user, $request->reason);
+            $remaining = VerificationRequest::where('status', 'review')->count();
 
             return response()->json([
-                'status' => true,
-                'message' => 'Verification rejected successfully!'
+                'result'    => 'success',
+                'message'   => 'Verification rejected for ' . $req->user->name,
+                'remaining' => $remaining,
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
-
-            Log::error('Failed to reject verification', [
-                'verification_queue_id' => $verificationQueue->id,
-                'error' => $e->getMessage()
+            Log::error('[VerificationQueue] Reject failed', [
+                'id' => $id, 'error' => $e->getMessage(),
             ]);
-
             return response()->json([
-                'status' => false,
-                'message' => 'Failed to reject verification. Please try again.'
-            ], 500);
+                'result'  => 'error',
+                'message' => 'Failed to reject: ' . $e->getMessage(),
+            ]);
         }
     }
 
     /**
-     * Get verification queue statistics
+     * Bulk approve all review items (convenience action).
      */
-    public function stats()
+    public function bulkApprove(Request $request)
     {
-        $stats = [
-            'pending' => VerificationQueue::where('status', 'pending')->count(),
-            'approved' => VerificationQueue::where('status', 'approved')->count(),
-            'rejected' => VerificationQueue::where('status', 'rejected')->count(),
-            'avg_confidence' => round(VerificationQueue::whereNotNull('ai_confidence')->avg('ai_confidence') * 100) . '%',
-            'high_confidence_pending' => VerificationQueue::where('status', 'pending')
-                ->where('ai_confidence', '>=', 0.95)
-                ->count(),
-            'medium_confidence_pending' => VerificationQueue::where('status', 'pending')
-                ->whereBetween('ai_confidence', [0.85, 0.95])
-                ->count(),
-        ];
+        $ids = $request->input('ids', []);
+        if (empty($ids)) {
+            return response()->json(['result' => 'error', 'message' => 'No items selected.']);
+        }
+
+        $approved = 0;
+        $notificationService = app(NotificationService::class);
+
+        foreach ($ids as $id) {
+            $req = VerificationRequest::with('user.user_information')->find($id);
+            if (!$req || $req->status !== 'review') continue;
+
+            DB::beginTransaction();
+            try {
+                $req->update(['status' => 'approved', 'reason' => 'Manually approved by admin (bulk).']);
+                $req->user->update(['verification_status' => 'approved', 'verified_at' => now()]);
+                if ($req->user->user_information) {
+                    $req->user->user_information->update(['is_verified' => true]);
+                }
+                DB::commit();
+
+                $req->user->refresh();
+                try {
+                    $notificationService->sendVerificationApproved($req->user, 'admin_review');
+                } catch (\Exception $e) {}
+
+                $approved++;
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('[VerificationQueue] Bulk approve failed', ['id' => $id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        $remaining = VerificationRequest::where('status', 'review')->count();
 
         return response()->json([
-            'status' => true,
-            'data' => $stats
+            'result'    => 'success',
+            'message'   => "Approved {$approved} verification(s).",
+            'remaining' => $remaining,
         ]);
-    }
-
-    /**
-     * Send approval notification to user
-     */
-    private function sendApprovalNotification(User $user)
-    {
-        if (!$user->device_token) {
-            return;
-        }
-
-        try {
-            send_notification(
-                'single',
-                '✅ Verification Approved!',
-                'Congratulations! Your account is now verified. Enjoy enhanced features and trust from other users.',
-                $user->image ? asset($user->image) : null,
-                [
-                    'device_token' => $user->device_token,
-                    'type' => 'verification_status',
-                ]
-            );
-        } catch (\Exception $e) {
-            Log::error('Failed to send approval notification', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Send rejection notification to user
-     */
-    private function sendRejectionNotification(User $user, string $reason)
-    {
-        if (!$user->device_token) {
-            return;
-        }
-
-        try {
-            send_notification(
-                'single',
-                '❌ Verification Rejected',
-                'Your verification was not approved. Reason: ' . $reason . '. Please try again with a new photo.',
-                null,
-                [
-                    'device_token' => $user->device_token,
-                    'type' => 'verification_status',
-                ]
-            );
-        } catch (\Exception $e) {
-            Log::error('Failed to send rejection notification', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage()
-            ]);
-        }
     }
 }
