@@ -82,7 +82,7 @@ class VerificationQueueController extends Controller
                         <button class="btn btn-danger btn-reject" data-id="' . $req->id . '" title="Reject">
                             <i class="fas fa-times"></i>
                         </button>
-                        <a href="' . url('verification-queue/' . $req->id) . '" class="btn btn-info btn-detail" title="Review Detail">
+                        <a href="#" class="btn btn-info btn-detail" data-id="' . $req->id . '" title="Review Detail">
                             <i class="fas fa-eye"></i>
                         </a>
                     </div>';
