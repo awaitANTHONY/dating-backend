@@ -82,9 +82,9 @@ class VerificationQueueController extends Controller
                         <button class="btn btn-danger btn-reject" data-id="' . $req->id . '" title="Reject">
                             <i class="fas fa-times"></i>
                         </button>
-                        <button class="btn btn-info btn-detail" data-id="' . $req->id . '" title="Review Detail">
+                        <a href="' . url('verification-queue/' . $req->id) . '" class="btn btn-info" title="Review Detail">
                             <i class="fas fa-eye"></i>
-                        </button>
+                        </a>
                     </div>';
                 })
                 ->rawColumns(['user_image', 'selfie', 'face_score', 'action'])
@@ -96,7 +96,7 @@ class VerificationQueueController extends Controller
     }
 
     /**
-     * Get detail data for the review modal (AJAX).
+     * Show full-page review detail for a verification request.
      */
     public function show($id)
     {
@@ -120,7 +120,7 @@ class VerificationQueueController extends Controller
             }
         }
 
-        // Extract face matching details for each profile photo
+        // Extract face matching details
         $faceDetails = [];
         if (isset($ai['face_matching']['details']) && is_array($ai['face_matching']['details'])) {
             foreach ($ai['face_matching']['details'] as $detail) {
@@ -133,26 +133,18 @@ class VerificationQueueController extends Controller
             }
         }
 
-        return response()->json([
-            'id'             => $req->id,
-            'user_id'        => $user ? $user->id : null,
-            'user_name'      => $user ? $user->name : 'Unknown',
-            'user_email'     => $user ? $user->email : '-',
-            'gender'         => ucfirst($info->gender ?? '-'),
-            'age'            => ($info && $info->date_of_birth) ? \Carbon\Carbon::parse($info->date_of_birth)->age : null,
-            'country'        => $info->country_code ?? '-',
-            'joined'         => $user && $user->created_at ? $user->created_at->format('M d, Y') : '-',
-            'selfie_url'     => asset($req->image),
-            'profile_photos' => $profilePhotos,
-            'reason'         => $req->reason,
-            'face_matching'  => $ai['face_matching'] ?? null,
-            'face_details'   => $faceDetails,
-            'highest_match'  => $ai['face_matching']['highest_match'] ?? null,
-            'matched_count'  => $ai['face_matching']['matched'] ?? 0,
-            'total_compared' => (($ai['face_matching']['matched'] ?? 0) + ($ai['face_matching']['unmatched'] ?? 0) + ($ai['face_matching']['skipped'] ?? 0)),
-            'liveness'       => $ai['liveness'] ?? null,
-            'created_at'     => $req->created_at ? $req->created_at->format('M d, Y g:ia') : '-',
-        ]);
+        $data = [
+            'req'           => $req,
+            'user'          => $user,
+            'info'          => $info,
+            'profilePhotos' => $profilePhotos,
+            'faceDetails'   => $faceDetails,
+            'highestMatch'  => $ai['face_matching']['highest_match'] ?? null,
+            'matchedCount'  => $ai['face_matching']['matched'] ?? 0,
+            'totalCompared' => (($ai['face_matching']['matched'] ?? 0) + ($ai['face_matching']['unmatched'] ?? 0) + ($ai['face_matching']['skipped'] ?? 0)),
+        ];
+
+        return view('backend.verification_queue.show', $data);
     }
 
     /**

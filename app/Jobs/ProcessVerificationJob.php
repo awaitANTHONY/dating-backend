@@ -47,7 +47,20 @@ class ProcessVerificationJob implements ShouldQueue
                 return;
             }
 
-            $user            = $verificationRequest->user;
+            $user = $verificationRequest->user;
+
+            // Skip if user already has a verified badge
+            if ($user->verification_status === 'approved' && $user->verified_at !== null) {
+                Log::info('[Verification] User already verified, auto-approving', [
+                    'id'      => $this->verificationRequestId,
+                    'user_id' => $user->id,
+                ]);
+                $verificationRequest->update([
+                    'status' => 'approved',
+                    'reason' => 'User already has verification badge.',
+                ]);
+                return;
+            }
             $userInformation = $user->user_information;
 
             if (!$userInformation) {
