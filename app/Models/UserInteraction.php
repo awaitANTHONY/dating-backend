@@ -17,6 +17,7 @@ class UserInteraction extends Model
         'user_id',
         'target_user_id',
         'action',
+        'interaction_count',
     ];
 
     /**

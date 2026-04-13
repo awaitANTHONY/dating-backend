@@ -180,6 +180,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the engagement score for the user.
+     */
+    public function engagementScore()
+    {
+        return $this->hasOne(UserEngagementScore::class);
+    }
+
+    /**
      * Get active profile boost for the user.
      */
     public function activeBoost()

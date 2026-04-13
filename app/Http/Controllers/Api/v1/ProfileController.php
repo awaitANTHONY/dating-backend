@@ -97,7 +97,7 @@ class ProfileController extends Controller
         $maxAge = $request->input('max_age');
 
         // Build query for recommendations with smart matching
-        $query = User::with(['user_information'])
+        $query = User::with(['user_information', 'engagementScore'])
             ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge) {
                 $q->where('gender', $searchPreference);
                 if ($minAge) {
@@ -120,11 +120,23 @@ class ProfileController extends Controller
                 $q->where('user_id', $user->id)
                   ->where('action', 'like');
             })
-            // Exclude users the current user has disliked/passed (30-day cooldown, then resurface)
+            // Exclude users the current user has disliked/passed (dynamic cooldown based on re-swipe count)
             ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
                 $q->where('user_id', $user->id)
                   ->whereIn('action', ['dislike', 'pass'])
-                  ->where('created_at', '>=', now()->subDays(30));
+                  ->where(function($sub) {
+                      // 1st dislike = 7 days, 2nd = 14 days, 3rd+ = 30 days
+                      $sub->where(function($s) {
+                          $s->where('interaction_count', '<=', 1)
+                            ->where('created_at', '>=', now()->subDays(7));
+                      })->orWhere(function($s) {
+                          $s->where('interaction_count', 2)
+                            ->where('created_at', '>=', now()->subDays(14));
+                      })->orWhere(function($s) {
+                          $s->where('interaction_count', '>=', 3)
+                            ->where('created_at', '>=', now()->subDays(30));
+                      });
+                  });
             });
 
         // Filter by same country to prevent cross-country matching
@@ -171,6 +183,14 @@ class ProfileController extends Controller
         
         $results = $query->limit(2000)->get();
 
+        // Fetch IDs of users who have already liked the current user ("secret admirers")
+        // These should appear higher in the stack without revealing they liked you
+        $secretAdmirerIds = \DB::table('user_interactions')
+            ->where('target_user_id', $user->id)
+            ->where('action', 'like')
+            ->pluck('user_id')
+            ->toArray();
+
         // Transform results and add distance calculation
         $transformedResults = $results->map(function($user) use ($currentLat, $currentLng) {
             $userInfo = $user->user_information;
@@ -216,6 +236,7 @@ class ProfileController extends Controller
                 'last_activity' => $user->last_activity,
                 'created_at' => $user->created_at,
                 'distance' => $distance,
+                'engagement_score' => $user->engagementScore->engagement_score ?? 5.0,
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
                 'device_token' => $userInfo->device_token,
@@ -428,6 +449,11 @@ class ProfileController extends Controller
             }
 
             $profile->match_score = $score;
+
+            // Blended rank_score: 70% compatibility + 30% engagement
+            $engagementScore = $profile->engagement_score ?? 5.0;
+            $profile->rank_score = round(($score * 0.70) + ($engagementScore * 0.30), 2);
+
             $profile->compatibility_details = [
                 'relation_goals_match' => !empty($rgOverlap),
                 'language_match' => !empty($langOverlap),
@@ -531,40 +557,56 @@ class ProfileController extends Controller
             ]);
         }
         
-        // Separate boosted, VIP, and regular profiles
+        // 5-tier sorting: Boosted > Secret Admirers > VIP > Goal-match > Regular
+        // Tier 1: Boosted profiles (paid placement)
         $boostedProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
             return in_array($profile->id, $boostedUserIds);
-        })->sortByDesc('match_score')->values();
+        })->sortByDesc('rank_score')->values();
 
-        $vipProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
-            return !in_array($profile->id, $boostedUserIds) && $profile->is_vip;
-        })->sortByDesc('match_score')->values();
+        // Tier 2: Secret admirers (liked current user — NOT revealed to frontend)
+        $admirerProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds, $secretAdmirerIds) {
+            return !in_array($profile->id, $boostedUserIds)
+                && in_array($profile->id, $secretAdmirerIds);
+        })->sortByDesc('rank_score')->values();
 
-        $regularProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds) {
-            return !in_array($profile->id, $boostedUserIds) && !$profile->is_vip;
-        })->sortByDesc('match_score')->values();
+        // Tier 3: VIP profiles
+        $vipProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds, $secretAdmirerIds) {
+            return !in_array($profile->id, $boostedUserIds)
+                && !in_array($profile->id, $secretAdmirerIds)
+                && $profile->is_vip;
+        })->sortByDesc('rank_score')->values();
 
-        // Separate profiles with and without relationship goals match for regular profiles
+        // Tier 4 & 5: Regular profiles (split by goal match)
+        $regularProfiles = $scoredResults->filter(function($profile) use ($boostedUserIds, $secretAdmirerIds) {
+            return !in_array($profile->id, $boostedUserIds)
+                && !in_array($profile->id, $secretAdmirerIds)
+                && !$profile->is_vip;
+        })->sortByDesc('rank_score')->values();
+
         $profilesWithGoalMatch = $regularProfiles->filter(function($profile) {
-            return isset($profile->compatibility_details['relation_goals_match']) && 
+            return isset($profile->compatibility_details['relation_goals_match']) &&
                    $profile->compatibility_details['relation_goals_match'] === true;
         });
-        
+
         $profilesWithoutGoalMatch = $regularProfiles->filter(function($profile) {
-            return !isset($profile->compatibility_details['relation_goals_match']) || 
+            return !isset($profile->compatibility_details['relation_goals_match']) ||
                    $profile->compatibility_details['relation_goals_match'] === false;
         });
 
-        // Combine: boosted first, then VIP, then profiles with goal match, then others
-        // Take more profiles when they have relationship goals match
+        // Combine: boosted → early VIPs → admirers → remaining VIPs → goal-match → others
+        // Interleave admirers after a few VIPs to avoid suspicious patterns
         $limit = get_option('recommendation_limit', 50);
-        $goalMatchLimit = (int)($limit * 1.5); // 50% more profiles with goal match
-        
+        $goalMatchLimit = (int)($limit * 1.5);
+        $admirerSlice = $admirerProfiles->take(5); // Cap admirers at 5 per batch
+
         $finalResults = $boostedProfiles
-            ->concat($vipProfiles->take($limit))
+            ->concat($vipProfiles->take(3))
+            ->concat($admirerSlice)
+            ->concat($vipProfiles->skip(3)->take($limit))
             ->concat($profilesWithGoalMatch->take($goalMatchLimit))
-            ->concat($profilesWithoutGoalMatch->take($limit - $boostedProfiles->count() - $vipProfiles->count()))
-            ->take($limit * 2) // Double the final limit to show more matches
+            ->concat($profilesWithoutGoalMatch->take($limit))
+            ->unique('id')
+            ->take($limit * 2)
             ->values();
 
         // Same Goal tab — only show users whose relationship goals match
@@ -590,6 +632,16 @@ class ProfileController extends Controller
                 $joined = \Carbon\Carbon::parse($profile->created_at);
                 return $joined->greaterThanOrEqualTo(now()->subDays(3));
             })->sortByDesc('created_at')->values();
+        }
+
+        // Track impressions for freshness/visibility decay (non-blocking, runs after response)
+        $returnedUserIds = $finalResults->pluck('id')->toArray();
+        if (!empty($returnedUserIds)) {
+            dispatch(function () use ($returnedUserIds) {
+                \DB::table('user_engagement_scores')
+                    ->whereIn('user_id', $returnedUserIds)
+                    ->increment('impressions_count');
+            })->afterResponse();
         }
 
         return response()->json(['status' => true, 'data' => $finalResults]);
@@ -638,11 +690,23 @@ class ProfileController extends Controller
                 $q->where('user_id', $user->id)
                   ->where('action', 'like');
             })
-            // Exclude users the current user has disliked/passed (30-day cooldown)
+            // Exclude users the current user has disliked/passed (dynamic cooldown)
             ->whereDoesntHave('receivedInteractions', function($q) use ($user) {
                 $q->where('user_id', $user->id)
                   ->whereIn('action', ['dislike', 'pass'])
-                  ->where('created_at', '>=', now()->subDays(30));
+                  ->where(function($sub) {
+                      // 1st dislike = 7 days, 2nd = 14 days, 3rd+ = 30 days
+                      $sub->where(function($s) {
+                          $s->where('interaction_count', '<=', 1)
+                            ->where('created_at', '>=', now()->subDays(7));
+                      })->orWhere(function($s) {
+                          $s->where('interaction_count', 2)
+                            ->where('created_at', '>=', now()->subDays(14));
+                      })->orWhere(function($s) {
+                          $s->where('interaction_count', '>=', 3)
+                            ->where('created_at', '>=', now()->subDays(30));
+                      });
+                  });
             });
 
         // Strict country filter: only show users whose country_code exactly matches

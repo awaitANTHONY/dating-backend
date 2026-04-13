@@ -57,6 +57,19 @@ Schedule::command('direct-connect:expire')
         \Log::error('Direct Connect expire check failed');
     });
 
+// Compute engagement scores hourly for recommendation ranking
+Schedule::command('engagement:compute --all')
+    ->hourly()
+    ->name('compute-engagement-scores')
+    ->description('Compute engagement scores for all active users')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Engagement score computation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Engagement score computation failed');
+    });
+
 // Grant daily free coins to active subscribers (Premium, Gold, VIP)
 Schedule::command('coins:grant-daily-subscriber')
     ->dailyAt('00:05')

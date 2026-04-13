@@ -61,16 +61,25 @@ class UserInteractionController extends Controller
         try {
             DB::beginTransaction();
 
-            // Store or update the interaction
-            $interaction = UserInteraction::updateOrCreate(
-                [
+            // Store or update the interaction (track re-swipes via interaction_count)
+            $existing = UserInteraction::where('user_id', $userId)
+                ->where('target_user_id', $targetUserId)
+                ->first();
+
+            if ($existing) {
+                $existing->update([
+                    'action' => $action,
+                    'interaction_count' => $existing->interaction_count + 1,
+                ]);
+                $interaction = $existing;
+            } else {
+                $interaction = UserInteraction::create([
                     'user_id' => $userId,
                     'target_user_id' => $targetUserId,
-                ],
-                [
                     'action' => $action,
-                ]
-            );
+                    'interaction_count' => 1,
+                ]);
+            }
 
             $isMatch = false;
             $matchId = null;
