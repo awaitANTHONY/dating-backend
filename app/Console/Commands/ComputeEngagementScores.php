@@ -7,8 +7,6 @@ use App\Models\User;
 use App\Models\UserInteraction;
 use App\Models\UserMatch;
 use App\Models\UserEngagementScore;
-use App\Models\ChatGroupMember;
-use App\Models\ChatMessage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -114,8 +112,9 @@ class ComputeEngagementScores extends Command
         $maxInCountry = $maxLikesByCountry[$countryCode] ?? 1;
         $popularityScore = min(1.0, $receivedLikes7d / max($maxInCountry, 1));
 
-        // 2. Quality (0-1): blend of match rate, profile completeness, response rate
-        $qualityScore = ($matchRate * 0.5) + ($profileCompleteness * 0.3) + ($responseRate * 0.2);
+        // 2. Quality (0-1): blend of match rate and profile completeness
+        //    (response_rate omitted — chat is Firebase, not MySQL)
+        $qualityScore = ($matchRate * 0.6) + ($profileCompleteness * 0.4);
 
         // 3. Activity (0-1): based on last_activity
         $activityScore = $this->computeActivityScore($user);
@@ -176,19 +175,9 @@ class ComputeEngagementScores extends Command
 
     private function computeResponseRate(int $userId): float
     {
-        $chatGroupIds = ChatGroupMember::where('user_id', $userId)
-            ->pluck('group_id')
-            ->toArray();
-
-        $totalMatchChats = count($chatGroupIds);
-        if ($totalMatchChats === 0) return 0;
-
-        $respondedChats = ChatMessage::where('sender_id', $userId)
-            ->whereIn('group_id', $chatGroupIds)
-            ->distinct('group_id')
-            ->count('group_id');
-
-        return min(1.0, $respondedChats / $totalMatchChats);
+        // Chat is handled by Firebase, not MySQL — return 0 (neutral)
+        // Response rate will be factored out of quality_score weighting
+        return 0;
     }
 
     private function computeActivityScore(User $user): float
