@@ -425,12 +425,23 @@ class DirectConnectController extends Controller
         $ownerLng = $ownerInfo->longitude ?? null;
 
         $requests = ContactRequest::where('owner_id', $user->id)
-            ->where('status', 'pending')
             ->where(function ($query) {
-                $query->whereNull('expires_at')
-                      ->orWhere('expires_at', '>', now());
+                // Pending requests (not expired)
+                $query->where(function ($q) {
+                    $q->where('status', 'pending')
+                      ->where(function ($sub) {
+                          $sub->whereNull('expires_at')
+                              ->orWhere('expires_at', '>', now());
+                      });
+                })
+                // Also include recently approved (within 48h)
+                ->orWhere(function ($q) {
+                    $q->where('status', 'approved')
+                      ->where('responded_at', '>=', now()->subHours(48));
+                });
             })
-            ->with(['requester:id,name,image,updated_at'])
+            ->with(['requester:id,name,image,updated_at', 'platform'])
+            ->orderByRaw("FIELD(status, 'approved', 'pending') ASC")
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
