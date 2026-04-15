@@ -237,6 +237,7 @@ class ProfileController extends Controller
                 'created_at' => $user->created_at,
                 'distance' => $distance,
                 'engagement_score' => $user->engagementScore->engagement_score ?? 5.0,
+                'popularity_score' => (int) round(($user->engagementScore->engagement_score ?? 0) * 10),
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
                 'device_token' => $userInfo->device_token,
@@ -634,6 +635,20 @@ class ProfileController extends Controller
             })->sortByDesc('created_at')->values();
         }
 
+        // Popular tab — sort by boosted first, then engagement_score DESC, then distance ASC
+        if ($sortBy === 'popular') {
+            $finalResults = $finalResults->sortBy(function ($profile) {
+                $priority = 0;
+                if (!empty($profile->is_boosted)) $priority -= 10000;
+                // Higher engagement_score = lower sort key = appears first
+                $score = $profile->engagement_score ?? 0;
+                $priority -= ($score * 100);
+                // Tie-break by distance (closer first)
+                $priority += ($profile->distance ?? 9999) * 0.01;
+                return $priority;
+            })->values();
+        }
+
         // Track impressions for freshness/visibility decay (non-blocking, runs after response)
         $returnedUserIds = $finalResults->pluck('id')->toArray();
         if (!empty($returnedUserIds)) {
@@ -666,7 +681,7 @@ class ProfileController extends Controller
         $maxAge = $request->input('max_age');
         $radius = $request->input('radius');
 
-        $query = User::with(['user_information'])
+        $query = User::with(['user_information', 'engagementScore'])
             ->where('created_at', '>=', now()->subDays(3))
             ->where('id', '!=', $user->id)
             ->where('status', 1)
@@ -774,6 +789,7 @@ class ProfileController extends Controller
                 'device_token' => $info->device_token ?? $u->device_token ?? '--',
                 'last_activity' => $u->last_activity,
                 'created_at' => $u->created_at,
+                'popularity_score' => (int) round(($u->engagementScore->engagement_score ?? 0) * 10),
 
                 // Detailed attributes from UserInformation model accessors
                 'relation_goals_details' => $info->relation_goals_details,
@@ -2442,7 +2458,7 @@ class ProfileController extends Controller
         }
 
         // Build base query
-        $query = User::with(['user_information'])
+        $query = User::with(['user_information', 'engagementScore'])
             ->whereHas('user_information', function ($q) use ($searchPreference) {
                 $q->where('gender', $searchPreference);
             })
@@ -2471,10 +2487,17 @@ class ProfileController extends Controller
         }
 
         if ($filter === 'popular') {
-            // Only show users who have an active boost in the same country
+            // Show boosted users AND users with high engagement scores
             $countryCode = $userInformation->country_code ?? null;
             $boostedIds = ProfileBoost::getActiveBoostedUsers($countryCode);
-            $query->whereIn('id', $boostedIds);
+            $highEngagementIds = \DB::table('user_engagement_scores')
+                ->where('engagement_score', '>=', 3.0)
+                ->pluck('user_id')
+                ->toArray();
+            $popularIds = array_unique(array_merge($boostedIds, $highEngagementIds));
+            if (!empty($popularIds)) {
+                $query->whereIn('id', $popularIds);
+            }
         }
 
         // Get country-wide boosted user IDs for merging into results
@@ -2565,6 +2588,7 @@ class ProfileController extends Controller
                 'last_activity' => $user->last_activity,
                 'created_at' => $user->created_at,
                 'distance' => $distance ? round($distance, 1) : null,
+                'popularity_score' => (int) round(($user->engagementScore->engagement_score ?? 0) * 10),
                 'mood' => $userInfo->mood,
                 'address' => $userInfo->address,
                 'device_token' => $userInfo->device_token,
