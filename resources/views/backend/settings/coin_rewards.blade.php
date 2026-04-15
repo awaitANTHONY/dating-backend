@@ -9,6 +9,7 @@
             <a class="nav-link" id="dc-tab" data-toggle="pill" href="#dc" role="tab">{{ _lang('Direct Connect') }}</a>
             <a class="nav-link" id="approval-tab" data-toggle="pill" href="#approval" role="tab">{{ _lang('Approval Limits') }}</a>
             <a class="nav-link" id="content-tab" data-toggle="pill" href="#content" role="tab">{{ _lang('Content Rules') }}</a>
+            <a class="nav-link" id="toggles-tab" data-toggle="pill" href="#toggles" role="tab">{{ _lang('Feature Toggles') }}</a>
         </div>
     </div>
     <div class="col-md-9">
@@ -267,6 +268,56 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-12">
+                                    <div class="form-group text-right">
+                                        <button type="submit" class="btn btn-primary btn-sm">{{ _lang('Update') }}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Feature Toggles Tab --}}
+            <div class="tab-pane fade" id="toggles" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="mb-3 header-title card-title">{{ _lang('Feature Toggles') }}</h3>
+                        <p class="text-muted mb-3">{{ _lang('Show or hide app features without releasing an update. Changes take effect on next app launch.') }}</p>
+                        <form method="post" class="ajax-submit2 params-card" autocomplete="off" action="{{ route('store_settings') }}">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="control-label">{{ _lang('Popular Tab') }}</label>
+                                        <select class="form-control" name="enable_popular">
+                                            <option value="1" {{ get_option('enable_popular', '1') == '1' ? 'selected' : '' }}>{{ _lang('Visible') }}</option>
+                                            <option value="0" {{ get_option('enable_popular', '1') == '0' ? 'selected' : '' }}>{{ _lang('Hidden') }}</option>
+                                        </select>
+                                        <small class="form-text text-muted">{{ _lang('Show the Popular tab on the home screen') }}</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="control-label">{{ _lang('Just Joined Tab') }}</label>
+                                        <select class="form-control" name="enable_just_joined">
+                                            <option value="1" {{ get_option('enable_just_joined', '1') == '1' ? 'selected' : '' }}>{{ _lang('Visible') }}</option>
+                                            <option value="0" {{ get_option('enable_just_joined', '1') == '0' ? 'selected' : '' }}>{{ _lang('Hidden') }}</option>
+                                        </select>
+                                        <small class="form-text text-muted">{{ _lang('Show the Just Joined tab on the home screen') }}</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="control-label">{{ _lang('Direct Connect') }}</label>
+                                        <select class="form-control" name="enable_direct_connect">
+                                            <option value="1" {{ get_option('enable_direct_connect', '1') == '1' ? 'selected' : '' }}>{{ _lang('Visible') }}</option>
+                                            <option value="0" {{ get_option('enable_direct_connect', '1') == '0' ? 'selected' : '' }}>{{ _lang('Hidden') }}</option>
+                                        </select>
+                                        <small class="form-text text-muted">{{ _lang('Show the Add Contact / Direct Connect tab') }}</small>
+                                    </div>
+                                </div>
                                 <div class="col-md-12">
                                     <div class="form-group text-right">
                                         <button type="submit" class="btn btn-primary btn-sm">{{ _lang('Update') }}</button>
