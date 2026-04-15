@@ -149,6 +149,32 @@ class ComputeEngagementScores extends Command
                 'last_computed_at' => now(),
             ]
         );
+
+        // Send push notification when user crosses the Popular threshold organically
+        // Popular threshold: engagement_score >= 3.0 (maps to popularityScore >= 30 in Flutter)
+        $previousScore = $existing->engagement_score ?? 0;
+        $popularThreshold = 3.0;
+
+        if ($previousScore < $popularThreshold && $engagementScore >= $popularThreshold) {
+            // User just entered Popular — not boosted, purely organic
+            if (empty($user->is_boosted) && $user->device_token) {
+                try {
+                    send_notification(
+                        'single',
+                        "You're Trending! ⚡",
+                        "Your profile is getting noticed! You've made it to the Popular section. Keep the momentum going!",
+                        null,
+                        [
+                            'device_token' => $user->device_token,
+                            'type' => 'popular_achieved',
+                        ]
+                    );
+                    Log::info("Popular notification sent to user {$userId} (score: {$engagementScore})");
+                } catch (\Throwable $e) {
+                    Log::warning("Failed to send Popular notification to user {$userId}: {$e->getMessage()}");
+                }
+            }
+        }
     }
 
     private function computeProfileCompleteness(User $user): float
