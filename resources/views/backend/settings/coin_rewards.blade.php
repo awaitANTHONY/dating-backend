@@ -9,6 +9,7 @@
             <a class="nav-link" id="dc-tab" data-toggle="pill" href="#dc" role="tab">{{ _lang('Direct Connect') }}</a>
             <a class="nav-link" id="approval-tab" data-toggle="pill" href="#approval" role="tab">{{ _lang('Approval Limits') }}</a>
             <a class="nav-link" id="content-tab" data-toggle="pill" href="#content" role="tab">{{ _lang('Content Rules') }}</a>
+            <a class="nav-link" id="limits-tab" data-toggle="pill" href="#limits" role="tab">{{ _lang('Free Tier Limits') }}</a>
             <a class="nav-link" id="toggles-tab" data-toggle="pill" href="#toggles" role="tab">{{ _lang('Feature Toggles') }}</a>
         </div>
     </div>
@@ -268,6 +269,40 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-12">
+                                    <div class="form-group text-right">
+                                        <button type="submit" class="btn btn-primary btn-sm">{{ _lang('Update') }}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Free Tier Limits Tab --}}
+            <div class="tab-pane fade" id="limits" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="mb-3 header-title card-title">{{ _lang('Free Tier Limits') }}</h3>
+                        <p class="text-muted mb-3">{{ _lang('Control daily limits for free (non-subscriber) users. Changes take effect immediately — no app update needed.') }}</p>
+                        <form method="post" class="ajax-submit2 params-card" autocomplete="off" action="{{ route('store_settings') }}">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label">{{ _lang('Daily Swipes (Likes)') }}</label>
+                                        <input type="number" class="form-control" name="daily_like_limit" value="{{ get_option('daily_like_limit', '10') }}" min="1" max="100" required>
+                                        <small class="form-text text-muted">{{ _lang('Number of right-swipes a free user can make per day. Lower = more paywall triggers.') }}</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="control-label">{{ _lang('Daily Messages') }}</label>
+                                        <input type="number" class="form-control" name="daily_chat_limit" value="{{ get_option('daily_chat_limit', '3') }}" min="1" max="100" required>
+                                        <small class="form-text text-muted">{{ _lang('Number of messages a free user can send per day. Lower = more paywall triggers.') }}</small>
+                                    </div>
+                                </div>
                                 <div class="col-md-12">
                                     <div class="form-group text-right">
                                         <button type="submit" class="btn btn-primary btn-sm">{{ _lang('Update') }}</button>
