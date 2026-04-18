@@ -96,10 +96,15 @@ class ProfileController extends Controller
         $minAge = $request->input('min_age');
         $maxAge = $request->input('max_age');
 
+        $viewerGender = $userInformation->gender ?? null;
+
         // Build query for recommendations with smart matching
         $query = User::with(['user_information', 'engagementScore'])
-            ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge) {
+            ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge, $viewerGender) {
                 $q->where('gender', $searchPreference);
+                if ($viewerGender) {
+                    $q->wantsToMeet($viewerGender);
+                }
                 if ($minAge) {
                     $q->where('age', '>=', (int) $minAge);
                 }
@@ -485,6 +490,12 @@ class ProfileController extends Controller
                 $missingBoosted = User::with(['user_information'])
                     ->whereIn('id', $missingBoostedIds)
                     ->where('status', 1)
+                    ->whereHas('user_information', function($q) use ($searchPreference, $viewerGender) {
+                        $q->where('gender', $searchPreference);
+                        if ($viewerGender) {
+                            $q->wantsToMeet($viewerGender);
+                        }
+                    })
                     ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
                         $q->where('user_id', $user->id);
                     })
@@ -681,12 +692,17 @@ class ProfileController extends Controller
         $maxAge = $request->input('max_age');
         $radius = $request->input('radius');
 
+        $viewerGender = $userInformation->gender ?? null;
+
         $query = User::with(['user_information', 'engagementScore'])
             ->where('created_at', '>=', now()->subDays(3))
             ->where('id', '!=', $user->id)
             ->where('status', 1)
-            ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge) {
+            ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge, $viewerGender) {
                 $q->where('gender', $searchPreference);
+                if ($viewerGender) {
+                    $q->wantsToMeet($viewerGender);
+                }
                 if ($minAge) {
                     $q->where('age', '>=', (int) $minAge);
                 }
@@ -852,9 +868,14 @@ class ProfileController extends Controller
         $excludeIds = $request->input('exclude_ids', []);
 
         // Build Eloquent query for better performance and readability
+        $viewerGender = $userInformation->gender ?? null;
+
         $query = User::with(['user_information'])
-            ->whereHas('user_information', function($q) use ($gender) {
+            ->whereHas('user_information', function($q) use ($gender, $viewerGender) {
                 $q->where('gender', $gender);
+                if ($viewerGender) {
+                    $q->wantsToMeet($viewerGender);
+                }
             })
             ->where('id', '!=', $user->id)
             ->where('status', 1)
@@ -998,6 +1019,12 @@ class ProfileController extends Controller
                 $missingBoosted = User::with(['user_information'])
                     ->whereIn('id', $missingBoostedIds)
                     ->where('status', 1)
+                    ->whereHas('user_information', function($q) use ($gender, $viewerGender) {
+                        $q->where('gender', $gender);
+                        if ($viewerGender) {
+                            $q->wantsToMeet($viewerGender);
+                        }
+                    })
                     ->whereDoesntHave('blockedByUsers', function($q) use ($user) {
                         $q->where('user_id', $user->id);
                     })
@@ -1813,12 +1840,16 @@ class ProfileController extends Controller
         $searchRadius = ($userInformation->search_radius ?? 1000) * 2; // Expand radius for soulmates
         $searchPreference = $userInformation->search_preference ?? 'male';
 
+        $viewerGender = $userInformation->gender ?? null;
+
         // Build query for high-quality profiles only
         $query = User::with(['user_information'])
-            ->whereHas('user_information', function($q) use ($searchPreference) {
-                $q->where('gender', $searchPreference)
-                  
-                  ->whereNotNull('age')
+            ->whereHas('user_information', function($q) use ($searchPreference, $viewerGender) {
+                $q->where('gender', $searchPreference);
+                if ($viewerGender) {
+                    $q->wantsToMeet($viewerGender);
+                }
+                $q->whereNotNull('age')
                   ->where('age', '>', 0);
             })
             ->where('id', '!=', $user->id)
@@ -2457,10 +2488,15 @@ class ProfileController extends Controller
             ], 400);
         }
 
+        $viewerGender = $userInformation->gender ?? null;
+
         // Build base query
         $query = User::with(['user_information', 'engagementScore'])
-            ->whereHas('user_information', function ($q) use ($searchPreference) {
+            ->whereHas('user_information', function ($q) use ($searchPreference, $viewerGender) {
                 $q->where('gender', $searchPreference);
+                if ($viewerGender) {
+                    $q->wantsToMeet($viewerGender);
+                }
             })
             ->where('id', '!=', $user->id)
             ->where('status', 1)

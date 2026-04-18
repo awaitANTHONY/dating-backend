@@ -277,4 +277,22 @@ class UserInformation extends Model
     {
         return $this->hasOne('App\Models\CareerField', 'id', 'carrer_field_id')->withDefault();
     }
+
+    /**
+     * Scope: only return users whose search_preference is compatible
+     * with the given viewer's gender.
+     */
+    public function scopeWantsToMeet($query, ?string $viewerGender)
+    {
+        if (empty($viewerGender)) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($viewerGender) {
+            $q->where('search_preference', $viewerGender)
+              ->orWhere('search_preference', 'everyone')
+              ->orWhereNull('search_preference')
+              ->orWhere('search_preference', '');
+        });
+    }
 }
