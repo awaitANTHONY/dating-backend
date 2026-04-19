@@ -466,9 +466,10 @@ class ProfileController extends Controller
 
             $profile->match_score = $score;
 
-            // Blended rank_score: 70% compatibility + 30% engagement
+            // Blended rank_score: 60% compatibility + 25% engagement + 15% photo quality
             $engagementScore = $profile->engagement_score ?? 5.0;
-            $profile->rank_score = round(($score * 0.70) + ($engagementScore * 0.30), 2);
+            $photoQuality = $profile->user_information->photo_quality_score ?? 5.0;
+            $profile->rank_score = round(($score * 0.60) + ($engagementScore * 0.25) + ($photoQuality * 0.15), 2);
 
             $profile->compatibility_details = [
                 'relation_goals_match' => !empty($rgOverlap),

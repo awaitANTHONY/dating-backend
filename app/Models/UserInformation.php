@@ -104,6 +104,7 @@ class UserInformation extends Model
         'mood_text',
         'mood_expires_at',
         'visible_on_map',
+        'photo_quality_score',
     ];
 
     protected $casts = [

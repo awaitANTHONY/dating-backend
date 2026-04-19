@@ -736,6 +736,13 @@ class AuthController extends Controller
             $user_information = $user->user_information;
             $user->is_vip = (bool) $user->isVipActive();
 
+            // Store client-side photo quality score if provided
+            if ($request->has('photo_quality_score')) {
+                $score = min(10, max(0, (float) $request->photo_quality_score));
+                $user_information->photo_quality_score = $score;
+                $user_information->save();
+            }
+
             // Build response with info about any rejected images
             $response = [
                 'status' => true,
