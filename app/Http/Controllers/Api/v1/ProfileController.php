@@ -84,6 +84,8 @@ class ProfileController extends Controller
      */
     private function generateRecommendations(Request $request, $user, $userInformation, $excludeIds = [])
     {
+        $isFakeUser = (bool) $user->is_fake;
+
         // Get current user's preferences and location
         $currentLat = $userInformation->latitude ?? 0;
         $currentLng = $userInformation->longitude ?? 0;
@@ -144,8 +146,14 @@ class ProfileController extends Controller
                   });
             });
 
+        // Fake/test accounts only see other fake users (app store review isolation)
+        if ($isFakeUser) {
+            $query->where('is_fake', 1);
+        }
+
         // Filter by same country to prevent cross-country matching
-        if ($currentCountryCode) {
+        // Skip for fake users so reviewers from any country see profiles
+        if ($currentCountryCode && !$isFakeUser) {
             $query->whereHas('user_information', function($q) use ($currentCountryCode) {
                 $q->where('country_code', $currentCountryCode);
             });
@@ -170,9 +178,9 @@ class ProfileController extends Controller
         }
 
         // Apply distance filter if coordinates are available
-        // Skip distance filter for "Just Joined" tab — show new users from same country regardless of distance
+        // Skip for fake users (reviewers can be anywhere) and "Just Joined" tab
         $isNewestTab = $request->input('sort_by') === 'newest';
-        if ($currentLat != 0 && $currentLng != 0 && !$isNewestTab) {
+        if ($currentLat != 0 && $currentLng != 0 && !$isNewestTab && !$isFakeUser) {
             $query->whereHas('user_information', function($q) use ($currentLat, $currentLng, $searchRadius) {
                 $q->whereRaw("(
                     6371 * acos(
@@ -682,6 +690,8 @@ class ProfileController extends Controller
      */
     private function handleJustJoinedTab($user, $userInformation, $request)
     {
+        $isFakeUser = (bool) $user->is_fake;
+
         $searchPreference = $userInformation->search_preference ?? 'male';
         $currentCountryCode = $userInformation->country_code ?? null;
         $currentLat = $userInformation->latitude ?? 0;
@@ -694,9 +704,14 @@ class ProfileController extends Controller
 
         $viewerGender = $userInformation->gender ?? null;
 
-        $query = User::with(['user_information', 'engagementScore'])
-            ->where('created_at', '>=', now()->subDays(3))
-            ->where('id', '!=', $user->id)
+        $query = User::with(['user_information', 'engagementScore']);
+
+        // Fake users skip the "just joined" date filter — show all fake profiles
+        if (!$isFakeUser) {
+            $query->where('created_at', '>=', now()->subDays(3));
+        }
+
+        $query->where('id', '!=', $user->id)
             ->where('status', 1)
             ->whereHas('user_information', function($q) use ($searchPreference, $minAge, $maxAge, $viewerGender) {
                 $q->where('gender', $searchPreference);
@@ -740,11 +755,19 @@ class ProfileController extends Controller
                   });
             });
 
+        // Fake/test accounts only see other fake users
+        if ($isFakeUser) {
+            $query->where('is_fake', 1);
+        }
+
         // Strict country filter: only show users whose country_code exactly matches
         // the viewer's country.  Users with NULL / empty country_code are excluded —
         // they have not had their location resolved yet and must NOT leak into other
         // countries' feeds (the orWhereNull pattern was the source of the bug).
-        if ($currentCountryCode) {
+        // Skip for fake users so reviewers from any country see profiles.
+        if ($isFakeUser) {
+            // No country filter for test accounts
+        } else if ($currentCountryCode) {
             $query->whereHas('user_information', function($q) use ($currentCountryCode) {
                 $q->where('country_code', $currentCountryCode);
             });
@@ -857,6 +880,8 @@ class ProfileController extends Controller
      */
     private function handleSearchWithFilters(Request $request, $user, $userInformation)
     {
+        $isFakeUser = (bool) $user->is_fake;
+
         $q = $request->input('q');
         $gender = $request->input('gender', $userInformation->search_preference ?? 'male');
         $interests = $request->input('interests', []);
@@ -890,6 +915,11 @@ class ProfileController extends Controller
                 $q->where('user_id', $user->id);
             });
 
+        // Fake/test accounts only see other fake users
+        if ($isFakeUser) {
+            $query->where('is_fake', 1);
+        }
+
         // Exclude already-shown profiles (from client's current session)
         if (!empty($excludeIds) && is_array($excludeIds)) {
             $query->whereNotIn('id', $excludeIds);
@@ -906,8 +936,8 @@ class ProfileController extends Controller
         // Apply profile filters
         $this->applyProfileFilters($query, $request);
 
-        // Apply distance filter
-        if ($latitude !== null && $longitude !== null) {
+        // Apply distance filter (skip for fake users — reviewers can be anywhere)
+        if ($latitude !== null && $longitude !== null && !$isFakeUser) {
             $query->whereHas('user_information', function($q) use ($latitude, $longitude, $radius) {
                 $q->whereRaw("(
                     6371 * acos(
@@ -1834,6 +1864,8 @@ class ProfileController extends Controller
      */
     private function generateSoulmates(Request $request, $user, $userInformation)
     {
+        $isFakeUser = (bool) $user->is_fake;
+
         // Get current user's preferences and location
         $currentLat = $userInformation->latitude ?? 0;
         $currentLng = $userInformation->longitude ?? 0;
@@ -1869,8 +1901,13 @@ class ProfileController extends Controller
                 $q->where('target_user_id', $user->id);
             });
 
-        // Apply expanded distance filter for soulmates
-        if ($currentLat != 0 && $currentLng != 0) {
+        // Fake/test accounts only see other fake users
+        if ($isFakeUser) {
+            $query->where('is_fake', 1);
+        }
+
+        // Apply expanded distance filter for soulmates (skip for fake users)
+        if ($currentLat != 0 && $currentLng != 0 && !$isFakeUser) {
             $query->whereHas('user_information', function($q) use ($currentLat, $currentLng, $searchRadius) {
                 $q->whereRaw("(
                     6371 * acos(
@@ -2464,6 +2501,7 @@ class ProfileController extends Controller
     public function nearby(Request $request)
     {
         $user = $request->user();
+        $isFakeUser = (bool) $user->is_fake;
 
         $userInformation = $user ? $user->user_information : null;
 
@@ -2482,10 +2520,12 @@ class ProfileController extends Controller
         $searchPreference = $userInformation->search_preference ?? 'male';
 
         if (!$latitude || !$longitude) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Location coordinates are required. Please enable location services.'
-            ], 400);
+            if (!$isFakeUser) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Location coordinates are required. Please enable location services.'
+                ], 400);
+            }
         }
 
         $viewerGender = $userInformation->gender ?? null;
@@ -2499,12 +2539,18 @@ class ProfileController extends Controller
                 }
             })
             ->where('id', '!=', $user->id)
-            ->where('status', 1)
-            // Exclude users who opted out of map visibility
-            ->whereHas('user_information', function ($q) {
+            ->where('status', 1);
+
+        // Fake/test accounts only see other fake users, skip map visibility check
+        if ($isFakeUser) {
+            $query->where('is_fake', 1);
+        } else {
+            $query->whereHas('user_information', function ($q) {
                 $q->where('visible_on_map', true);
-            })
-            ->whereDoesntHave('blockedByUsers', function ($q) use ($user) {
+            });
+        }
+
+        $query->whereDoesntHave('blockedByUsers', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
             ->whereDoesntHave('blockedUsers', function ($q) use ($user) {
@@ -2541,7 +2587,10 @@ class ProfileController extends Controller
 
         // Distance filter using ST_Distance_Sphere for accuracy
         // Boosted users from same country bypass the distance filter
-        if (!empty($countryBoostedIds)) {
+        // Fake/test users skip distance entirely — reviewers can be anywhere
+        if ($isFakeUser) {
+            // No distance filter for test accounts
+        } else if (!empty($countryBoostedIds)) {
             $query->where(function ($q) use ($latitude, $longitude, $radius, $countryBoostedIds) {
                 // Include users within radius OR boosted users from same country
                 $q->whereHas('user_information', function ($sub) use ($latitude, $longitude, $radius) {
