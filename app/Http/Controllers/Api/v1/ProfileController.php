@@ -149,6 +149,8 @@ class ProfileController extends Controller
         // Fake/test accounts only see other fake users (app store review isolation)
         if ($isFakeUser) {
             $query->where('is_fake', 1);
+        } else {
+            $query->where('is_fake', 0);
         }
 
         // Filter by same country to prevent cross-country matching
@@ -758,6 +760,8 @@ class ProfileController extends Controller
         // Fake/test accounts only see other fake users
         if ($isFakeUser) {
             $query->where('is_fake', 1);
+        } else {
+            $query->where('is_fake', 0);
         }
 
         // Strict country filter: only show users whose country_code exactly matches
@@ -918,6 +922,8 @@ class ProfileController extends Controller
         // Fake/test accounts only see other fake users
         if ($isFakeUser) {
             $query->where('is_fake', 1);
+        } else {
+            $query->where('is_fake', 0);
         }
 
         // Exclude already-shown profiles (from client's current session)
@@ -1904,6 +1910,8 @@ class ProfileController extends Controller
         // Fake/test accounts only see other fake users
         if ($isFakeUser) {
             $query->where('is_fake', 1);
+        } else {
+            $query->where('is_fake', 0);
         }
 
         // Apply expanded distance filter for soulmates (skip for fake users)
@@ -2545,7 +2553,8 @@ class ProfileController extends Controller
         if ($isFakeUser) {
             $query->where('is_fake', 1);
         } else {
-            $query->whereHas('user_information', function ($q) {
+            $query->where('is_fake', 0)
+                  ->whereHas('user_information', function ($q) {
                 $q->where('visible_on_map', true);
             });
         }
