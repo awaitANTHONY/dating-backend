@@ -155,6 +155,9 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::get('coin-rewards/status', [Controllers\Api\v1\CoinRewardController::class, 'status']);
         Route::post('coin-rewards/claim', [Controllers\Api\v1\CoinRewardController::class, 'claim']);
 
+        // Account deletion request (from Flutter app)
+        Route::post('account-delete-request', [Controllers\AccountDeleteRequestController::class, 'apiStore']);
+
         // Admin API routes
         Route::prefix('admin')->group(function () {
             // Coin Reward Settings

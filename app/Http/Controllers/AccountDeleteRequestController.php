@@ -61,6 +61,31 @@ class AccountDeleteRequestController extends Controller
     }
 
     /**
+     * API endpoint: authenticated user submits their own account deletion request
+     */
+    public function apiStore(Request $request)
+    {
+        $user = $request->user();
+
+        // Prevent duplicate pending requests
+        $existing = AccountDeleteRequest::where('email', $user->email)
+            ->where('accepted', 0)
+            ->first();
+
+        if ($existing) {
+            return response()->json(['message' => 'A deletion request is already pending.'], 409);
+        }
+
+        AccountDeleteRequest::create([
+            'email'    => $user->email,
+            'type'     => 2, // Clear Data & Account
+            'accepted' => 0,
+        ]);
+
+        return response()->json(['message' => 'Deletion request submitted successfully.'], 201);
+    }
+
+    /**
      * Show the public form for creating a new account delete request
      */
     public function publicForm()
