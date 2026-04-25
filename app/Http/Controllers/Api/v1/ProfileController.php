@@ -176,7 +176,8 @@ class ProfileController extends Controller
 
         // Online tab — show users active within the last 30 minutes (online + recently active)
         if ($request->has('is_online') && filter_var($request->input('is_online'), FILTER_VALIDATE_BOOLEAN)) {
-            $query->where('last_activity', '>=', now()->subMinutes(30));
+            $query->where('last_activity', '>=', now()->subMinutes(30))
+                  ->where('hide_online_status', false);
         }
 
         // Apply distance filter if coordinates are available
@@ -247,8 +248,8 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
-                'is_online' => $user->last_activity && $user->last_activity->diffInMinutes(now()) <= 15,
-                'last_activity' => $user->last_activity,
+                'is_online' => $user->isOnlineVisible(),
+                'last_activity' => $user->lastActivityVisible(),
                 'created_at' => $user->created_at,
                 'distance' => $distance,
                 'engagement_score' => $user->engagementScore->engagement_score ?? 5.0,
@@ -553,8 +554,8 @@ class ProfileController extends Controller
                             'is_verified' => $userInfo->is_verified ?? false,
                             'is_vip' => (bool) $u->isVipActive(),
                             'is_boosted' => true,
-                            'is_online' => $u->last_activity ? $u->last_activity->diffInMinutes(now()) <= 15 : false,
-                            'last_activity' => $u->last_activity,
+                            'is_online' => $u->isOnlineVisible(),
+                            'last_activity' => $u->lastActivityVisible(),
                             'created_at' => $u->created_at,
                             'distance' => $distance,
                             'mood' => $userInfo->mood,
@@ -828,10 +829,10 @@ class ProfileController extends Controller
                 'distance' => round($distance, 1),
                 'is_verified' => (bool) ($info->is_verified ?? false),
                 'is_vip' => (bool) $u->isVipActive(),
-                'is_online' => $u->last_activity && $u->last_activity->diffInMinutes(now()) <= 15,
+                'is_online' => $u->isOnlineVisible(),
                 'is_boosted' => (bool) $u->isBoosted(),
                 'device_token' => $info->device_token ?? $u->device_token ?? '--',
-                'last_activity' => $u->last_activity,
+                'last_activity' => $u->lastActivityVisible(),
                 'created_at' => $u->created_at,
                 'popularity_score' => (int) round(($u->engagementScore->engagement_score ?? 0) * 10),
 
@@ -998,8 +999,8 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
-                'is_online' => $user->last_activity && $user->last_activity->diffInMinutes(now()) <= 15,
-                'last_activity' => $user->last_activity,
+                'is_online' => $user->isOnlineVisible(),
+                'last_activity' => $user->lastActivityVisible(),
                 'created_at' => $user->created_at,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -1105,8 +1106,8 @@ class ProfileController extends Controller
                             'is_verified' => $userInfo->is_verified ?? false,
                             'is_vip' => (bool) $u->isVipActive(),
                             'is_boosted' => true,
-                            'is_online' => $u->last_activity ? $u->last_activity->diffInMinutes(now()) <= 15 : false,
-                            'last_activity' => $u->last_activity,
+                            'is_online' => $u->isOnlineVisible(),
+                            'last_activity' => $u->lastActivityVisible(),
                             'created_at' => $u->created_at,
                             'distance' => $distance,
                             'mood' => $userInfo->mood,
@@ -1643,31 +1644,33 @@ class ProfileController extends Controller
                 ], 404);
             }
 
-            // Track profile visit (async to not block response)
+            // Track profile visit — skip if the viewer has incognito mode enabled
             try {
-                // Check if this is the first visit today (before inserting) to avoid spam notifications
-                $isFirstVisitToday = !\App\Models\ProfileVisitor::where('visitor_id', $user->id)
-                    ->where('visited_user_id', $targetUserId)
-                    ->whereDate('visited_at', today())
-                    ->exists();
+                if (!$user->incognito_mode) {
+                    // Check if this is the first visit today (before inserting) to avoid spam notifications
+                    $isFirstVisitToday = !\App\Models\ProfileVisitor::where('visitor_id', $user->id)
+                        ->where('visited_user_id', $targetUserId)
+                        ->whereDate('visited_at', today())
+                        ->exists();
 
-                ProfileVisitor::trackVisit($user->id, $targetUserId);
+                    ProfileVisitor::trackVisit($user->id, $targetUserId);
 
-                // Clear the profile visitors cache for the target user so the visit appears immediately
-                Cache::forget("profile_visitors_user_{$targetUserId}");
+                    // Clear the profile visitors cache for the target user so the visit appears immediately
+                    Cache::forget("profile_visitors_user_{$targetUserId}");
 
-                // Notify target user — only on first visit today to avoid spam
-                if ($isFirstVisitToday) {
-                    $targetUser = \App\Models\User::find($targetUserId);
-                    if ($targetUser && $targetUser->device_token) {
-                        $visitorName = $user->name ?? 'Someone';
-                        send_notification('single', '👀 New Visitor', "{$visitorName} visited your profile!", null, [
-                            'device_token' => $targetUser->device_token,
-                            'type'         => 'new_visitor',
-                            'user_id'      => (string) $user->id,
-                        ]);
+                    // Notify target user — only on first visit today to avoid spam
+                    if ($isFirstVisitToday) {
+                        $targetUser = \App\Models\User::find($targetUserId);
+                        if ($targetUser && $targetUser->device_token) {
+                            $visitorName = $user->name ?? 'Someone';
+                            send_notification('single', '👀 New Visitor', "{$visitorName} visited your profile!", null, [
+                                'device_token' => $targetUser->device_token,
+                                'type'         => 'new_visitor',
+                                'user_id'      => (string) $user->id,
+                            ]);
+                        }
                     }
-                }
+                } // end if (!$user->incognito_mode)
             } catch (\Exception $e) {
                 // Log the error but don't fail the request
                 \Log::error('Failed to track profile visit: ' . $e->getMessage());
@@ -1993,7 +1996,7 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
-                'is_online' => $user->last_activity && $user->last_activity->diffInMinutes(now()) <= 15,
+                'is_online' => $user->isOnlineVisible(),
                 'created_at' => $user->created_at,
                 'distance' => $distance,
                 'mood' => $userInfo->mood,
@@ -2503,7 +2506,7 @@ class ProfileController extends Controller
                         'is_vip'     => (bool) $visitor->isVipActive(),
                         'is_boosted' => (bool) $visitor->isBoosted(),
                         'is_verified'=> $userInfo ? ($userInfo->is_verified ?? false) : false,
-                        'is_online'  => $visitor->last_activity && $visitor->last_activity->diffInMinutes(now()) <= 15,
+                        'is_online'  => $visitor->isOnlineVisible(),
                         'visited_at' => $visit->visited_at,
                     ];
                 })->values();
@@ -2700,8 +2703,8 @@ class ProfileController extends Controller
                 'is_verified' => $userInfo->is_verified ?? false,
                 'is_vip' => (bool) $user->isVipActive(),
                 'is_boosted' => (bool) $user->isBoosted(),
-                'is_online' => $user->last_activity && $user->last_activity->diffInMinutes(now()) <= 15,
-                'last_activity' => $user->last_activity,
+                'is_online' => $user->isOnlineVisible(),
+                'last_activity' => $user->lastActivityVisible(),
                 'created_at' => $user->created_at,
                 'distance' => $distance ? round($distance, 1) : null,
                 'popularity_score' => (int) round(($user->engagementScore->engagement_score ?? 0) * 10),

@@ -333,6 +333,17 @@ class AuthController extends Controller
             $user->save();
         }
 
+        // Privacy settings — premium/Gold only
+        $isPremiumOrGold = $user->subscription_id || $user->is_vip;
+        if ($request->has('incognito_mode') && $isPremiumOrGold) {
+            $user->incognito_mode = filter_var($request->incognito_mode, FILTER_VALIDATE_BOOLEAN);
+            $user->save();
+        }
+        if ($request->has('hide_online_status') && $isPremiumOrGold) {
+            $user->hide_online_status = filter_var($request->hide_online_status, FILTER_VALIDATE_BOOLEAN);
+            $user->save();
+        }
+
         // Create user-specific directory for images
         $userPath = "public/uploads/images/users/{$user->id}/";
         if (!file_exists(base_path($userPath))) {

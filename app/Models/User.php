@@ -46,6 +46,8 @@ class User extends Authenticatable
         'ban_reason',
         'is_on_trial',
         'trial_ends_at',
+        'incognito_mode',
+        'hide_online_status',
     ];
 
     /**
@@ -81,6 +83,8 @@ class User extends Authenticatable
         'is_on_trial' => 'boolean',
         'trial_ends_at' => 'datetime',
         'verification_attempts' => 'integer',
+        'incognito_mode' => 'boolean',
+        'hide_online_status' => 'boolean',
     ];
 
     public function getImageAttribute($data)
@@ -89,6 +93,23 @@ class User extends Authenticatable
             return asset('public/default/profile.png');
         }
         return asset($data);
+    }
+
+    /**
+     * Returns whether this user is currently online, respecting hide_online_status.
+     */
+    public function isOnlineVisible(): bool
+    {
+        if ($this->hide_online_status) return false;
+        return $this->last_activity && $this->last_activity->diffInMinutes(now()) <= 15;
+    }
+
+    /**
+     * Returns last_activity for display, or null if user hides online status.
+     */
+    public function lastActivityVisible()
+    {
+        return $this->hide_online_status ? null : $this->last_activity;
     }
 
     /**
