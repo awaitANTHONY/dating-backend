@@ -243,6 +243,20 @@ class DirectConnectController extends Controller
 
         DB::beginTransaction();
         try {
+            // Re-fetch user with row lock to prevent race conditions on coin balance
+            $user = \App\Models\User::lockForUpdate()->find($user->id);
+            $balance = (int) $user->coin_balance;
+
+            // Re-check balance inside transaction (guards against concurrent requests)
+            if ($cost > 0 && $balance < $cost) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => "Not enough coins. You need {$cost} coins.",
+                    'data' => ['balance' => $balance, 'cost' => $cost],
+                ]);
+            }
+
             // Debit coins
             if ($cost > 0) {
                 $user->coin_balance = $balance - $cost;
@@ -323,6 +337,9 @@ class DirectConnectController extends Controller
 
             if ($todayApprovals >= $approvalLimit) {
                 $coinCost = (int) get_option('dc_approval_coin_cost', '3');
+
+                // Lock user row before reading/writing coin balance
+                $user = \App\Models\User::lockForUpdate()->find($user->id);
                 $balance = (int) $user->coin_balance;
 
                 if ($balance < $coinCost) {

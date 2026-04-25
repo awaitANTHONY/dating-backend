@@ -303,11 +303,8 @@ class UserInteractionController extends Controller
                     ]);
                 }
 
-                // Reset expiry: update updated_at so the expiry window restarts from now
-                $match->timestamps = false;
-                $match->updated_at = now();
-                $match->save();
-                $match->timestamps = true;
+                // Reset expiry using a direct DB update (avoids Eloquent timestamp side effects)
+                \DB::table('matches')->where('id', $match->id)->update(['updated_at' => now()]);
             });
 
             return response()->json([

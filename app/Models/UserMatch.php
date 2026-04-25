@@ -53,33 +53,39 @@ class UserMatch extends Model
      */
     public static function createIfMutual(int $userId, int $targetUserId): ?self
     {
-        // Check if mutual like exists
-        if (!UserInteraction::isMutualLike($userId, $targetUserId)) {
-            return null;
-        }
-
-        // Ensure user_id is always smaller than target_user_id
         $userOneId = min($userId, $targetUserId);
         $userTwoId = max($userId, $targetUserId);
 
-        // Check if match already exists
-        $existingMatch = self::where('user_id', $userOneId)
-            ->where('target_user_id', $userTwoId)
-            ->first();
+        return DB::transaction(function () use ($userId, $targetUserId, $userOneId, $userTwoId) {
+            // Lock both interaction rows before checking mutual like (prevents race condition)
+            UserInteraction::where(function ($q) use ($userId, $targetUserId) {
+                $q->where('user_id', $userId)->where('target_user_id', $targetUserId)
+                  ->orWhere('user_id', $targetUserId)->where('target_user_id', $userId);
+            })->lockForUpdate()->get();
 
-        if ($existingMatch) {
-            // If it was soft deleted, restore it
-            if ($existingMatch->trashed()) {
-                $existingMatch->restore();
+            if (!UserInteraction::isMutualLike($userId, $targetUserId)) {
+                return null;
             }
-            return $existingMatch;
-        }
 
-        // Create new match
-        return self::create([
-            'user_id' => $userOneId,
-            'target_user_id' => $userTwoId,
-        ]);
+            // Use firstOrCreate to prevent duplicate matches under concurrent requests
+            $match = self::withTrashed()
+                ->where('user_id', $userOneId)
+                ->where('target_user_id', $userTwoId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($match) {
+                if ($match->trashed()) {
+                    $match->restore();
+                }
+                return $match;
+            }
+
+            return self::create([
+                'user_id' => $userOneId,
+                'target_user_id' => $userTwoId,
+            ]);
+        });
     }
 
     /**
