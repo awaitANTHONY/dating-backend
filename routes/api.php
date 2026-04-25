@@ -89,6 +89,7 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         
         // Matches
         Route::any('matches', [Controllers\Api\v1\UserInteractionController::class, 'getMatches']);
+        Route::post('matches/{matchId}/revive', [Controllers\Api\v1\UserInteractionController::class, 'reviveMatch']);
 
         // User Blocking System
         Route::post('blocks', [Controllers\Api\v1\UserBlockController::class, 'toggleBlock']);

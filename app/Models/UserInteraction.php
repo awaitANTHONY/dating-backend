@@ -72,20 +72,22 @@ class UserInteraction extends Model
             ->with(['user.user_information'])
             ->orderBy('created_at', 'desc')
             ->get()
+            ->filter(fn($interaction) => $interaction->user !== null) // skip deleted users
             ->map(function($interaction) {
-                $user = $interaction->user;
+                $user     = $interaction->user;
                 $userInfo = $user->user_information;
 
-                $interaction->user->is_vip = (bool) $user->isVipActive();
-                $interaction->user->is_boosted = (bool) $user->isBoosted();
+                $interaction->user->is_vip      = (bool) $user->isVipActive();
+                $interaction->user->is_boosted  = (bool) $user->isBoosted();
                 $interaction->user->is_verified = $userInfo ? ($userInfo->is_verified ?? false) : false;
-                $interaction->user->is_online = $user->last_activity && $user->last_activity->diffInHours(now()) <= 3;
+                $interaction->user->is_online   = $user->last_activity && $user->last_activity->diffInHours(now()) <= 3;
 
                 return $interaction;
-            });
+            })
+            ->values();
     }
 
-        /**
+    /**
      * Get all interactions performed by the current user.
      */
     public static function getUserInteractions(int $userId)
@@ -93,9 +95,11 @@ class UserInteraction extends Model
         return self::where('user_id', $userId)
             ->with('targetUser')
             ->get()
+            ->filter(fn($interaction) => $interaction->targetUser !== null) // skip deleted users
             ->map(function($interaction) {
                 $interaction->targetUser->is_vip = (bool) $interaction->targetUser->isVipActive();
                 return $interaction;
-            });
+            })
+            ->values();
     }
 }

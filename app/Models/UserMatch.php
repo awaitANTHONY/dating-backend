@@ -83,7 +83,7 @@ class UserMatch extends Model
     }
 
     /**
-     * Get all matches for a specific user.
+     * Get all matches for a specific user (legacy format — used by checkMatch/unmatch).
      */
     public static function getMatchesForUser(int $userId)
     {
@@ -94,20 +94,24 @@ class UserMatch extends Model
         ->with(['user', 'targetUser'])
         ->orderBy('created_at', 'desc')
         ->get()
+        ->filter(function ($match) use ($userId) {
+            $other = $match->user_id === $userId ? $match->targetUser : $match->user;
+            return $other !== null; // skip matches where the other user was deleted
+        })
         ->map(function ($match) use ($userId) {
-            // Return the other user in the match
-            $otherUser = $match->user_id === $userId 
-                ? $match->targetUser 
+            $otherUser = $match->user_id === $userId
+                ? $match->targetUser
                 : $match->user;
-            
+
             $otherUser->is_vip = (bool) $otherUser->isVipActive();
-            
+
             return [
-                'match_id' => $match->id,
+                'match_id'   => $match->id,
                 'matched_at' => $match->created_at,
-                'user' => $otherUser,
+                'user'       => $otherUser,
             ];
-        });
+        })
+        ->values();
     }
 
     /**

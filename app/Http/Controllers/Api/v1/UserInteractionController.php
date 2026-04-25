@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\UserInteraction;
 use App\Models\UserMatch;
 use App\Models\UserBlock;
+use App\Models\CoinTransaction;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -175,29 +177,159 @@ class UserInteractionController extends Controller
     }
 
     /**
-     * Get all matches for the authenticated user.
-     *
-     * @param Request $request
-     * @return JsonResponse
+     * Get all matches for the authenticated user, classified as active or expired.
+     * Returns the format expected by the Flutter app: { active:[...], expired:[...], limits:{...} }
      */
     public function getMatches(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
+        $user = $request->user();
 
         try {
-            $matches = UserMatch::getMatchesForUser($userId);
+            $isPremium = (bool) $user->isVipActive();
+
+            // Read configurable expiry hours from settings, with safe defaults
+            $freeExpiryHours    = (int) (Setting::where('name', 'match_expiry_hours_free')->value('value')    ?: 48);
+            $premiumExpiryHours = (int) (Setting::where('name', 'match_expiry_hours_premium')->value('value') ?: 168);
+            $freeVisibleCount   = (int) (Setting::where('name', 'match_free_visible_count')->value('value')   ?: 3);
+            $reviveCoinCost     = (int) (Setting::where('name', 'match_revive_coin_cost')->value('value')     ?: 10);
+
+            $expiryHours = $isPremium ? $premiumExpiryHours : $freeExpiryHours;
+            $cutoff      = now()->subHours($expiryHours);
+
+            $rows = UserMatch::where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)->orWhere('target_user_id', $user->id);
+                })
+                ->with(['user.user_information', 'targetUser.user_information'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $active  = [];
+            $expired = [];
+
+            foreach ($rows as $match) {
+                $otherUser = $match->user_id === $user->id ? $match->targetUser : $match->user;
+                if (!$otherUser) continue;
+
+                $otherUser->is_vip      = (bool) $otherUser->isVipActive();
+                $otherUser->is_verified = $otherUser->user_information
+                    ? (bool) ($otherUser->user_information->is_verified ?? false)
+                    : false;
+
+                // Use updated_at as the expiry reference: starts equal to created_at,
+                // gets reset to now() on revive via touch
+                $referenceTime = $match->updated_at ?? $match->created_at;
+                $expiresAt     = $referenceTime->copy()->addHours($expiryHours);
+                $isExpired     = $referenceTime->lt($cutoff);
+
+                $item = [
+                    'id'         => $match->id,
+                    'match_id'   => $match->id,
+                    'user_id'    => $otherUser->id,
+                    'user'       => $otherUser,
+                    'created_at' => $match->created_at,
+                    'expires_at' => $expiresAt,
+                    'expired_at' => $isExpired ? $expiresAt : null,
+                    'status'     => $isExpired ? 'expired' : 'active',
+                ];
+
+                if ($isExpired) {
+                    $expired[] = $item;
+                } else {
+                    $active[] = $item;
+                }
+            }
 
             return response()->json([
-                'status' => true,
-                'data' => $matches,
+                'status'  => true,
+                'data'    => [
+                    'active'  => $active,
+                    'expired' => $expired,
+                    'limits'  => [
+                        'free_visible_count' => $freeVisibleCount,
+                        'revive_coin_cost'   => $reviveCoinCost,
+                        'is_premium'         => $isPremium,
+                    ],
+                ],
                 'message' => 'Matches retrieved successfully',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'status' => false,
+                'status'  => false,
                 'message' => 'Failed to retrieve matches',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
+                'error'   => config('app.debug') ? $e->getMessage() : 'Internal server error',
+            ], 500);
+        }
+    }
+
+    /**
+     * Revive an expired match. Costs coins for free users; free for premium.
+     * POST /api/v1/matches/{matchId}/revive
+     */
+    public function reviveMatch(Request $request, int $matchId): JsonResponse
+    {
+        $user = $request->user();
+
+        try {
+            $isPremium      = (bool) $user->isVipActive();
+            $reviveCoinCost = (int) (Setting::where('name', 'match_revive_coin_cost')->value('value') ?: 10);
+
+            $match = UserMatch::where('id', $matchId)
+                ->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)->orWhere('target_user_id', $user->id);
+                })
+                ->first();
+
+            if (!$match) {
+                return response()->json(['status' => false, 'message' => 'Match not found'], 404);
+            }
+
+            DB::transaction(function () use ($user, $match, $reviveCoinCost, $isPremium) {
+                if (!$isPremium) {
+                    $balance = (int) $user->coin_balance;
+                    if ($balance < $reviveCoinCost) {
+                        throw new \Exception("NOT_ENOUGH_COINS:{$reviveCoinCost}:{$balance}");
+                    }
+                    $user->coin_balance = $balance - $reviveCoinCost;
+                    $user->save();
+
+                    CoinTransaction::create([
+                        'user_id'        => $user->id,
+                        'amount'         => $reviveCoinCost,
+                        'status'         => 'Debit',
+                        'description'    => 'Match revive',
+                        'reference_type' => 'match_revive',
+                        'reference_id'   => $match->id,
+                    ]);
+                }
+
+                // Reset expiry: update updated_at so the expiry window restarts from now
+                $match->timestamps = false;
+                $match->updated_at = now();
+                $match->save();
+                $match->timestamps = true;
+            });
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Match revived successfully',
+                'data'    => ['balance' => (int) $user->coin_balance],
+            ]);
+
+        } catch (\Exception $e) {
+            $msg = $e->getMessage();
+            if (str_starts_with($msg, 'NOT_ENOUGH_COINS:')) {
+                [, $required, $available] = explode(':', $msg);
+                return response()->json([
+                    'status'  => false,
+                    'message' => "Not enough coins. You need {$required} coins.",
+                    'data'    => ['required' => (int) $required, 'available' => (int) $available],
+                ], 402);
+            }
+            return response()->json([
+                'status'  => false,
+                'message' => 'Failed to revive match',
+                'error'   => config('app.debug') ? $msg : 'Internal server error',
             ], 500);
         }
     }

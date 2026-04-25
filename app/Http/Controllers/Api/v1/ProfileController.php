@@ -2470,22 +2470,24 @@ class ProfileController extends Controller
                 ->filter();
 
             // Transform visitor data
-            $transformedVisitors = $visitors->map(function($visit) {
-                $visitor = $visit->visitor;
-                $userInfo = $visitor->user_information;
+            $transformedVisitors = $visitors
+                ->filter(fn($visit) => $visit->visitor !== null) // skip deleted users
+                ->map(function($visit) {
+                    $visitor  = $visit->visitor;
+                    $userInfo = $visitor->user_information;
 
-                return [
-                    'id' => $visitor->id,
-                    'name' => $visitor->name,
-                    'image' => $visitor->image,
-                    'age' => $userInfo ? $userInfo->age : null,
-                    'is_vip' => (bool) $visitor->isVipActive(),
-                    'is_boosted' => (bool) $visitor->isBoosted(),
-                    'is_verified' => $userInfo ? ($userInfo->is_verified ?? false) : false,
-                    'is_online' => $visitor->last_activity && $visitor->last_activity->diffInMinutes(now()) <= 15,
-                    'visited_at' => $visit->visited_at,
-                ];
-            })->filter()->values();
+                    return [
+                        'id'         => $visitor->id,
+                        'name'       => $visitor->name,
+                        'image'      => $visitor->image,
+                        'age'        => $userInfo ? $userInfo->age : null,
+                        'is_vip'     => (bool) $visitor->isVipActive(),
+                        'is_boosted' => (bool) $visitor->isBoosted(),
+                        'is_verified'=> $userInfo ? ($userInfo->is_verified ?? false) : false,
+                        'is_online'  => $visitor->last_activity && $visitor->last_activity->diffInMinutes(now()) <= 15,
+                        'visited_at' => $visit->visited_at,
+                    ];
+                })->values();
 
             return response()->json([
                 'status' => true,
