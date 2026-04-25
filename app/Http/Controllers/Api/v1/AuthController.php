@@ -334,13 +334,17 @@ class AuthController extends Controller
         }
 
         // Privacy settings — premium/Gold only
-        $isPremiumOrGold = $user->subscription_id || $user->is_vip;
+        $isPremiumOrGold = $user->subscription_id || $user->isVipActive();
+        $privacyChanged = false;
         if ($request->has('incognito_mode') && $isPremiumOrGold) {
             $user->incognito_mode = filter_var($request->incognito_mode, FILTER_VALIDATE_BOOLEAN);
-            $user->save();
+            $privacyChanged = true;
         }
         if ($request->has('hide_online_status') && $isPremiumOrGold) {
             $user->hide_online_status = filter_var($request->hide_online_status, FILTER_VALIDATE_BOOLEAN);
+            $privacyChanged = true;
+        }
+        if ($privacyChanged) {
             $user->save();
         }
 
