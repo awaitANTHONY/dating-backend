@@ -57,6 +57,19 @@ Schedule::command('direct-connect:expire')
         \Log::error('Direct Connect expire check failed');
     });
 
+// Notify users whose matches are expiring in ~24 hours
+Schedule::command('matches:notify-expiring')
+    ->hourly()
+    ->name('notify-expiring-matches')
+    ->description('Send 24h expiry warning push notifications for matches')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Expiring match notifications sent');
+    })
+    ->onFailure(function () {
+        \Log::error('Expiring match notifications failed');
+    });
+
 // Compute engagement scores hourly for recommendation ranking
 Schedule::command('engagement:compute --all')
     ->hourly()

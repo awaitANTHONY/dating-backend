@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\UserInteraction;
 use App\Models\UserMatch;
 use App\Models\UserBlock;
@@ -11,6 +12,7 @@ use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class UserInteractionController extends Controller
@@ -89,7 +91,7 @@ class UserInteractionController extends Controller
             // If the action is 'like', check for mutual match
             if ($action === 'like') {
                 $match = UserMatch::createIfMutual($userId, $targetUserId);
-                
+
                 if ($match) {
                     $isMatch = true;
                     $matchId = $match->id;
@@ -97,6 +99,41 @@ class UserInteractionController extends Controller
             }
 
             DB::commit();
+
+            // ── Push notifications (fire after commit so DB is consistent) ──
+            try {
+                $actor = User::find($userId);
+                $target = User::find($targetUserId);
+                $actorName = $actor ? ($actor->name ?? 'Someone') : 'Someone';
+
+                if ($action === 'like' && $target && $target->device_token) {
+                    if ($isMatch) {
+                        // Notify BOTH users about the new match
+                        send_notification('single', '🎉 It\'s a Match!', "You and {$actorName} liked each other!", null, [
+                            'device_token' => $target->device_token,
+                            'type'         => 'new_match',
+                            'match_id'     => (string) $matchId,
+                        ]);
+                        if ($actor && $actor->device_token) {
+                            $targetName = $target->name ?? 'Someone';
+                            send_notification('single', '🎉 It\'s a Match!', "You and {$targetName} liked each other!", null, [
+                                'device_token' => $actor->device_token,
+                                'type'         => 'new_match',
+                                'match_id'     => (string) $matchId,
+                            ]);
+                        }
+                    } else {
+                        // Just a like — notify the target
+                        send_notification('single', '❤️ New Like', "{$actorName} liked your profile!", null, [
+                            'device_token' => $target->device_token,
+                            'type'         => 'new_like',
+                            'user_id'      => (string) $userId,
+                        ]);
+                    }
+                }
+            } catch (\Exception $notifEx) {
+                Log::warning('Interaction push notification failed: ' . $notifEx->getMessage());
+            }
 
             return response()->json([
                 'status' => true,

@@ -1645,10 +1645,29 @@ class ProfileController extends Controller
 
             // Track profile visit (async to not block response)
             try {
+                // Check if this is the first visit today (before inserting) to avoid spam notifications
+                $isFirstVisitToday = !\App\Models\ProfileVisitor::where('visitor_id', $user->id)
+                    ->where('visited_user_id', $targetUserId)
+                    ->whereDate('visited_at', today())
+                    ->exists();
+
                 ProfileVisitor::trackVisit($user->id, $targetUserId);
-                
+
                 // Clear the profile visitors cache for the target user so the visit appears immediately
                 Cache::forget("profile_visitors_user_{$targetUserId}");
+
+                // Notify target user — only on first visit today to avoid spam
+                if ($isFirstVisitToday) {
+                    $targetUser = \App\Models\User::find($targetUserId);
+                    if ($targetUser && $targetUser->device_token) {
+                        $visitorName = $user->name ?? 'Someone';
+                        send_notification('single', '👀 New Visitor', "{$visitorName} visited your profile!", null, [
+                            'device_token' => $targetUser->device_token,
+                            'type'         => 'new_visitor',
+                            'user_id'      => (string) $user->id,
+                        ]);
+                    }
+                }
             } catch (\Exception $e) {
                 // Log the error but don't fail the request
                 \Log::error('Failed to track profile visit: ' . $e->getMessage());

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use App\Services\FirebaseService;
 
 class ChatController extends Controller
@@ -98,6 +100,22 @@ class ChatController extends Controller
             'message_result' => $messageResult,
             'update_result' => $updateResult
         ]);
+
+        // Push notification to receiver
+        try {
+            $receiver = User::find($receiverId);
+            if ($receiver && $receiver->device_token) {
+                $senderName = $user->name ?? 'Someone';
+                send_notification('single', '💬 New Message', "{$senderName}: {$message}", null, [
+                    'device_token' => $receiver->device_token,
+                    'type'         => 'new_message',
+                    'group_id'     => $groupId,
+                    'sender_id'    => (string) $user->id,
+                ]);
+            }
+        } catch (\Exception $notifEx) {
+            Log::warning('Chat push notification failed: ' . $notifEx->getMessage());
+        }
 
         return response()->json(['status' => true]);
     }
