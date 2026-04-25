@@ -160,6 +160,10 @@
 					<span><i class="fas fa-user mr-1"></i> Free Users</span>
 					<strong>{{ number_format($freeUsers) }}</strong>
 				</div>
+				<div class="d-flex justify-content-between align-items-center text-muted mt-1">
+					<span><i class="fas fa-flask mr-1" style="color:#10b981;"></i> Free Trial</span>
+					<strong style="color:#10b981;">{{ number_format($trialUsers) }}</strong>
+				</div>
 				</div>
 			</div>
 		</div>

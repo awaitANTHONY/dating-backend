@@ -78,6 +78,7 @@
 								<option value="">{{ _lang('All') }}</option>
 								<option value="free">{{ _lang('Free') }}</option>
 								<option value="subscribed">{{ _lang('Subscribed') }}</option>
+								<option value="trial">{{ _lang('Free Trial') }}</option>
 								<option value="vip">{{ _lang('VIP') }}</option>
 							</select>
 						</div>

@@ -113,6 +113,9 @@ Route::group(['middleware' => ['install']], function () {
         // Coin Reward & Direct Connect Settings
         Route::any('coin_reward_settings', [Controllers\SettingController::class, 'coin_rewards'])->name('coin_reward_settings');
 
+        // Coin Transactions Report
+        Route::get('coin-transactions', [Controllers\CoinTransactionController::class, 'index'])->name('coin_transactions.index');
+
         // Verification Requests
         Route::get('verification-requests', [Controllers\VerificationRequestController::class, 'index'])->name('verification-requests.index');
         Route::get('verification-requests/{id}', [Controllers\VerificationRequestController::class, 'show'])->name('verification-requests.show');

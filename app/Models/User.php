@@ -44,6 +44,8 @@ class User extends Authenticatable
         'verification_cooldown_until',
         'is_banned',
         'ban_reason',
+        'is_on_trial',
+        'trial_ends_at',
     ];
 
     /**
@@ -76,6 +78,8 @@ class User extends Authenticatable
         'verification_cooldown_until' => 'datetime',
         'is_vip' => 'boolean',
         'is_banned' => 'boolean',
+        'is_on_trial' => 'boolean',
+        'trial_ends_at' => 'datetime',
         'verification_attempts' => 'integer',
     ];
 

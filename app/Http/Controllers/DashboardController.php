@@ -79,6 +79,14 @@ class DashboardController extends Controller
         // Free users
         $freeUsers = $totalUsers - $totalSubscribers - $vipUsers;
 
+        // Free trial users
+        $trialUsers = User::where('user_type', 'user')
+            ->where('is_on_trial', true)
+            ->where(function ($q) use ($now) {
+                $q->whereNull('trial_ends_at')->orWhere('trial_ends_at', '>', $now);
+            })
+            ->count();
+
         // Verification stats
         $pendingVerifications = VerificationRequest::pending()->count();
         $totalVerified = DB::table('user_information')->where('is_verified', true)->count();
@@ -133,7 +141,7 @@ class DashboardController extends Controller
         return view('backend.dashboard', compact(
             'totalUsers', 'activeUsers', 'bannedUsers',
             'newUsersWeek', 'newUsersMonth', 'userGrowth', 'activeToday',
-            'totalSubscribers', 'vipUsers', 'freeUsers', 'expiredSubscribers',
+            'totalSubscribers', 'vipUsers', 'freeUsers', 'expiredSubscribers', 'trialUsers',
             'subscriptionBreakdown',
             'pendingVerifications', 'totalVerified',
             'pendingReports', 'totalReports',

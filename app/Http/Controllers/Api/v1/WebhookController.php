@@ -218,6 +218,22 @@ class WebhookController extends Controller
             $user->expired_at = Carbon::createFromTimestampMs($expirationAtMs);
         }
         $user->subscription_id = $subscription->id;
+
+        // Track free trial status — INITIAL_PURCHASE with is_trial_period = true
+        $isTrial = ($event['type'] ?? '') === 'INITIAL_PURCHASE'
+            && ($event['is_trial_period'] ?? false) === true;
+
+        if ($isTrial) {
+            $user->is_on_trial = true;
+            $user->trial_ends_at = $expirationAtMs
+                ? Carbon::createFromTimestampMs($expirationAtMs)
+                : now()->addDays(7);
+        } else {
+            // Paid renewal or conversion — clear trial flag
+            $user->is_on_trial = false;
+            $user->trial_ends_at = null;
+        }
+
         $user->save();
 
         // Record payment if not duplicate
@@ -289,8 +305,10 @@ class WebhookController extends Controller
             return;
         }
 
-        // Subscription expired — clear subscription (keep subscription_id for history)
+        // Subscription expired — clear subscription and trial flags
         $user->expired_at = now();
+        $user->is_on_trial = false;
+        $user->trial_ends_at = null;
         $user->save();
 
         Log::info('WEBHOOK: Subscription expired/cancelled', [

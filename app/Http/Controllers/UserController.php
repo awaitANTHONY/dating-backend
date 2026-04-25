@@ -49,6 +49,11 @@ class UserController extends Controller
                     });
                 } elseif ($request->subscription === 'subscribed') {
                     $users->where('subscription_id', '>', 0);
+                } elseif ($request->subscription === 'trial') {
+                    $users->where('is_on_trial', true)
+                        ->where(function ($q) {
+                            $q->whereNull('trial_ends_at')->orWhere('trial_ends_at', '>', now());
+                        });
                 } elseif ($request->subscription === 'vip') {
                     $users->where('is_vip', true)->where('vip_expire', '>', now());
                 }
@@ -144,6 +149,11 @@ class UserController extends Controller
                         $subLower = strtolower($subName);
                         if ($expired) {
                             return '<span class="badge badge-secondary"><i class="fas fa-clock"></i> ' . e($subName) . ' (Expired)</span>';
+                        }
+                        // Free trial badge
+                        if ($user->is_on_trial) {
+                            $trialEnd = $user->trial_ends_at ? \Carbon\Carbon::parse($user->trial_ends_at)->format('M j') : '';
+                            return '<span class="badge" style="background:#10b981;color:#fff;"><i class="fas fa-flask"></i> Free Trial' . ($trialEnd ? ' (ends ' . $trialEnd . ')' : '') . '</span>';
                         }
                         if (str_contains($subLower, 'gold')) {
                             return '<span class="badge" style="background:#f59e0b;color:#fff;"><i class="fas fa-crown"></i> Gold</span>';

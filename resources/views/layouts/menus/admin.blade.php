@@ -151,6 +151,12 @@
 	</a>
 </li>
 <li class="u-sidebar-nav-menu__item">
+	<a class="u-sidebar-nav-menu__link" href="{{ route('coin_transactions.index') }}">
+		<i class="fas fa-exchange-alt u-sidebar-nav-menu__item-icon"></i>
+		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Coin Transactions') }}</span>
+	</a>
+</li>
+<li class="u-sidebar-nav-menu__item">
 	<a class="u-sidebar-nav-menu__link" href="{{ url('notifications') }}">
 		<i class="fa fa-bell u-sidebar-nav-menu__item-icon"></i>
 		<span class="u-sidebar-nav-menu__item-title">{{ _lang('Notifications') }}</span>
