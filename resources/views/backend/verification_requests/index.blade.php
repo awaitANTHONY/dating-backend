@@ -54,20 +54,7 @@
     </div>
 </div>
 
-{{-- Full Profile Review Modal --}}
-<div class="modal fade" id="review-modal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-id-card mr-2"></i>Verification Review</h5>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <div class="modal-body" id="review-modal-body">
-                <div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
-            </div>
-        </div>
-    </div>
-</div>
+{{-- Review modal is handled by #main_modal via .ajax-modal (see app.js) --}}
 @endsection
 
 @section('js-script')
@@ -103,16 +90,6 @@ $('#btn-reset').on('click', function() {
     table.ajax.reload();
 });
 
-// Open full profile modal
-$(document).on('click', '.btn-review', function() {
-    var id = $(this).data('id');
-    $('#review-modal-body').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>');
-    $('#review-modal').modal('show');
-    $.get(_url + '/verification-requests/' + id, function(html) {
-        $('#review-modal-body').html(html);
-    });
-});
-
 // Quick Approve inline
 $(document).on('click', '.btn-quick-approve', function() {
     var id  = $(this).data('id');
@@ -123,12 +100,13 @@ $(document).on('click', '.btn-quick-approve', function() {
         success: function(res) {
             toastr.success(res.message || 'Approved');
             table.ajax.reload(null, false);
+            $('#main_modal').modal('hide');
         },
         error: function() { toastr.error('Failed to approve'); btn.prop('disabled', false); }
     });
 });
 
-// Quick Reject inline (opens small prompt)
+// Quick Reject inline
 $(document).on('click', '.btn-quick-reject', function() {
     var id = $(this).data('id');
     var reason = prompt('Rejection reason (optional):') || '';

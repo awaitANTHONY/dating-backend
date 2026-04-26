@@ -52,7 +52,8 @@ class VerificationRequestController extends Controller
                     return $vr->created_at ? $vr->created_at->format('M d, Y H:i') : '-';
                 })
                 ->addColumn('action', function ($vr) {
-                    $buttons = '<button class="btn btn-info btn-sm btn-review mb-1" data-id="' . $vr->id . '" title="View full profile"><i class="fas fa-eye"></i> Review</button>';
+                    $reviewUrl = url('verification-requests/' . $vr->id);
+                    $buttons = '<a href="' . $reviewUrl . '" class="btn btn-info btn-sm ajax-modal mb-1" data-title="Verification Review"><i class="fas fa-eye"></i> Review</a>';
                     if (in_array($vr->status, ['pending', 'rejected', 'pending_admin_review'])) {
                         $buttons .= ' <button class="btn btn-success btn-sm btn-quick-approve mb-1" data-id="' . $vr->id . '" title="Approve"><i class="fas fa-check"></i></button>';
                     }
