@@ -39,6 +39,9 @@
                     <span id="queue-count" class="badge badge-warning ml-2" style="font-size:14px;">{{ $reviewCount }}</span>
                 </h4>
                 <div>
+                    <button class="btn btn-danger btn-sm mr-2" id="btn-reject-all" title="Reject all queue items so users can resubmit better photos">
+                        <i class="fas fa-trash-alt"></i> Reject All &amp; Reset
+                    </button>
                     <button class="btn btn-success btn-sm" id="btn-bulk-approve" style="display:none;">
                         <i class="fas fa-check-double"></i> Approve Selected (<span id="selected-count">0</span>)
                     </button>
@@ -297,6 +300,28 @@ $(document).ready(function() {
             else { toastr.error(res.message); }
             btn.prop('disabled',false).html('<i class="fas fa-check-double"></i> Approve Selected (<span id="selected-count">0</span>)');
         }).fail(function(){ toastr.error('Failed'); btn.prop('disabled',false).html('<i class="fas fa-check-double"></i> Approve Selected'); });
+    });
+
+    // Reject All & Reset
+    $('#btn-reject-all').on('click', function() {
+        if(!confirm('Reject ALL ' + $('#queue-count').text() + ' items in the queue?\n\nUsers will be notified to resubmit a clearer verification photo. This cannot be undone.')) return;
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+        $.post('/verification-queue/reject-all', {_token: csrf}, function(res) {
+            if(res.result === 'success') {
+                toastr.success(res.message);
+                $('#queue-count').text(0);
+                $('#table-wrapper').hide();
+                $('#empty-state').show();
+                table.ajax.reload(null, false);
+            } else {
+                toastr.error(res.message);
+            }
+            btn.prop('disabled', false).html('<i class="fas fa-trash-alt"></i> Reject All & Reset');
+        }).fail(function() {
+            toastr.error('Failed to reject all');
+            btn.prop('disabled', false).html('<i class="fas fa-trash-alt"></i> Reject All & Reset');
+        });
     });
 
     // Refresh

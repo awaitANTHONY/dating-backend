@@ -308,4 +308,48 @@ class VerificationQueueController extends Controller
             'remaining' => $remaining,
         ]);
     }
+
+    /**
+     * Reject ALL items currently in the review queue so users can resubmit.
+     */
+    public function rejectAll(Request $request)
+    {
+        $items = VerificationRequest::with('user')
+            ->where('status', 'review')
+            ->get();
+
+        if ($items->isEmpty()) {
+            return response()->json(['result' => 'success', 'message' => 'Queue is already empty.']);
+        }
+
+        $notificationService = app(NotificationService::class);
+        $rejectedCount = 0;
+        $reason = 'Your verification photo could not be processed. Please resubmit a clear, well-lit selfie for verification.';
+
+        foreach ($items as $req) {
+            DB::beginTransaction();
+            try {
+                $req->update(['status' => 'rejected', 'reason' => $reason]);
+                if ($req->user) {
+                    $req->user->update(['verification_status' => 'rejected']);
+                    if ($req->user->device_token) {
+                        try {
+                            $notificationService->sendVerificationRejected($req->user);
+                        } catch (\Exception $e) {
+                            // Don't block if push fails
+                        }
+                    }
+                }
+                DB::commit();
+                $rejectedCount++;
+            } catch (\Exception $e) {
+                DB::rollBack();
+            }
+        }
+
+        return response()->json([
+            'result'  => 'success',
+            'message' => "Rejected {$rejectedCount} verification(s). Users will be notified to resubmit.",
+        ]);
+    }
 }
