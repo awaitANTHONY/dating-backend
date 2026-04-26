@@ -10,6 +10,15 @@
         <div class="card">
             <div class="card-body py-2">
                 <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="input-group input-group-sm">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            </div>
+                            <input type="text" class="form-control" id="search-input"
+                                   placeholder="Search by name or email...">
+                        </div>
+                    </div>
                     <div class="col-md-3">
                         <select class="form-control form-control-sm select2" id="filter-status">
                             <option value="">All Statuses</option>
@@ -18,9 +27,9 @@
                             <option value="rejected">Rejected</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <button class="btn btn-primary btn-sm" id="btn-filter">
-                            <i class="fas fa-filter"></i> Filter
+                            <i class="fas fa-filter"></i> Search
                         </button>
                         <button class="btn btn-secondary btn-sm ml-1" id="btn-reset">
                             <i class="fas fa-undo"></i> Reset
@@ -68,6 +77,7 @@ var table = $('#data-table').DataTable({
         url: _url + '/verification-requests',
         data: function(d) {
             d.filter_status = $('#filter-status').val();
+            d.search_query  = $('#search-input').val();
         }
     },
     columns: [
@@ -85,8 +95,11 @@ var table = $('#data-table').DataTable({
 });
 
 $('#btn-filter').on('click', function() { table.ajax.reload(); });
+// Also trigger on Enter key in search box
+$('#search-input').on('keypress', function(e) { if(e.which === 13) table.ajax.reload(); });
 $('#btn-reset').on('click', function() {
     $('#filter-status').val('').trigger('change');
+    $('#search-input').val('');
     table.ajax.reload();
 });
 

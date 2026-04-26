@@ -21,6 +21,15 @@ class VerificationRequestController extends Controller
                 $query->where('status', $request->filter_status);
             }
 
+            // Name / email search
+            if ($request->filled('search_query')) {
+                $q = $request->search_query;
+                $query->whereHas('user', function ($u) use ($q) {
+                    $u->where('name', 'like', "%{$q}%")
+                      ->orWhere('email', 'like', "%{$q}%");
+                });
+            }
+
             return DataTables::of($query)
                 ->addColumn('user_name', function ($vr) {
                     return optional($vr->user)->name ?? '-';
