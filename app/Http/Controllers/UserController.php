@@ -636,16 +636,7 @@ class UserController extends Controller
     public function ban_user(Request $request, $id)
     {
         $user = User::findOrFail($id);
-        $user->status = 4;
-        $user->is_banned = true;
-        $user->ban_reason = 'Banned by admin.';
-        $user->save();
-
-        // Kill all active sessions immediately
-        $user->tokens()->delete();
-
-        // Block email so they can't re-register
-        \App\Models\BannedEmail::ban($user->email, $user->id, 'Banned by admin.');
+        $this->applyBan($user);
 
         $message = 'User has been banned successfully!';
 
@@ -662,13 +653,7 @@ class UserController extends Controller
     public function unban_user(Request $request, $id)
     {
         $user = User::findOrFail($id);
-        $user->status = 1;
-        $user->is_banned = false;
-        $user->ban_reason = null;
-        $user->save();
-
-        // Also remove from banned_emails so they can log back in
-        \App\Models\BannedEmail::where('email', strtolower(trim($user->email)))->delete();
+        $this->applyUnban($user);
 
         $message = 'User has been unbanned successfully!';
 
@@ -676,6 +661,86 @@ class UserController extends Controller
             return back()->with('success', $message);
         } else {
             return response()->json(['result' => 'success', 'message' => $message]);
+        }
+    }
+
+    /**
+     * Bulk action: ban, unban, or delete multiple users.
+     */
+    public function bulkAction(Request $request)
+    {
+        $request->validate([
+            'action'   => 'required|in:ban,unban,delete',
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $ids    = $request->user_ids;
+        $action = $request->action;
+        $users  = User::whereIn('id', $ids)->get();
+        $count  = $users->count();
+
+        foreach ($users as $user) {
+            if ($action === 'ban') {
+                $this->applyBan($user);
+            } elseif ($action === 'unban') {
+                $this->applyUnban($user);
+            } elseif ($action === 'delete') {
+                $user->tokens()->delete();
+                $user->delete();
+            }
+        }
+
+        $label = match($action) {
+            'ban'    => 'banned',
+            'unban'  => 'unbanned',
+            'delete' => 'deleted',
+        };
+
+        $message = "{$count} user(s) have been {$label} successfully!";
+
+        if (!$request->ajax()) {
+            return back()->with('success', $message);
+        }
+        return response()->json(['result' => 'success', 'message' => $message]);
+    }
+
+    /**
+     * Apply a full ban: set status, kill sessions, ban email + IP.
+     */
+    private function applyBan(User $user): void
+    {
+        $user->status     = 4;
+        $user->is_banned  = true;
+        $user->ban_reason = 'Banned by admin.';
+        $user->save();
+
+        // Kill all active sessions immediately
+        $user->tokens()->delete();
+
+        // Block email so they can't re-register
+        \App\Models\BannedEmail::ban($user->email, $user->id, 'Banned by admin.');
+
+        // Block IP so they can't re-register from same device/network
+        if (!empty($user->ip_address)) {
+            \App\Models\BannedIp::ban($user->ip_address, $user->id, 'Banned by admin.');
+        }
+    }
+
+    /**
+     * Remove a ban: restore status, unban email + IP.
+     */
+    private function applyUnban(User $user): void
+    {
+        $user->status     = 1;
+        $user->is_banned  = false;
+        $user->ban_reason = null;
+        $user->save();
+
+        \App\Models\BannedEmail::where('email', strtolower(trim($user->email)))->delete();
+
+        if (!empty($user->ip_address)) {
+            \App\Models\BannedIp::unban($user->ip_address);
         }
     }
 }

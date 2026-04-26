@@ -109,11 +109,25 @@
 	<div class="col-md-12">
 		<div class="card">
 			<div class="card-body p-0 p-md-3">
+				{{-- Bulk Action Toolbar --}}
+				<div id="bulk-action-bar" class="mb-3" style="display:none;">
+					<div class="d-flex align-items-center gap-2">
+						<span id="selected-count" class="text-muted mr-2">0 selected</span>
+						<select id="bulk-action-select" class="form-control form-control-sm" style="width:auto;">
+							<option value="">-- Bulk Action --</option>
+							<option value="ban">🚫 Ban Selected</option>
+							<option value="unban">✅ Unban Selected</option>
+							<option value="delete">🗑️ Delete Selected</option>
+						</select>
+						<button id="bulk-apply-btn" class="btn btn-danger btn-sm ml-2">Apply</button>
+						<button id="bulk-cancel-btn" class="btn btn-secondary btn-sm ml-1">Cancel</button>
+					</div>
+				</div>
 				<div class="table-responsive">
 				<table class="table table-bordered mb-0" id="data-table1">
 					<thead>
 						<tr>
-
+							<th style="width:36px;"><input type="checkbox" id="select-all-users" title="Select All"></th>
 							<th>{{ _lang('Image') }}</th>
         					<th>{{ _lang('Name') }}</th>
         					<th>{{ _lang('Email') }}</th>
@@ -122,7 +136,6 @@
         					<th>{{ _lang('Verified') }}</th>
         					<th>{{ _lang('Joined') }}</th>
         					<th class="text-center">{{ _lang('Status') }}</th>
-
 							<th class="text-center">{{ _lang('Action') }}</th>
 						</tr>
 					</thead>
@@ -137,7 +150,7 @@
 
 @section('js-script')
 <script>
-	$('#data-table1').DataTable({
+	var table = $('#data-table1').DataTable({
 		processing: true,
 		serverSide: true,
 		ajax: {
@@ -155,6 +168,15 @@
 			}
 		},
 		"columns" : [
+			{
+				data: null,
+				orderable: false,
+				searchable: false,
+				className: 'text-center',
+				render: function(data) {
+					return '<input type="checkbox" class="row-checkbox" value="' + data.id + '">';
+				}
+			},
 			{ data : "image", name : "image", className : "image" },
         	{ data : "name", name : "name", className : "name" },
         	{ data : "email", name : "email", className : "email" },
@@ -183,6 +205,92 @@
 		$('#user-filter-form')[0].reset();
 		$('#user-filter-form select').val('').trigger('change');
 		$('#data-table1').DataTable().ajax.reload();
+	});
+
+	// Select all checkboxes on current page
+	$('#select-all-users').on('change', function() {
+		var checked = this.checked;
+		$('#data-table1 tbody .row-checkbox').prop('checked', checked);
+		updateBulkBar();
+	});
+
+	// Track individual checkbox changes
+	$('#data-table1').on('change', '.row-checkbox', function() {
+		updateBulkBar();
+	});
+
+	function getSelectedIds() {
+		var ids = [];
+		$('#data-table1 tbody .row-checkbox:checked').each(function() {
+			ids.push($(this).val());
+		});
+		return ids;
+	}
+
+	function updateBulkBar() {
+		var ids = getSelectedIds();
+		if (ids.length > 0) {
+			$('#bulk-action-bar').show();
+			$('#selected-count').text(ids.length + ' selected');
+		} else {
+			$('#bulk-action-bar').hide();
+			$('#select-all-users').prop('checked', false);
+		}
+	}
+
+	// Cancel bulk selection
+	$('#bulk-cancel-btn').on('click', function() {
+		$('#data-table1 tbody .row-checkbox').prop('checked', false);
+		$('#select-all-users').prop('checked', false);
+		$('#bulk-action-bar').hide();
+	});
+
+	// Apply bulk action
+	$('#bulk-apply-btn').on('click', function() {
+		var action = $('#bulk-action-select').val();
+		var ids = getSelectedIds();
+
+		if (!action) {
+			alert('Please select an action.');
+			return;
+		}
+		if (ids.length === 0) {
+			alert('No users selected.');
+			return;
+		}
+
+		var label = action === 'ban' ? 'ban' : (action === 'unban' ? 'unban' : 'delete');
+		if (!confirm('Are you sure you want to ' + label + ' ' + ids.length + ' user(s)?')) {
+			return;
+		}
+
+		$.ajax({
+			url: _url + '/users/bulk-action',
+			method: 'POST',
+			data: {
+				_token: $('meta[name="csrf-token"]').attr('content'),
+				action: action,
+				user_ids: ids
+			},
+			success: function(res) {
+				if (res.result === 'success') {
+					toastr.success(res.message);
+					$('#select-all-users').prop('checked', false);
+					$('#bulk-action-bar').hide();
+					table.ajax.reload(null, false);
+				}
+			},
+			error: function(xhr) {
+				var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Something went wrong.';
+				toastr.error(msg);
+			}
+		});
+	});
+
+	// Reset select-all when table redraws
+	table.on('draw', function() {
+		$('#select-all-users').prop('checked', false);
+		updateBulkBar();
 	});
 </script>
 @endsection

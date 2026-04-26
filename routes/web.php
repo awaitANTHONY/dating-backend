@@ -70,6 +70,8 @@ Route::group(['middleware' => ['install']], function () {
         // Ban/Unban routes
         Route::get('users/{id}/ban', [App\Http\Controllers\UserController::class, 'ban_user'])->name('users.ban');
         Route::get('users/{id}/unban', [App\Http\Controllers\UserController::class, 'unban_user'])->name('users.unban');
+        // Bulk action route
+        Route::post('users/bulk-action', [App\Http\Controllers\UserController::class, 'bulkAction'])->name('users.bulk-action');
 
         //Channel Controller
         Route::resource('sliders', Controllers\SliderController::class);

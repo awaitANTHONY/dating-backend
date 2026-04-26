@@ -63,6 +63,11 @@ class AuthController extends Controller
         if (BannedEmail::isBanned($request->email)) {
             return response()->json(['status' => false, 'message' => 'This email address has been banned. Please contact support for assistance.']);
         }
+
+        // Block banned IPs from re-registering
+        if (\App\Models\BannedIp::isBanned($request->ip())) {
+            return response()->json(['status' => false, 'message' => 'Registration is not available from this device. Please contact support for assistance.']);
+        }
         
         $user = new User();
 
@@ -75,6 +80,7 @@ class AuthController extends Controller
         $user->image = asset('public/default/profile.png');
         $user->status = $request->provider == 'email' ? 3 : 1;
         $user->last_activity = now(); // Set last activity on signup
+        $user->ip_address = $request->ip(); // Store IP for ban enforcement
 
         // Generate and send OTP if provider is email
         if ($request->provider == 'email') {
