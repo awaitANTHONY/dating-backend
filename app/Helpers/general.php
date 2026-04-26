@@ -139,6 +139,8 @@ if (!function_exists('send_notification')) {
                         "default_sound" => true,
                         "default_vibrate_timings" => true,
                         "channel_id" => "high_importance_channel",
+                        "icon" => "ic_notification",
+                        "color" => "#E91E8C",
                         "image" => $image
                     ]
                 ]
