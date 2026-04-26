@@ -706,7 +706,7 @@ class UserController extends Controller
     }
 
     /**
-     * Apply a full ban: set status, kill sessions, ban email + IP.
+     * Apply a full ban: set status, kill sessions, ban email + IP + device.
      */
     private function applyBan(User $user): void
     {
@@ -721,14 +721,19 @@ class UserController extends Controller
         // Block email so they can't re-register
         \App\Models\BannedEmail::ban($user->email, $user->id, 'Banned by admin.');
 
-        // Block IP so they can't re-register from same device/network
+        // Block IP so they can't re-register from same network
         if (!empty($user->ip_address)) {
             \App\Models\BannedIp::ban($user->ip_address, $user->id, 'Banned by admin.');
+        }
+
+        // Block device token so they can't re-register on same device
+        if (!empty($user->device_token)) {
+            \App\Models\BannedDevice::ban($user->device_token, $user->id, 'Banned by admin.');
         }
     }
 
     /**
-     * Remove a ban: restore status, unban email + IP.
+     * Remove a ban: restore status, unban email + IP + device.
      */
     private function applyUnban(User $user): void
     {
@@ -741,6 +746,10 @@ class UserController extends Controller
 
         if (!empty($user->ip_address)) {
             \App\Models\BannedIp::unban($user->ip_address);
+        }
+
+        if (!empty($user->device_token)) {
+            \App\Models\BannedDevice::unban($user->device_token);
         }
     }
 }

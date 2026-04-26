@@ -68,6 +68,11 @@ class AuthController extends Controller
         if (\App\Models\BannedIp::isBanned($request->ip())) {
             return response()->json(['status' => false, 'message' => 'Registration is not available from this device. Please contact support for assistance.']);
         }
+
+        // Block banned devices from re-registering
+        if (\App\Models\BannedDevice::isBanned($request->device_token)) {
+            return response()->json(['status' => false, 'message' => 'Registration is not available from this device. Please contact support for assistance.']);
+        }
         
         $user = new User();
 
