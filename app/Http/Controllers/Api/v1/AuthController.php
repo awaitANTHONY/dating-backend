@@ -93,8 +93,12 @@ class AuthController extends Controller
             $user->email_otp = \Hash::make($otp);
             $user->email_verified_at = null;
             $user->save();
-            Overrider::load('Settings');
-            \Mail::to($user->email)->queue(new \App\Mail\EmailVerificationOtp($otp, $user->name));
+            try {
+                Overrider::load('Settings');
+                \Mail::to($user->email)->queue(new \App\Mail\EmailVerificationOtp($otp, $user->name));
+            } catch (\Exception $e) {
+                \Log::error('OTP email failed for user ' . $user->email . ': ' . $e->getMessage());
+            }
         }
 
         $user->save();

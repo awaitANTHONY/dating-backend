@@ -6,56 +6,38 @@ use Illuminate\Database\Eloquent\Model;
 
 class DirectConnectRequest extends Model
 {
-    protected $table = 'contact_requests';
+    protected $table = 'direct_connect_requests';
 
     protected $fillable = [
         'requester_id',
         'owner_id',
-        'contact_platform_id',
+        'platform_id',
         'status',
-        'coin_cost',
-        'was_free',
-        'expires_at',
+        'coins_spent',
         'responded_at',
-        'approved_expires_at',
+        'expires_at',
     ];
 
     protected $casts = [
-        'was_free'            => 'boolean',
-        'expires_at'          => 'datetime',
-        'responded_at'        => 'datetime',
-        'approved_expires_at' => 'datetime',
+        'responded_at' => 'datetime',
+        'expires_at'   => 'datetime',
+        'coins_spent'  => 'integer',
     ];
-
-    // ── Relationships ──
 
     public function requester()
     {
-        return $this->belongsTo(\App\Models\User::class, 'requester_id');
+        return $this->belongsTo(User::class, 'requester_id')
+            ->select(['id', 'name', 'image', 'last_activity']);
     }
 
     public function owner()
     {
-        return $this->belongsTo(\App\Models\User::class, 'owner_id');
+        return $this->belongsTo(User::class, 'owner_id')
+            ->select(['id', 'name', 'image', 'last_activity']);
     }
 
-    public function contactPlatform()
+    public function platform()
     {
-        return $this->belongsTo(ContactPlatform::class, 'contact_platform_id');
-    }
-
-    // ── Scopes ──
-
-    public function scopePending($query)
-    {
-        return $query->where('status', 'pending');
-    }
-
-    public function scopeNotExpired($query)
-    {
-        return $query->where(function ($q) {
-            $q->whereNull('expires_at')
-              ->orWhere('expires_at', '>', now());
-        });
+        return $this->belongsTo(ContactPlatform::class, 'platform_id');
     }
 }
