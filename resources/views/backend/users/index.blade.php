@@ -173,8 +173,8 @@
 				orderable: false,
 				searchable: false,
 				className: 'text-center',
-				render: function(data) {
-					return '<input type="checkbox" class="row-checkbox" value="' + data.id + '">';
+				render: function(data, type, row) {
+					return '<input type="checkbox" class="row-checkbox" value="' + row.id + '">';
 				}
 			},
 			{ data : "image", name : "image", className : "image" },
