@@ -2581,7 +2581,9 @@ class ProfileController extends Controller
             $query->where('is_fake', 0)
                   ->whereHas('user_information', function ($q) {
                 $q->where('visible_on_map', true);
-            });
+            })
+            // Hide users inactive for more than 60 days — keep the map feeling alive
+            ->where('last_activity', '>=', now()->subDays(60));
         }
 
         $query->whereDoesntHave('blockedByUsers', function ($q) use ($user) {
