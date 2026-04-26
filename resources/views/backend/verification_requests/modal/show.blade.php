@@ -164,11 +164,11 @@
 </div>
 @endif
 
-{{-- Approve / Reject actions --}}
-@if(in_array($vr->status, ['pending', 'rejected', 'pending_admin_review']))
+{{-- Approve / Reject / Ban actions --}}
 <hr class="my-3">
 <div class="row">
-    <div class="col-md-6">
+    @if(in_array($vr->status, ['pending', 'rejected', 'pending_admin_review']))
+    <div class="col-md-4 mb-2">
         <a href="{{ url('verification-requests/' . $vr->id . '/approve') }}"
            class="btn btn-success btn-block ajax-get-confirm"
            data-confirm="Approve this verification request?">
@@ -176,7 +176,7 @@
         </a>
     </div>
     @if($vr->status !== 'rejected')
-    <div class="col-md-6">
+    <div class="col-md-4 mb-2">
         <form method="post" class="ajax-submit" action="{{ url('verification-requests/' . $vr->id . '/reject') }}">
             @csrf
             <div class="input-group">
@@ -191,5 +191,22 @@
         </form>
     </div>
     @endif
+    @endif
+    @if($user->id)
+    <div class="col-md-4 mb-2">
+        @if(optional($user)->status == 4)
+            <a href="{{ url('users/' . $user->id . '/unban') }}"
+               class="btn btn-warning btn-block ajax-get-confirm"
+               data-confirm="Unban {{ $user->name }}? They will regain access to the app.">
+                <i class="fas fa-unlock mr-1"></i> Unban User
+            </a>
+        @else
+            <a href="{{ url('users/' . $user->id . '/ban') }}"
+               class="btn btn-dark btn-block ajax-get-confirm"
+               data-confirm="Ban {{ $user->name }}? This will block their account, IP, and device permanently.">
+                <i class="fas fa-ban mr-1"></i> Ban User
+            </a>
+        @endif
+    </div>
+    @endif
 </div>
-@endif

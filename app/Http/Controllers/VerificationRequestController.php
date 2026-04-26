@@ -60,6 +60,16 @@ class VerificationRequestController extends Controller
                     if (in_array($vr->status, ['pending', 'pending_admin_review'])) {
                         $buttons .= ' <button class="btn btn-danger btn-sm btn-quick-reject mb-1" data-id="' . $vr->id . '" title="Reject"><i class="fas fa-times"></i></button>';
                     }
+                    // Ban/Unban button
+                    $userId = optional($vr->user)->id;
+                    $userStatus = optional($vr->user)->status;
+                    if ($userId) {
+                        if ($userStatus == 4) {
+                            $buttons .= ' <a href="' . url('users/' . $userId . '/unban') . '" class="btn btn-warning btn-sm ajax-get-confirm mb-1" data-confirm="Unban this user?" title="Unban"><i class="fas fa-unlock"></i></a>';
+                        } else {
+                            $buttons .= ' <a href="' . url('users/' . $userId . '/ban') . '" class="btn btn-dark btn-sm ajax-get-confirm mb-1" data-confirm="Ban this user permanently?" title="Ban"><i class="fas fa-ban"></i></a>';
+                        }
+                    }
                     return $buttons;
                 })
                 ->rawColumns(['action', 'status', 'image', 'user_image'])
