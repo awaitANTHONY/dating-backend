@@ -145,13 +145,13 @@ Route::group(['middleware' => ['x_check'], 'prefix' => 'v1'], function ()
         Route::post('my-contacts', [Controllers\Api\v1\DirectConnectController::class, 'storeContact']);
         Route::delete('my-contacts/{id}', [Controllers\Api\v1\DirectConnectController::class, 'deleteContact']);
         Route::get('user/{id}/contacts', [Controllers\Api\v1\DirectConnectController::class, 'userContactInfo']);
-        Route::post('direct-connect/request', [Controllers\Api\v1\DirectConnectController::class, 'sendRequest']);
-        Route::post('direct-connect/respond', [Controllers\Api\v1\DirectConnectController::class, 'respondToRequest']);
-        Route::get('direct-connect/sent', [Controllers\Api\v1\DirectConnectController::class, 'sentRequests']);
-        Route::get('direct-connect/received', [Controllers\Api\v1\DirectConnectController::class, 'receivedRequests']);
-        Route::get('coin-packages', [Controllers\Api\v1\DirectConnectController::class, 'coinPackages']);
-        Route::post('coins/purchase', [Controllers\Api\v1\DirectConnectController::class, 'purchaseCoins']);
-        Route::get('coins/balance', [Controllers\Api\v1\DirectConnectController::class, 'coinBalance']);
+        Route::post('direct-connect/request', [Controllers\Api\v1\DirectConnectController::class, 'request']);
+        Route::post('direct-connect/respond', [Controllers\Api\v1\DirectConnectController::class, 'respond']);
+        Route::get('direct-connect/sent', [Controllers\Api\v1\DirectConnectController::class, 'sent']);
+        Route::get('direct-connect/received', [Controllers\Api\v1\DirectConnectController::class, 'received']);
+        Route::get('coin-packages', [\App\Http\Controllers\Api\v1\CoinController::class, 'packages']);
+        Route::post('coins/purchase', [\App\Http\Controllers\Api\v1\CoinController::class, 'purchase']);
+        Route::get('coins/balance', [\App\Http\Controllers\Api\v1\CoinController::class, 'balance']);
 
         // Coin Rewards
         Route::get('coin-rewards/status', [Controllers\Api\v1\CoinRewardController::class, 'status']);
