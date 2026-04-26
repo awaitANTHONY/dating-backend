@@ -52,18 +52,14 @@ class VerificationRequestController extends Controller
                     return $vr->created_at ? $vr->created_at->format('M d, Y H:i') : '-';
                 })
                 ->addColumn('action', function ($vr) {
-                    $action = '<div class="dropdown">';
-                    $action .= '<button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-toggle="dropdown">' . _lang('Action') . '</button>';
-                    $action .= '<div class="dropdown-menu">';
-                    $action .= '<a href="' . url('verification-requests/' . $vr->id) . '" class="dropdown-item ajax-modal" data-title="' . _lang('Review Verification') . '"><i class="fas fa-eye"></i> ' . _lang('Review') . '</a>';
-                    if ($vr->status === 'pending' || $vr->status === 'rejected' || $vr->status === 'pending_admin_review') {
-                        $action .= '<a href="' . url('verification-requests/' . $vr->id . '/approve') . '" class="dropdown-item ajax-get-confirm" data-confirm="' . _lang('Approve this verification?') . '"><i class="fas fa-check text-success"></i> ' . _lang('Approve') . '</a>';
+                    $buttons = '<button class="btn btn-info btn-sm btn-review mb-1" data-id="' . $vr->id . '" title="View full profile"><i class="fas fa-eye"></i> Review</button>';
+                    if (in_array($vr->status, ['pending', 'rejected', 'pending_admin_review'])) {
+                        $buttons .= ' <button class="btn btn-success btn-sm btn-quick-approve mb-1" data-id="' . $vr->id . '" title="Approve"><i class="fas fa-check"></i></button>';
                     }
-                    if ($vr->status === 'pending' || $vr->status === 'pending_admin_review') {
-                        $action .= '<a href="' . url('verification-requests/' . $vr->id . '/reject') . '" class="dropdown-item ajax-modal" data-title="' . _lang('Reject Verification') . '"><i class="fas fa-times text-danger"></i> ' . _lang('Reject') . '</a>';
+                    if (in_array($vr->status, ['pending', 'pending_admin_review'])) {
+                        $buttons .= ' <button class="btn btn-danger btn-sm btn-quick-reject mb-1" data-id="' . $vr->id . '" title="Reject"><i class="fas fa-times"></i></button>';
                     }
-                    $action .= '</div></div>';
-                    return $action;
+                    return $buttons;
                 })
                 ->rawColumns(['action', 'status', 'image', 'user_image'])
                 ->make(true);

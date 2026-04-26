@@ -126,10 +126,11 @@ Route::group(['middleware' => ['install']], function () {
 
         // Verification Queue (manual review when AI unavailable)
         Route::resource('verification-queue', Controllers\VerificationQueueController::class)->only(['index', 'show']);
-        Route::post('verification-queue/{verificationQueue}/approve', [Controllers\VerificationQueueController::class, 'approve'])->name('verification-queue.approve');
-        Route::post('verification-queue/{verificationQueue}/reject', [Controllers\VerificationQueueController::class, 'reject'])->name('verification-queue.reject');
+        // Specific static routes MUST come before wildcard {verificationQueue} routes
         Route::post('verification-queue/bulk-approve', [Controllers\VerificationQueueController::class, 'bulkApprove'])->name('verification-queue.bulk-approve');
         Route::post('verification-queue/reject-all', [Controllers\VerificationQueueController::class, 'rejectAll'])->name('verification-queue.reject-all');
+        Route::post('verification-queue/{verificationQueue}/approve', [Controllers\VerificationQueueController::class, 'approve'])->name('verification-queue.approve');
+        Route::post('verification-queue/{verificationQueue}/reject', [Controllers\VerificationQueueController::class, 'reject'])->name('verification-queue.reject');
 
         // Bio Templates
         Route::resource('bio_templates', Controllers\BioTemplateWebController::class);
